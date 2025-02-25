@@ -1,0 +1,18 @@
+/* General custom styles (you can add more as needed) */
+
+/* Example: adjust overall body background */
+body {
+    background-color: #f8f9fa;
+}
+
+/* Ensure table styling */
+.table {
+    margin-bottom: 1rem;
+}
+
+/* Buttons: if needed, you can override Bootstrap defaults */
+.btn {
+    margin-right: 0.5rem;
+}
+
+/* If needed, add any custom styles for other components here */
