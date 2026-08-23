@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SmartTimePlanning</string>
+    <string name="title_activity_main">SmartTimePlanning</string>
+    <string name="package_name">ee.gretmar.tarmel</string>
+    <string name="custom_url_scheme">ee.gretmar.tarmel</string>
+</resources>

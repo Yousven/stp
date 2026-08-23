@@ -1,0 +1,41 @@
+import { Preferences } from "@capacitor/preferences";
+import type { AuthUser } from "../api/types";
+
+const ACCESS_KEY = "tarmel_access_token";
+const REFRESH_KEY = "tarmel_refresh_token";
+const USER_KEY = "tarmel_user";
+
+export async function getAccessToken(): Promise<string | null> {
+  const { value } = await Preferences.get({ key: ACCESS_KEY });
+  return value;
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+  const { value } = await Preferences.get({ key: REFRESH_KEY });
+  return value;
+}
+
+export async function getStoredUser(): Promise<AuthUser | null> {
+  const { value } = await Preferences.get({ key: USER_KEY });
+  return value ? (JSON.parse(value) as AuthUser) : null;
+}
+
+export async function setAccessToken(accessToken: string): Promise<void> {
+  await Preferences.set({ key: ACCESS_KEY, value: accessToken });
+}
+
+export async function setSession(accessToken: string, refreshToken: string, user: AuthUser): Promise<void> {
+  await Promise.all([
+    Preferences.set({ key: ACCESS_KEY, value: accessToken }),
+    Preferences.set({ key: REFRESH_KEY, value: refreshToken }),
+    Preferences.set({ key: USER_KEY, value: JSON.stringify(user) }),
+  ]);
+}
+
+export async function clearSession(): Promise<void> {
+  await Promise.all([
+    Preferences.remove({ key: ACCESS_KEY }),
+    Preferences.remove({ key: REFRESH_KEY }),
+    Preferences.remove({ key: USER_KEY }),
+  ]);
+}

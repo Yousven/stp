@@ -1,0 +1,5 @@
+# Asenda domeeniga, mis osutab su Proxmoxi hostile (nt api.tarmel.gretmar.ee).
+# Caddy hangib ja uuendab Let's Encrypt TLS sertifikaadi automaatselt.
+api.example.com {
+	reverse_proxy api:3000
+}

@@ -1,0 +1,77 @@
+// See skeem on koostatud praeguse PHP-rakenduse (public/*.php) päringute põhjal.
+// ENNE toodangu andmebaasiga ühendamist käivita `npm run prisma:pull`, mis
+// loeb päris tabelistruktuuri Proxmoxi MySQL-ist ja parandab siin võimalikud
+// ebatäpsused (nt täpsed veerutüübid, indeksid, mis siit puuduvad).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int             @id @default(autoincrement())
+  username     String          @unique @db.VarChar(255)
+  password     String          @db.VarChar(255)
+  email        String          @unique @db.VarChar(255)
+  hourlyRate   Decimal         @map("hourly_rate") @db.Decimal(10, 2)
+  advance      Decimal         @db.Decimal(10, 2)
+  role         String          @db.VarChar(20) // "admin" | "employee"
+  timeLogs     TimeLog[]
+  passwordResets PasswordReset[]
+
+  @@map("users")
+}
+
+model WorkObject {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  address     String?   @db.VarChar(255)
+  latitude    Decimal   @db.Decimal(10, 7)
+  longitude   Decimal   @db.Decimal(10, 7)
+  radius      Int
+  deleted     Boolean   @default(false)
+  timeLogs    TimeLog[]
+
+  @@map("objects")
+}
+
+model TimeLog {
+  id             Int         @id @default(autoincrement())
+  userId         Int         @map("user_id")
+  objectId       Int         @map("object_id")
+  startTime      DateTime    @map("start_time")
+  endTime        DateTime?   @map("end_time")
+  startLatitude  Decimal?    @map("start_latitude") @db.Decimal(10, 7)
+  startLongitude Decimal?    @map("start_longitude") @db.Decimal(10, 7)
+  comment        String?     @db.Text
+  travelDuration Decimal?    @map("travel_duration") @db.Decimal(5, 2)
+  lunch          Decimal?    @db.Decimal(5, 2)
+
+  user   User       @relation(fields: [userId], references: [id])
+  object WorkObject @relation(fields: [objectId], references: [id])
+
+  @@map("time_logs")
+}
+
+model Setting {
+  key   String @id @map("setting_key") @db.VarChar(100)
+  value String @map("setting_value") @db.Text
+
+  @@map("settings")
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique @db.VarChar(64)
+  expiresAt DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("password_resets")
+}

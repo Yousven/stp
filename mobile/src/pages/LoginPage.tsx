@@ -1,0 +1,48 @@
+import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { ApiError } from "../api/client";
+
+export function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(username, password);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Sisselogimine ebaõnnestus.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="page page-center">
+      <form className="card" onSubmit={handleSubmit}>
+        <h1>SmartTimePlanning</h1>
+        <p className="subtitle">Logi sisse</p>
+        {error && <div className="alert alert-error">{error}</div>}
+        <label>
+          Kasutajanimi
+          <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+        </label>
+        <label>
+          Parool
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </label>
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          {submitting ? "Palun oota..." : "Logi sisse"}
+        </button>
+      </form>
+    </div>
+  );
+}

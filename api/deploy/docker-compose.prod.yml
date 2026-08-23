@@ -1,0 +1,38 @@
+# Näidis Proxmoxi jaoks. Eeldab, et olemasolev MySQL (koos time_tracking
+# andmebaasiga) jookseb juba Proxmoxis (kas samas hostis või teises
+# konteineris/VM-is) ja on API konteinerile võrgus kättesaadav — seda EI
+# looda siin uuesti, et päris andmeid mitte kaotada.
+#
+# Kasutamine:
+#   1. Kopeeri see fail + Caddyfile Proxmoxi hosti.
+#   2. Loo kõrvale .env fail (vt ../.env.example), DATABASE_URL peab
+#      osutama olemasolevale MySQL instantsile.
+#   3. docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:
