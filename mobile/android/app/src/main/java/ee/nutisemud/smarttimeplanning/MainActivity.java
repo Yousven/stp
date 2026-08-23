@@ -1,4 +1,4 @@
-package ee.gretmar.tarmel;
+package ee.nutisemud.smarttimeplanning;
 
 import com.getcapacitor.BridgeActivity;
 

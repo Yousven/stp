@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "ee.gretmar.tarmel",
+  appId: "ee.nutisemud.smarttimeplanning",
   appName: "SmartTimePlanning",
   webDir: "dist",
 };
