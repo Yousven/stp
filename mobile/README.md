@@ -1,4 +1,4 @@
-# TarMel mobiiliäpp
+# SmartTimePlanning mobiiliäpp
 
 React + TypeScript + Vite SPA, mis räägib `../api` REST API-ga, pakitud
 Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:

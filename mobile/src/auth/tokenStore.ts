@@ -1,9 +1,9 @@
 import { Preferences } from "@capacitor/preferences";
 import type { AuthUser } from "../api/types";
 
-const ACCESS_KEY = "tarmel_access_token";
-const REFRESH_KEY = "tarmel_refresh_token";
-const USER_KEY = "tarmel_user";
+const ACCESS_KEY = "stp_access_token";
+const REFRESH_KEY = "stp_refresh_token";
+const USER_KEY = "stp_user";
 
 export async function getAccessToken(): Promise<string | null> {
   const { value } = await Preferences.get({ key: ACCESS_KEY });
