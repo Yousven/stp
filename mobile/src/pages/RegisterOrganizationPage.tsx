@@ -80,8 +80,8 @@ export function RegisterOrganizationPage() {
             }}
             required
           />
-          <div className="form-hint">Kasutatakse sisselogimisel. Väiketähed, numbrid, sidekriipsud.</div>
         </label>
+        <div className="form-hint">Kasutatakse sisselogimisel. Väiketähed, numbrid, sidekriipsud.</div>
         <label>
           Admin kasutajanimi
           <input value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} required />
@@ -98,8 +98,8 @@ export function RegisterOrganizationPage() {
             onChange={(e) => setAdminPassword(e.target.value)}
             required
           />
-          <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
         </label>
+        <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
         <label>
           Kinnita parool
           <input
