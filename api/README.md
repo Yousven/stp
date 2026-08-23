@@ -1,8 +1,11 @@
-# TarMel API
+# SmartTimePlanning API
 
 Node.js + TypeScript + Express + Prisma REST API, mis asendab järk-järgult
 `public/*.php` äriloogika. Loodud plaani järgi: `/Users/margo.hain/.claude/plans/bubbly-exploring-hartmanis.md`
 (Faas 0 + Faas 1: infra skafold, autentimine, tööajaarvestuse tuum).
+
+Praegu jookseb esimene versioon Ubuntu 24.04 serveris (Proxmox VM),
+Docker Compose'iga — vt "Deploy" allpool.
 
 ## Kohalik arendus
 
@@ -51,8 +54,24 @@ Demo kasutajad pärast seedimist: `admin` / `employee`, parool mõlemal
 - `src/utils/geofence.ts` — Haversine distants (port dashboardi brauseri-JS-ist)
 - `src/utils/password.ts` — bcrypt ühilduvus PHP `password_hash()` hashidega
 
-## Deploy Proxmoxi
+## Deploy Proxmoxi / serverisse
 
-Vaata `deploy/docker-compose.prod.yml` ja `deploy/Caddyfile` — API konteiner +
-Caddy reverse proxy automaatse TLS-iga. Eeldab olemasolevat MySQL-i, mida
-see stack ise ei loo.
+Kaks varianti, olenevalt sellest, kas serveris on juba MySQL:
+
+- **Olemasolev MySQL** (nt sama server, kus vana PHP rakendus): kasuta
+  `deploy/docker-compose.prod.yml` + `deploy/Caddyfile` — API konteiner +
+  Caddy reverse proxy automaatse TLS-iga.
+- **Puhas server, MySQL-i pole veel** (nt uus Proxmox VM): kasuta
+  `deploy/docker-compose.with-mysql.yml`, mis lisab ka MySQL konteineri.
+  **Oluline**: käivita alati `--env-file .env` lipuga (töökataloogist `api/`):
+  ```bash
+  docker compose -f deploy/docker-compose.with-mysql.yml --env-file .env up -d --build
+  ```
+  Ilma selleta ei leia Compose `MYSQL_APP_PASSWORD` muutujat (vaikimisi
+  otsitakse `.env` faili compose-faili enda kataloogist `deploy/`, mitte
+  `api/`-st, kust käsku käivitatakse) ja MySQL käivitub tühja parooliga.
+
+Pärast käivitamist: `docker compose ... exec api npx prisma db push` loob
+tabelid, `npm run prisma:seed` (kohapeal, mitte konteineris — vt
+`prisma:seed` skript ei ole toodangu image'is) või samaväärne otsene
+Prisma-päring lisab esimesed test-kasutajad.
