@@ -6,11 +6,18 @@ import { hashPassword } from "../src/utils/password.js";
 const prisma = new PrismaClient();
 
 async function main() {
+  const organization = await prisma.organization.upsert({
+    where: { slug: "demo" },
+    update: {},
+    create: { name: "Demo OÜ", slug: "demo" },
+  });
+
   const adminPassword = await hashPassword("DevPassword123!");
   const admin = await prisma.user.upsert({
-    where: { username: "admin" },
+    where: { organizationId_username: { organizationId: organization.id, username: "admin" } },
     update: {},
     create: {
+      organizationId: organization.id,
       username: "admin",
       password: adminPassword,
       email: "admin@example.test",
@@ -22,9 +29,10 @@ async function main() {
 
   const employeePassword = await hashPassword("DevPassword123!");
   await prisma.user.upsert({
-    where: { username: "employee" },
+    where: { organizationId_username: { organizationId: organization.id, username: "employee" } },
     update: {},
     create: {
+      organizationId: organization.id,
       username: "employee",
       password: employeePassword,
       email: "employee@example.test",
@@ -42,6 +50,7 @@ async function main() {
     update: { radius: 100_000 },
     create: {
       id: 1,
+      organizationId: organization.id,
       name: "Demo objekt",
       description: "Kohaliku arenduse test-objekt",
       address: "Tallinn, Eesti",
@@ -52,7 +61,7 @@ async function main() {
     },
   });
 
-  console.log("Seed valmis. Kasutajad: admin / employee, parool mõlemal: DevPassword123!");
+  console.log("Seed valmis. Ettevõtte kood: demo. Kasutajad: admin / employee, parool mõlemal: DevPassword123!");
   console.log("Admin id:", admin.id);
 }
 

@@ -6,7 +6,8 @@ import { clearSession, getAccessToken, getStoredUser, setSession } from "./token
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (orgSlug: string, username: string, password: string) => Promise<void>;
+  applySession: (data: LoginResponse) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -26,12 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  async function login(username: string, password: string) {
+  async function login(orgSlug: string, username: string, password: string) {
     const data = await apiRequest<LoginResponse>("/auth/login", {
       method: "POST",
-      body: { username, password },
+      body: { orgSlug, username, password },
       auth: false,
     });
+    await applySession(data);
+  }
+
+  async function applySession(data: LoginResponse) {
     await setSession(data.accessToken, data.refreshToken, data.user);
     setUser(data.user);
   }
@@ -42,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, login, applySession, logout }}>{children}</AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

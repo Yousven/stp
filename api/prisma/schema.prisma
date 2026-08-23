@@ -12,30 +12,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id        Int          @id @default(autoincrement())
+  name      String       @db.VarChar(255)
+  slug      String       @unique @db.VarChar(100)
+  createdAt DateTime     @default(now()) @map("created_at")
+  users     User[]
+  objects   WorkObject[]
+  settings  Setting[]
+
+  @@map("organizations")
+}
+
 model User {
-  id           Int             @id @default(autoincrement())
-  username     String          @unique @db.VarChar(255)
-  password     String          @db.VarChar(255)
-  email        String          @unique @db.VarChar(255)
-  hourlyRate   Decimal         @map("hourly_rate") @db.Decimal(10, 2)
-  advance      Decimal         @db.Decimal(10, 2)
-  role         String          @db.VarChar(20) // "admin" | "employee"
-  timeLogs     TimeLog[]
+  id             Int             @id @default(autoincrement())
+  organizationId Int             @map("organization_id")
+  username       String          @db.VarChar(255)
+  password       String          @db.VarChar(255)
+  email          String          @db.VarChar(255)
+  hourlyRate     Decimal         @map("hourly_rate") @db.Decimal(10, 2)
+  advance        Decimal         @db.Decimal(10, 2)
+  role           String          @db.VarChar(20) // "admin" | "employee"
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  timeLogs       TimeLog[]
   passwordResets PasswordReset[]
 
+  @@unique([organizationId, username])
+  @@unique([organizationId, email])
   @@map("users")
 }
 
 model WorkObject {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  address     String?   @db.VarChar(255)
-  latitude    Decimal   @db.Decimal(10, 7)
-  longitude   Decimal   @db.Decimal(10, 7)
-  radius      Int
-  deleted     Boolean   @default(false)
-  timeLogs    TimeLog[]
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @map("organization_id")
+  name           String       @db.VarChar(255)
+  description    String?      @db.Text
+  address        String?      @db.VarChar(255)
+  latitude       Decimal      @db.Decimal(10, 7)
+  longitude      Decimal      @db.Decimal(10, 7)
+  radius         Int
+  deleted        Boolean      @default(false)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  timeLogs       TimeLog[]
 
   @@map("objects")
 }
@@ -59,9 +77,12 @@ model TimeLog {
 }
 
 model Setting {
-  key   String @id @map("setting_key") @db.VarChar(100)
-  value String @map("setting_value") @db.Text
+  organizationId Int          @map("organization_id")
+  key            String       @map("setting_key") @db.VarChar(100)
+  value          String       @map("setting_value") @db.Text
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
+  @@id([organizationId, key])
   @@map("settings")
 }
 

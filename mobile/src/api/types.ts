@@ -44,10 +44,17 @@ export interface AuthUser {
   role: "admin" | "employee";
 }
 
+export interface AuthOrganization {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   user: AuthUser;
+  organization: AuthOrganization;
 }
 
 export interface HistoryResponse {

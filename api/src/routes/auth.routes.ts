@@ -3,13 +3,13 @@ import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { verifyPassword } from "../utils/password.js";
+import { hashPassword, validatePasswordPolicy, verifyPassword } from "../utils/password.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/tokens.js";
 import { HttpError } from "../middleware/errorHandler.js";
 
 export const authRouter = Router();
 
-// Kaitse jõhkra jõu rünnete eest sisselogimisel.
+// Kaitse jõhkra jõu rünnete eest sisselogimisel/registreerumisel.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -17,28 +17,94 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const orgSlugSchema = z
+  .string()
+  .min(2)
+  .max(100)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Ettevõtte kood võib sisaldada ainult väiketähti, numbreid ja sidekriipse.");
+
 const loginSchema = z.object({
+  orgSlug: orgSlugSchema,
   username: z.string().min(1),
   password: z.string().min(1),
 });
 
-// Port: public/authenticate.php
+// Port: public/authenticate.php (+ ettevõtte-skoop multi-tenant arhitektuuris)
 authRouter.post(
   "/login",
   loginLimiter,
   asyncHandler(async (req, res) => {
-    const { username, password } = loginSchema.parse(req.body);
+    const { orgSlug, username, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    // Sama üldine veateade nii vale org-koodi kui vale kasutajanime/parooli
+    // korral, et mitte lekitada, millised ettevõtte koodid eksisteerivad.
+    const invalidCredentials = () => new HttpError(401, "Vale ettevõtte kood, kasutajanimi või parool.");
+
+    const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+    if (!organization) throw invalidCredentials();
+
+    const user = await prisma.user.findUnique({
+      where: { organizationId_username: { organizationId: organization.id, username } },
+    });
     if (!user || !(await verifyPassword(password, user.password))) {
-      throw new HttpError(401, "Vale kasutajanimi või parool.");
+      throw invalidCredentials();
     }
 
-    const payload = { sub: user.id, username: user.username, role: user.role };
+    const payload = { sub: user.id, organizationId: user.organizationId, username: user.username, role: user.role };
     res.json({
       accessToken: signAccessToken(payload),
       refreshToken: signRefreshToken(payload),
       user: { id: user.id, username: user.username, role: user.role },
+      organization: { id: organization.id, name: organization.name, slug: organization.slug },
+    });
+  })
+);
+
+const registerOrgSchema = z.object({
+  orgName: z.string().min(1).max(255),
+  orgSlug: orgSlugSchema,
+  adminUsername: z.string().min(1).max(255),
+  adminEmail: z.string().email(),
+  adminPassword: z.string().min(1),
+});
+
+// Isetenindus-registreerumine: loob uue ettevõtte + esimese admin-kasutaja.
+authRouter.post(
+  "/register-organization",
+  loginLimiter,
+  asyncHandler(async (req, res) => {
+    const { orgName, orgSlug, adminUsername, adminEmail, adminPassword } = registerOrgSchema.parse(req.body);
+
+    const passwordError = validatePasswordPolicy(adminPassword);
+    if (passwordError) throw new HttpError(400, passwordError);
+
+    const existing = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+    if (existing) throw new HttpError(409, "See ettevõtte kood on juba kasutusel.");
+
+    const hashed = await hashPassword(adminPassword);
+
+    const { organization, user } = await prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({ data: { name: orgName, slug: orgSlug } });
+      const user = await tx.user.create({
+        data: {
+          organizationId: organization.id,
+          username: adminUsername,
+          email: adminEmail,
+          password: hashed,
+          hourlyRate: 0,
+          advance: 0,
+          role: "admin",
+        },
+      });
+      return { organization, user };
+    });
+
+    const payload = { sub: user.id, organizationId: user.organizationId, username: user.username, role: user.role };
+    res.status(201).json({
+      accessToken: signAccessToken(payload),
+      refreshToken: signRefreshToken(payload),
+      user: { id: user.id, username: user.username, role: user.role },
+      organization: { id: organization.id, name: organization.name, slug: organization.slug },
     });
   })
 );
@@ -55,8 +121,8 @@ authRouter.post(
     } catch {
       throw new HttpError(401, "Refresh-token on vale või aegunud.");
     }
-    const { sub, username, role } = payload;
-    res.json({ accessToken: signAccessToken({ sub, username, role }) });
+    const { sub, organizationId, username, role } = payload;
+    res.json({ accessToken: signAccessToken({ sub, organizationId, username, role }) });
   })
 );
 

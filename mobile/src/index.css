@@ -77,6 +77,12 @@ h2 {
   margin: 0 0 1rem;
 }
 
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);

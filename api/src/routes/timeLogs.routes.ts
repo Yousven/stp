@@ -19,8 +19,11 @@ timeLogsRouter.post(
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
-    // (objects.deleted) — mõistlik äriloogika täiendus, mida originaal ei teinud.
-    const object = await prisma.workObject.findFirst({ where: { id: objectId, deleted: false } });
+    // (objects.deleted) ega kuuluks mõnele teisele ettevõttele — mõlemad on
+    // täiendused, mida originaal (üksiku ettevõtte rakendus) ei vajanud.
+    const object = await prisma.workObject.findFirst({
+      where: { id: objectId, organizationId: req.user!.organizationId, deleted: false },
+    });
     if (!object) {
       throw new HttpError(404, "Valitud objekti ei leitud.");
     }

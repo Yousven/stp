@@ -3,6 +3,7 @@ import { env } from "../env.js";
 
 export interface AuthTokenPayload {
   sub: number;
+  organizationId: number;
   username: string;
   role: string;
 }

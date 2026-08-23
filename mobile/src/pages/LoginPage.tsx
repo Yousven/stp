@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [orgSlug, setOrgSlug] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,7 +17,7 @@ export function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await login(username, password);
+      await login(orgSlug, username, password);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sisselogimine ebaõnnestus.");
@@ -32,8 +33,12 @@ export function LoginPage() {
         <p className="subtitle">Logi sisse</p>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
+          Ettevõtte kood
+          <input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} required autoFocus />
+        </label>
+        <label>
           Kasutajanimi
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
           Parool
@@ -43,6 +48,9 @@ export function LoginPage() {
           {submitting ? "Palun oota..." : "Logi sisse"}
         </button>
       </form>
+      <Link to="/register" className="btn btn-link" style={{ alignSelf: "center" }}>
+        Registreeri oma ettevõte
+      </Link>
     </div>
   );
 }

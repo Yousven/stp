@@ -108,6 +108,11 @@ export function DashboardPage() {
         <Link className="btn btn-secondary" to="/history">
           Tööajalugu
         </Link>
+        {user?.role === "admin" && (
+          <Link className="btn btn-secondary" to="/objects/new">
+            Lisa objekt
+          </Link>
+        )}
       </nav>
     </div>
   );
