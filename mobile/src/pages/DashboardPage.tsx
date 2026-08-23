@@ -116,6 +116,12 @@ export function DashboardPage() {
             <Link className="btn btn-secondary" to="/admin/users">
               Halda kasutajaid
             </Link>
+            <Link className="btn btn-secondary" to="/admin/team-performance">
+              Meeskonna ülevaade
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/settings">
+              Seaded
+            </Link>
           </>
         )}
       </nav>

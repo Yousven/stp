@@ -11,6 +11,8 @@ import { AdminObjectsPage } from "./pages/AdminObjectsPage";
 import { ObjectFormPage } from "./pages/ObjectFormPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { UserFormPage } from "./pages/UserFormPage";
+import { TeamPerformancePage } from "./pages/TeamPerformancePage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 export default function App() {
   return (
@@ -95,6 +97,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <UserFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/team-performance"
+          element={
+            <ProtectedRoute>
+              <TeamPerformancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
