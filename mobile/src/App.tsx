@@ -7,7 +7,10 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { StartWorkPage } from "./pages/StartWorkPage";
 import { EndWorkPage } from "./pages/EndWorkPage";
 import { HistoryPage } from "./pages/HistoryPage";
-import { CreateObjectPage } from "./pages/CreateObjectPage";
+import { AdminObjectsPage } from "./pages/AdminObjectsPage";
+import { ObjectFormPage } from "./pages/ObjectFormPage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { UserFormPage } from "./pages/UserFormPage";
 
 export default function App() {
   return (
@@ -48,10 +51,50 @@ export default function App() {
           }
         />
         <Route
-          path="/objects/new"
+          path="/admin/objects"
           element={
             <ProtectedRoute>
-              <CreateObjectPage />
+              <AdminObjectsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/objects/new"
+          element={
+            <ProtectedRoute>
+              <ObjectFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/objects/:id/edit"
+          element={
+            <ProtectedRoute>
+              <ObjectFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/new"
+          element={
+            <ProtectedRoute>
+              <UserFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:id/edit"
+          element={
+            <ProtectedRoute>
+              <UserFormPage />
             </ProtectedRoute>
           }
         />

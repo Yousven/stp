@@ -52,7 +52,7 @@ export function RegisterOrganizationPage() {
         auth: false,
       });
       await applySession(data);
-      navigate("/objects/new", { replace: true });
+      navigate("/admin/objects/new", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registreerimine ebaõnnestus.");
     } finally {

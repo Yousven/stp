@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { hoursBetween } from "../utils/timeStats.js";
@@ -113,6 +113,34 @@ timeLogsRouter.get(
     });
 
     res.json({ logs: result, totalHours: round2(totalHours) });
+  })
+);
+
+const adminUpdateSchema = z.object({
+  workDuration: z.number().optional(),
+  lunch: z.number().optional(),
+  travelDuration: z.number().optional(),
+});
+
+// Port: public/update_work_log.php (admin muudab käsitsi päeva tunde/lõunat/sõiduaega)
+timeLogsRouter.patch(
+  "/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const { workDuration, lunch, travelDuration } = adminUpdateSchema.parse(req.body);
+
+    const log = await prisma.timeLog.findFirst({
+      where: { id, user: { organizationId: req.user!.organizationId } },
+    });
+    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+
+    const updated = await prisma.timeLog.update({
+      where: { id },
+      data: { manualWorkDuration: workDuration, lunch, travelDuration },
+      include: { object: true },
+    });
+    res.json(updated);
   })
 );
 

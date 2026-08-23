@@ -61,3 +61,12 @@ export interface HistoryResponse {
   logs: TimeLog[];
   totalHours: number;
 }
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  hourlyRate: string;
+  advance: string;
+  role: "admin" | "employee";
+}

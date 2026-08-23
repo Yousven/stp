@@ -69,6 +69,7 @@ model TimeLog {
   comment        String?     @db.Text
   travelDuration Decimal?    @map("travel_duration") @db.Decimal(5, 2)
   lunch          Decimal?    @db.Decimal(5, 2)
+  manualWorkDuration Decimal? @map("manual_work_duration") @db.Decimal(5, 2)
 
   user   User       @relation(fields: [userId], references: [id])
   object WorkObject @relation(fields: [objectId], references: [id])

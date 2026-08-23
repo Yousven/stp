@@ -109,9 +109,14 @@ export function DashboardPage() {
           Tööajalugu
         </Link>
         {user?.role === "admin" && (
-          <Link className="btn btn-secondary" to="/objects/new">
-            Lisa objekt
-          </Link>
+          <>
+            <Link className="btn btn-secondary" to="/admin/objects">
+              Halda objekte
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/users">
+              Halda kasutajaid
+            </Link>
+          </>
         )}
       </nav>
     </div>
