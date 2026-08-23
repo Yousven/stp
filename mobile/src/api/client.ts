@@ -1,6 +1,6 @@
 import { clearSession, getAccessToken, getRefreshToken, setAccessToken } from "../auth/tokenStore";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
 
 export class ApiError extends Error {
   status: number;
@@ -75,4 +75,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+// Failide allalaadimislingid (raportid) ei saa fetch/blob kaudu käia
+// usaldusväärselt WebView-des, seega avatakse need lihtsalt navigeerimisega
+// (window.open) — token käib ?token= parameetrina, vt api/src/middleware/auth.ts.
+export async function buildDownloadUrl(path: string, params: Record<string, string | undefined> = {}): Promise<string> {
+  const token = await getAccessToken();
+  const search = new URLSearchParams();
+  if (token) search.set("token", token);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  return `${API_BASE}${path}?${search.toString()}`;
 }

@@ -122,6 +122,9 @@ export function DashboardPage() {
             <Link className="btn btn-secondary" to="/admin/settings">
               Seaded
             </Link>
+            <Link className="btn btn-secondary" to="/admin/reports">
+              Raportid
+            </Link>
           </>
         )}
       </nav>

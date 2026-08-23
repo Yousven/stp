@@ -13,6 +13,7 @@ import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { UserFormPage } from "./pages/UserFormPage";
 import { TeamPerformancePage } from "./pages/TeamPerformancePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ReportsPage } from "./pages/ReportsPage";
 
 export default function App() {
   return (
@@ -113,6 +114,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

@@ -12,6 +12,7 @@ COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/assets ./assets
 RUN npx prisma generate
 EXPOSE 3000
 CMD ["node", "dist/server.js"]

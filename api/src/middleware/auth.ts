@@ -12,12 +12,18 @@ declare global {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  // Failide allalaadimislingid (nt raportid) ei saa Authorization päist
+  // seada, seega lubame tokeni ka ?token= parameetrina. Kasutatakse ainult
+  // lühikese elueaga access token'itega, mitte refresh token'itega.
+  const queryToken = typeof req.query.token === "string" ? req.query.token : undefined;
+  const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : queryToken;
+
+  if (!token) {
     res.status(401).json({ error: "Autentimine puudub." });
     return;
   }
   try {
-    req.user = verifyAccessToken(header.slice("Bearer ".length));
+    req.user = verifyAccessToken(token);
     next();
   } catch {
     res.status(401).json({ error: "Token on vale või aegunud." });
