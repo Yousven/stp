@@ -4,12 +4,20 @@ import { apiRequest } from "../api/client";
 import type { DashboardResponse } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { useGeofence } from "../hooks/useGeofence";
+import {
+  checkBackgroundPermission,
+  requestBackgroundPermission,
+  useBackgroundGeofence,
+} from "../hooks/useBackgroundGeofence";
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState("");
   const [presence, setPresence] = useState<{ inside: boolean; distanceMeters: number } | null>(null);
+  const [backgroundPermission, setBackgroundPermission] = useState<
+    "granted" | "denied" | "prompt" | "unsupported" | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -29,6 +37,20 @@ export function DashboardPage() {
     load();
   });
 
+  // Natiivne taustajälgimine: registreerib objekti OS-i valvesse ja tõstab
+  // seadmes kogunenud sündmused serverisse äpi avamisel.
+  useBackgroundGeofence(data?.activeLog ?? null, load);
+
+  useEffect(() => {
+    checkBackgroundPermission().then(setBackgroundPermission);
+  }, [data?.activeLog?.id]);
+
+  async function enableBackgroundTracking() {
+    const result = await requestBackgroundPermission();
+    setBackgroundPermission(result);
+    if (result === "granted") load();
+  }
+
   if (error) return <div className="page">{error}</div>;
   if (!data) return <div className="page-loading">Laadin...</div>;
 
@@ -47,6 +69,16 @@ export function DashboardPage() {
         <div className="alert alert-error">
           Oled objektist {presence.distanceMeters} m kaugusel — tööaja arvestus on peatatud. Kell jookseb edasi, kui
           naased objektile.
+        </div>
+      )}
+
+      {activeLog && (backgroundPermission === "prompt" || backgroundPermission === "denied") && (
+        <div className="alert alert-info">
+          Luba asukoht ka taustal, siis märgitakse objektilt lahkumine ja naasmine automaatselt ka suletud rakenduse
+          korral. Asukohta ei jälgita pidevalt — ainult objekti piiri ületamisel, seega akut see praktiliselt ei kuluta.
+          <button className="btn btn-link" style={{ padding: "0.35rem 0" }} onClick={enableBackgroundTracking}>
+            Luba taustal
+          </button>
         </div>
       )}
 

@@ -7,15 +7,47 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 ## Ekraanid
 
 - Login → Dashboard (aktiivne/viimane töölogi, kuu kokkuvõte)
-- Alusta tööpäeva (objekti valik)
+- Alusta tööpäeva (objekti valik, nõuab asukohta)
 - Lõpeta tööpäev (kommentaar, sõidu-/lõunaaeg)
 - Tööajalugu (filtreeritav nimekiri, kokku tunnid)
+- Admin: objektid, kasutajad, meeskonna ülevaade, seaded, raportid
 
-Geofencing (`src/hooks/useGeofence.ts`) kontrollib praegu **esiplaanil**
-asukohta dashboard'i avamisel, pariteet praeguse veebirakendusega —
-sama Haversine valem, mis `dashboard.php`-s. Taustal töötav (native
-background-geolocation) versioon on järgmine samm, kui äppi saab
-päris seadmel testida.
+## Kohaloleku kontroll (petmisvastane tuum)
+
+Kaks kihti, mis peavad koos töötama:
+
+1. **Sisseregistreerimine** (`src/pages/StartWorkPage.tsx`) küsib asukoha
+   ja saadab selle serverisse; **server kontrollib** kaugust objektist ja
+   keeldub, kui oled väljas (`api/src/routes/timeLogs.routes.ts`). Kuna
+   kontroll on serveris, ei aita äpi muutmine ega kontrolli vahelejätmine.
+2. **Kohaloleku jälgimine** salvestab ENTER/EXIT sündmusi; tunnid
+   arvutatakse nende intervallide summana (`api/src/utils/timeStats.ts`,
+   ühikutestid `timeStats.test.ts`). Objektilt lahkumine **peatab kella**,
+   ei lõpeta tööpäeva.
+
+Jälgimisel on omakorda kaks režiimi:
+
+- **Esiplaanil** (`src/hooks/useGeofence.ts`) — kontroll dashboard'i
+  avamisel. Töötab alati, ka ilma taustaloata ja veebis.
+- **Taustal** (`src/hooks/useBackgroundGeofence.ts` + natiivne plugin) —
+  OS valvab ringi ise ja äratab äpi ainult piiri ületamisel. Töötab ka
+  siis, kui äpp on täielikult suletud.
+
+### Miks taustajälgimine akut ei söö
+
+Plugin EI polli GPS-i. Ta registreerib ühe ringi OS-ile
+(iOS `CLLocationManager.startMonitoring(for: CLCircularRegion)`,
+Android Play Services `GeofencingClient`) ja OS kasutab piiri valvamiseks
+odavaid signaale (mobiilimastid/WiFi), äratades äpi ainult siis, kui piir
+tegelikult ületatakse. Kui kunagi ilmub aku-kaebusi, kontrolli esimesena,
+ega kuskile pole tekkinud pidevat `watchPosition`/`requestLocationUpdates`
+kutset — see oleks päris põhjus, mitte region monitoring.
+
+Natiivne pool ei tee ise HTTP-päringuid: sündmused lähevad seadmes
+järjekorda (`GeofenceQueue.java` / `UserDefaults` iOS-il) ja JS tõstab need
+serverisse äpi avamisel. Nii ei pea JWT/refresh loogikat kolmes kohas
+dubleerima. Sündmustel on OS-i ajatempel, seega hiline üleslaadimine ei
+moonuta tunde — halvim tagajärg on, et admin näeb andmeid viivitusega.
 
 ## Kohalik arendus (brauseris)
 

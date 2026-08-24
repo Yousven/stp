@@ -26,6 +26,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Rakendus vajab asukohta, et kontrollida, kas oled tööobjekti juures (tööpäeva alustamine/lõpetamine).</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Rakendus märgib automaatselt, millal sa tööobjektile saabud ja sealt lahkud, et tööaeg oleks õige ka siis, kui rakendus on suletud. Asukohta kontrollitakse ainult objekti piiri ületamisel, mitte pidevalt.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
