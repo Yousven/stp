@@ -17,14 +17,29 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const orgSlugSchema = z
-  .string()
-  .min(2)
-  .max(100)
-  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Ettevõtte kood võib sisaldada ainult väiketähti, numbreid ja sidekriipse.");
+// Registreerimisel kehtiv, range vorming (kanooniline slug on alati väiketäht).
+// Suurtähtede sisestus normaliseeritakse enne regex-kontrolli, mitte ei
+// lükata tagasi — nii saab kasutaja kirjutada "TarMel-Ehitus" ja slug'iks
+// saab ikkagi "tarmel-ehitus".
+const orgSlugSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.toLowerCase() : v),
+  z
+    .string()
+    .min(2)
+    .max(100)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Ettevõtte kood võib sisaldada ainult tähti, numbreid ja sidekriipse.")
+);
+
+// Sisselogimisel ei pea kasutaja sisestama slug'i täpselt sama juhtumiga,
+// mis see loomisel salvestati — normaliseerime siin ainult võrdluseks,
+// ilma vormingu regex-i peale sundimata.
+const loginOrgSlugSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.toLowerCase() : v),
+  z.string().min(1)
+);
 
 const loginSchema = z.object({
-  orgSlug: orgSlugSchema,
+  orgSlug: loginOrgSlugSchema,
   username: z.string().min(1),
   password: z.string().min(1),
 });
@@ -43,6 +58,9 @@ authRouter.post(
     const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
     if (!organization) throw invalidCredentials();
 
+    // MySQL-i vaikimisi tähemärjastik (utf8mb4_unicode_ci) on juba
+    // suur-/väiketähetundetu, seega vastab see päring nt "Admin" ja "ADMIN"
+    // sõltumata sellest, mis juhtumiga kasutajanimi algselt loodi.
     const user = await prisma.user.findUnique({
       where: { organizationId_username: { organizationId: organization.id, username } },
     });

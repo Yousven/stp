@@ -9,6 +9,7 @@ export function DashboardPage() {
   const { user, logout } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState("");
+  const [autoEndMessage, setAutoEndMessage] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -23,7 +24,10 @@ export function DashboardPage() {
     load();
   }, [load]);
 
-  useGeofence(data?.activeLog ?? null, load);
+  useGeofence(data?.activeLog ?? null, (message) => {
+    setAutoEndMessage(message);
+    load();
+  });
 
   if (error) return <div className="page">{error}</div>;
   if (!data) return <div className="page-loading">Laadin...</div>;
@@ -38,6 +42,15 @@ export function DashboardPage() {
           Logi välja
         </button>
       </header>
+
+      {autoEndMessage && (
+        <div className="alert alert-error">
+          {autoEndMessage}
+          <button className="btn btn-link" style={{ padding: 0, marginLeft: "0.5rem" }} onClick={() => setAutoEndMessage("")}>
+            Sulge
+          </button>
+        </div>
+      )}
 
       <section className="card">
         {activeLog ? (

@@ -20,7 +20,7 @@ function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number):
 // ainult siis, kui vaade on lahti). Taustal töötav kontroll (native
 // background-geolocation plugin) lisandub Faas 2 järgmises etapis, kui
 // äpp on Android/iOS seadmes testitav.
-export function useGeofence(activeLog: TimeLog | null, onAutoEnded: () => void) {
+export function useGeofence(activeLog: TimeLog | null, onAutoEnded: (message: string) => void) {
   useEffect(() => {
     if (!activeLog) return;
     const { latitude, longitude, radius } = activeLog.object;
@@ -30,7 +30,14 @@ export function useGeofence(activeLog: TimeLog | null, onAutoEnded: () => void) 
 
     (async () => {
       try {
-        const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
+        // enableHighAccuracy + maximumAge: 0 sunnib värske GPS-fikseeringu,
+        // mitte vana/ebatäpse (nt WiFi-põhise) puhverdatud asukoha —
+        // ilma selleta võis auto-lõpetamine käivituda vale positsiooni tõttu.
+        const position = await Geolocation.getCurrentPosition({
+          timeout: 15000,
+          enableHighAccuracy: true,
+          maximumAge: 0,
+        });
         if (cancelled) return;
         const distance = distanceMeters(
           position.coords.latitude,
@@ -39,11 +46,18 @@ export function useGeofence(activeLog: TimeLog | null, onAutoEnded: () => void) 
           Number(longitude)
         );
         if (distance > radius) {
+          const distanceRounded = Math.round(distance);
           await apiRequest(`/time-logs/${activeLog.id}/end`, {
             method: "POST",
-            body: { comment: "Tööpäev lõpetatud automaatselt kuna töötaja oli raadiusest väljas" },
+            body: {
+              comment: `Tööpäev lõpetatud automaatselt: asukoht ${distanceRounded} m objektist (lubatud ${radius} m).`,
+            },
           });
-          if (!cancelled) onAutoEnded();
+          if (!cancelled) {
+            onAutoEnded(
+              `Tööpäev lõpetati automaatselt, kuna olid objektist ${distanceRounded} m kaugusel (lubatud raadius ${radius} m).`
+            );
+          }
         }
       } catch (err) {
         console.error("Geolokatsiooni viga:", err);

@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject } from "../api/types";
+import { AddressMapPicker } from "../components/AddressMapPicker";
+import { useAddressSearch } from "../hooks/useAddressSearch";
 
 // Objekti loomise/muutmise vorm — kui URL-is on :id, laeb olemasoleva
 // objekti ja teeb PATCH, muidu POST uue loomiseks.
@@ -12,6 +14,7 @@ export function ObjectFormPage() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [description, setDescription] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -19,6 +22,8 @@ export function ObjectFormPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
+
+  const suggestions = useAddressSearch(showSuggestions ? address : "");
 
   useEffect(() => {
     if (!isEdit) return;
@@ -39,6 +44,18 @@ export function ObjectFormPage() {
       .catch(() => setError("Objekti laadimine ebaõnnestus."))
       .finally(() => setLoading(false));
   }, [id, isEdit]);
+
+  function selectSuggestion(displayName: string, lat: number, lon: number) {
+    setAddress(displayName);
+    setLatitude(String(lat));
+    setLongitude(String(lon));
+    setShowSuggestions(false);
+  }
+
+  function handleMapChange(lat: number, lon: number) {
+    setLatitude(String(round6(lat)));
+    setLongitude(String(round6(lon)));
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -68,6 +85,9 @@ export function ObjectFormPage() {
 
   if (loading) return <div className="page-loading">Laadin...</div>;
 
+  const parsedLat = latitude !== "" ? Number(latitude) : null;
+  const parsedLon = longitude !== "" ? Number(longitude) : null;
+
   return (
     <div className="page">
       <h1>{isEdit ? "Muuda objekti" : "Lisa objekt"}</h1>
@@ -77,14 +97,36 @@ export function ObjectFormPage() {
           Objekti nimi
           <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </label>
-        <label>
+        <label className="address-field">
           Aadress
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
+          <input
+            value={address}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            placeholder="Hakka kirjutama aadressi..."
+            autoComplete="off"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="suggestions">
+              {suggestions.map((s, i) => (
+                <div
+                  key={i}
+                  className="suggestion-item"
+                  onMouseDown={() => selectSuggestion(s.displayName, s.latitude, s.longitude)}
+                >
+                  {s.displayName}
+                </div>
+              ))}
+            </div>
+          )}
         </label>
-        <label>
-          Kirjeldus
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
-        </label>
+        <div className="form-hint">Vali aadress loendist või täpsusta asukohta kaardil.</div>
+
+        <AddressMapPicker latitude={parsedLat} longitude={parsedLon} onChange={handleMapChange} />
+
         <label>
           Latitude
           <input type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} required />
@@ -100,6 +142,10 @@ export function ObjectFormPage() {
           />
         </label>
         <label>
+          Kirjeldus
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+        </label>
+        <label>
           Lubatud raadius (m)
           <input type="number" min="1" value={radius} onChange={(e) => setRadius(e.target.value)} required />
         </label>
@@ -112,4 +158,8 @@ export function ObjectFormPage() {
       </button>
     </div>
   );
+}
+
+function round6(n: number): number {
+  return Math.round(n * 1e6) / 1e6;
 }
