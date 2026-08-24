@@ -31,6 +31,9 @@ export function HistoryPage() {
                 <div>{new Date(log.startTime).toLocaleString("et-EE")}</div>
                 <div>{log.endTime ? new Date(log.endTime).toLocaleString("et-EE") : "Aktiivne"}</div>
                 <div>{log.durationHours != null ? `${log.durationHours} h` : "—"}</div>
+                {log.awayHours != null && log.awayHours > 0 && (
+                  <div className="subtitle">Objektilt eemal: {log.awayHours} h</div>
+                )}
                 {log.comment && <div className="log-comment">{log.comment}</div>}
               </li>
             ))}

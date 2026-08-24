@@ -9,7 +9,7 @@ export function DashboardPage() {
   const { user, logout } = useAuth();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState("");
-  const [autoEndMessage, setAutoEndMessage] = useState("");
+  const [presence, setPresence] = useState<{ inside: boolean; distanceMeters: number } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -24,8 +24,8 @@ export function DashboardPage() {
     load();
   }, [load]);
 
-  useGeofence(data?.activeLog ?? null, (message) => {
-    setAutoEndMessage(message);
+  useGeofence(data?.activeLog ?? null, (status) => {
+    setPresence(status);
     load();
   });
 
@@ -43,19 +43,19 @@ export function DashboardPage() {
         </button>
       </header>
 
-      {autoEndMessage && (
+      {activeLog && presence && !presence.inside && (
         <div className="alert alert-error">
-          {autoEndMessage}
-          <button className="btn btn-link" style={{ padding: 0, marginLeft: "0.5rem" }} onClick={() => setAutoEndMessage("")}>
-            Sulge
-          </button>
+          Oled objektist {presence.distanceMeters} m kaugusel — tööaja arvestus on peatatud. Kell jookseb edasi, kui
+          naased objektile.
         </div>
       )}
 
       <section className="card">
         {activeLog ? (
           <>
-            <h2 className="text-success">Tööle registreeritud</h2>
+            <h2 className={presence && !presence.inside ? "" : "text-success"}>
+              {presence && !presence.inside ? "Tööpäev avatud (objektilt eemal)" : "Tööle registreeritud"}
+            </h2>
             <p>
               <strong>Objekt:</strong> {activeLog.object.name}
               <br />

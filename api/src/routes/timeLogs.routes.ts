@@ -4,18 +4,30 @@ import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
-import { hoursBetween } from "../utils/timeStats.js";
+import { computeWorkedHours } from "../utils/timeStats.js";
+import { distanceMeters } from "../utils/geofence.js";
 
 export const timeLogsRouter = Router();
 timeLogsRouter.use(requireAuth);
 
-const startSchema = z.object({ objectId: z.number().int().positive() });
+// GPS-i ebatäpsuse varu: telefon võib teatada asukoha kuni ~paarikümne
+// meetrise veaga, seega lubame raadiusele lisaks seadme enda teatatud
+// täpsuse (kuni 100 m), et objekti servas seisev töötaja ei jääks kinni.
+const MAX_ACCURACY_ALLOWANCE_METERS = 100;
 
-// Port: public/start_work_action.php
+const startSchema = z.object({
+  objectId: z.number().int().positive(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().nonnegative().optional(),
+});
+
+// Port: public/start_work_action.php (+ serveripoolne asukoha kontroll,
+// mida originaalis EI olnud — seal sai sisse registreerida kust tahes).
 timeLogsRouter.post(
   "/start",
   asyncHandler(async (req, res) => {
-    const { objectId } = startSchema.parse(req.body);
+    const { objectId, latitude, longitude, accuracy } = startSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
@@ -28,16 +40,92 @@ timeLogsRouter.post(
       throw new HttpError(404, "Valitud objekti ei leitud.");
     }
 
+    // Asukoha kontroll serveri poolel: klient ei saa seda vahele jätta ega
+    // võltsida lihtsalt kontrolli välja kommenteerides.
+    const distance = distanceMeters(latitude, longitude, Number(object.latitude), Number(object.longitude));
+    const allowance = Math.min(accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
+    if (distance > object.radius + allowance) {
+      throw new HttpError(
+        403,
+        `Sa oled objektist ${Math.round(distance)} m kaugusel (lubatud ${object.radius} m). ` +
+          "Tööpäeva saab alustada ainult objektil kohapeal."
+      );
+    }
+
     const activeLog = await prisma.timeLog.findFirst({ where: { userId, endTime: null } });
     if (activeLog) {
       throw new HttpError(409, "Tööpäev on juba alustatud. Palun lõpetage olemasolev tööpäev enne uue alustamist.");
     }
 
+    const startTime = new Date();
     const log = await prisma.timeLog.create({
-      data: { userId, objectId, startTime: new Date() },
-      include: { object: true },
+      data: {
+        userId,
+        objectId,
+        startTime,
+        startLatitude: latitude,
+        startLongitude: longitude,
+        // Sisseregistreerimine ise on esimene kohaloleku tõend.
+        presenceEvents: {
+          create: { type: "ENTER", occurredAt: startTime, latitude, longitude, accuracy, source: "manual" },
+        },
+      },
+      include: { object: true, presenceEvents: true },
     });
     res.status(201).json(log);
+  })
+);
+
+const presenceEventsSchema = z.object({
+  events: z
+    .array(
+      z.object({
+        type: z.enum(["ENTER", "EXIT"]),
+        occurredAt: z.string().datetime(),
+        latitude: z.number().min(-90).max(90).optional(),
+        longitude: z.number().min(-180).max(180).optional(),
+        accuracy: z.number().nonnegative().optional(),
+        source: z.enum(["manual", "foreground", "native"]).optional().default("foreground"),
+      })
+    )
+    .min(1)
+    .max(200),
+});
+
+// Kohaloleku sündmuste üleslaadimine. Natiivne taustajälgimine (Etapp B)
+// kogub sündmused seadmes järjekorda ja saadab need partiidena, kui äpp
+// järgmine kord avatakse — seetõttu peab see olema idempotentne.
+timeLogsRouter.post(
+  "/:id/presence-events",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const { events } = presenceEventsSchema.parse(req.body);
+    const userId = req.user!.sub;
+
+    const log = await prisma.timeLog.findFirst({ where: { id, userId } });
+    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+
+    // skipDuplicates + @@unique([timeLogId, type, occurredAt]) teeb korduva
+    // partii saatmise ohutuks: juba salvestatud sündmused jäetakse vahele.
+    const result = await prisma.presenceEvent.createMany({
+      data: events.map((e) => ({
+        timeLogId: id,
+        type: e.type,
+        occurredAt: new Date(e.occurredAt),
+        latitude: e.latitude,
+        longitude: e.longitude,
+        accuracy: e.accuracy,
+        source: e.source,
+      })),
+      skipDuplicates: true,
+    });
+
+    const updated = await prisma.timeLog.findUniqueOrThrow({
+      where: { id },
+      include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
+    });
+
+    res.json({ accepted: result.count, skipped: events.length - result.count, log: withHours(updated) });
   })
 );
 
@@ -63,12 +151,21 @@ timeLogsRouter.post(
       throw new HttpError(409, "Aktiivset töölogi ei leitud. Tööpäev pole alustatud või on juba lõpetatud.");
     }
 
+    const endTime = new Date();
     const updated = await prisma.timeLog.update({
       where: { id },
-      data: { endTime: new Date(), comment, travelDuration, lunch },
-      include: { object: true },
+      data: {
+        endTime,
+        comment,
+        travelDuration,
+        lunch,
+        // Väljaregistreerimine lõpetab kohaloleku — ilma selleta jääks
+        // viimane ENTER lahtiseks ja tunnid loeksid lõpuni kohalolekuks.
+        presenceEvents: { create: { type: "EXIT", occurredAt: endTime, source: "manual" } },
+      },
+      include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
-    res.json(updated);
+    res.json(withHours(updated));
   })
 );
 
@@ -99,17 +196,14 @@ timeLogsRouter.get(
           : {}),
       },
       orderBy: { startTime: "desc" },
-      include: { object: true },
+      include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
 
     let totalHours = 0;
     const result = logs.map((log) => {
-      let durationHours: number | null = null;
-      if (log.endTime) {
-        durationHours = hoursBetween(log.startTime, log.endTime) - Number(log.lunch ?? 0);
-        totalHours += durationHours;
-      }
-      return { ...log, durationHours: durationHours !== null ? round2(durationHours) : null };
+      const withComputed = withHours(log);
+      if (log.endTime) totalHours += withComputed.durationHours ?? 0;
+      return withComputed;
     });
 
     res.json({ logs: result, totalHours: round2(totalHours) });
@@ -138,12 +232,39 @@ timeLogsRouter.patch(
     const updated = await prisma.timeLog.update({
       where: { id },
       data: { manualWorkDuration: workDuration, lunch, travelDuration },
-      include: { object: true },
+      include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
-    res.json(updated);
+    res.json(withHours(updated));
   })
 );
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+type LogWithEvents = {
+  startTime: Date;
+  endTime: Date | null;
+  lunch: unknown;
+  manualWorkDuration?: unknown;
+  presenceEvents?: Array<{ type: string; occurredAt: Date }>;
+};
+
+/**
+ * Lisab töölogile arvutatud tunnid. `durationHours` on kohaloleku põhjal
+ * arvutatud netotunnid; `awayHours` näitab, kui palju sellest tööpäevast
+ * viibiti objektist väljas (admin näeb erinevust kestuse ja kohaloleku vahel).
+ *
+ * Admini käsitsi määratud `manualWorkDuration` võidab automaatika — see on
+ * mõeldud just erandite parandamiseks (nt katkine GPS).
+ */
+export function withHours<T extends LogWithEvents>(log: T) {
+  const { net, gross, awayHours } = computeWorkedHours(log);
+  const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
+  return {
+    ...log,
+    durationHours: log.endTime ? (manual ?? net) : null,
+    grossHours: log.endTime ? gross : null,
+    awayHours: log.endTime ? awayHours : null,
+  };
 }

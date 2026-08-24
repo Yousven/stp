@@ -1,13 +1,20 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { Geolocation } from "@capacitor/geolocation";
 import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject } from "../api/types";
+
+const LOCATION_REQUIRED_MESSAGE =
+  "Tööpäeva alustamiseks on vaja asukoha luba, et kinnitada, et oled objektil. " +
+  "Luba asukoha kasutamine seadetes ja proovi uuesti.";
 
 export function StartWorkPage() {
   const navigate = useNavigate();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -24,12 +31,60 @@ export function StartWorkPage() {
     if (objectId === "") return;
     setError("");
     setSubmitting(true);
+
     try {
-      await apiRequest("/time-logs/start", { method: "POST", body: { objectId } });
+      // Asukoht on kohustuslik: server kontrollib, et oled päriselt objektil.
+      // Ilma loata ei saa tööpäeva alustada — see on kogu süsteemi mõte.
+      setStatus("Kontrollin asukohta...");
+
+      // checkPermissions/requestPermissions on olemas ainult natiivsel
+      // platvormil; veebis viskab plugin "Not implemented on web" ja seal
+      // küsib loa brauser ise getCurrentPosition'i käigus.
+      if (Capacitor.isNativePlatform()) {
+        const permission = await Geolocation.checkPermissions();
+        if (permission.location !== "granted") {
+          const requested = await Geolocation.requestPermissions();
+          if (requested.location !== "granted") {
+            throw new Error(LOCATION_REQUIRED_MESSAGE);
+          }
+        }
+      }
+
+      let position;
+      try {
+        position = await Geolocation.getCurrentPosition({
+          timeout: 20000,
+          enableHighAccuracy: true,
+          maximumAge: 0,
+        });
+      } catch {
+        // Kõige tavalisem põhjus on keelatud luba või välja lülitatud GPS —
+        // mõlemal juhul on kasutajale vaja sama selgitust, mitte plugina
+        // sisemist veateadet.
+        throw new Error(LOCATION_REQUIRED_MESSAGE);
+      }
+
+      setStatus("Registreerin tööpäeva...");
+      await apiRequest("/time-logs/start", {
+        method: "POST",
+        body: {
+          objectId,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        },
+      });
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tööpäeva alustamine ebaõnnestus.");
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Tööpäeva alustamine ebaõnnestus.");
+      }
     } finally {
+      setStatus("");
       setSubmitting(false);
     }
   }
@@ -49,8 +104,9 @@ export function StartWorkPage() {
             ))}
           </select>
         </label>
+        <div className="form-hint">Tööpäeva saab alustada ainult objektil kohapeal — asukohta kontrollitakse.</div>
         <button type="submit" className="btn btn-primary" disabled={submitting || objectId === ""}>
-          {submitting ? "Palun oota..." : "Alusta tööpäeva"}
+          {submitting ? status || "Palun oota..." : "Alusta tööpäeva"}
         </button>
       </form>
       <button className="btn btn-link" onClick={() => navigate(-1)}>

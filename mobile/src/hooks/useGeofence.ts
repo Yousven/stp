@@ -1,9 +1,14 @@
 import { Geolocation } from "@capacitor/geolocation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { apiRequest } from "../api/client";
 import type { TimeLog } from "../api/types";
 
 const EARTH_RADIUS_METERS = 6371000;
+
+// GPS-i ebatäpsuse varu, sama loogika mis serveris (timeLogs.routes.ts):
+// telefoni teatatud täpsus lisatakse raadiusele, et objekti servas seistes
+// ei hakkaks kohalolek edasi-tagasi võbelema.
+const MAX_ACCURACY_ALLOWANCE_METERS = 100;
 
 // Port originaalse dashboard.php brauseri-JS Haversine valemist.
 function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -16,13 +21,32 @@ function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number):
   return EARTH_RADIUS_METERS * c;
 }
 
-// Esiplaani geofence-kontroll: pariteet praeguse veebirakendusega (kontroll
-// ainult siis, kui vaade on lahti). Taustal töötav kontroll (native
-// background-geolocation plugin) lisandub Faas 2 järgmises etapis, kui
-// äpp on Android/iOS seadmes testitav.
-export function useGeofence(activeLog: TimeLog | null, onAutoEnded: (message: string) => void) {
+export interface PresenceStatus {
+  inside: boolean;
+  distanceMeters: number;
+}
+
+/**
+ * Esiplaani kohaloleku kontroll: kui Dashboard on lahti, kontrollib kus
+ * töötaja on, ja saadab ENTER/EXIT sündmuse, kui olek on muutunud.
+ *
+ * Tööpäeva EI lõpetata enam automaatselt — lahkumisel kell lihtsalt peatub
+ * (väljas viibitud aeg ei lähe tundide sisse) ja naasmisel jookseb edasi.
+ * Nii ei pea töötaja iga poeskäigu järel uuesti sisse registreerima.
+ *
+ * Taustal (kui äpp on kinni) töötav jälgimine tuleb natiivse pluginaga —
+ * seni katab see hook ainult ajad, mil äpp on avatud.
+ */
+export function useGeofence(activeLog: TimeLog | null, onPresenceChange: (status: PresenceStatus) => void) {
+  const lastInsideRef = useRef<boolean | null>(null);
+  const onChangeRef = useRef(onPresenceChange);
+  onChangeRef.current = onPresenceChange;
+
   useEffect(() => {
-    if (!activeLog) return;
+    if (!activeLog) {
+      lastInsideRef.current = null;
+      return;
+    }
     const { latitude, longitude, radius } = activeLog.object;
     if (latitude == null || longitude == null || radius == null) return;
 
@@ -30,35 +54,46 @@ export function useGeofence(activeLog: TimeLog | null, onAutoEnded: (message: st
 
     (async () => {
       try {
-        // enableHighAccuracy + maximumAge: 0 sunnib värske GPS-fikseeringu,
-        // mitte vana/ebatäpse (nt WiFi-põhise) puhverdatud asukoha —
-        // ilma selleta võis auto-lõpetamine käivituda vale positsiooni tõttu.
         const position = await Geolocation.getCurrentPosition({
           timeout: 15000,
           enableHighAccuracy: true,
           maximumAge: 0,
         });
         if (cancelled) return;
+
         const distance = distanceMeters(
           position.coords.latitude,
           position.coords.longitude,
           Number(latitude),
           Number(longitude)
         );
-        if (distance > radius) {
-          const distanceRounded = Math.round(distance);
-          await apiRequest(`/time-logs/${activeLog.id}/end`, {
+        const allowance = Math.min(position.coords.accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
+        const inside = distance <= radius + allowance;
+
+        // Saada sündmus ainult siis, kui olek tegelikult muutus — muidu
+        // tekiks iga dashboardi avamisega uus duplikaat.
+        const previous = lastInsideRef.current;
+        lastInsideRef.current = inside;
+
+        if (previous !== null && previous !== inside) {
+          await apiRequest(`/time-logs/${activeLog.id}/presence-events`, {
             method: "POST",
             body: {
-              comment: `Tööpäev lõpetatud automaatselt: asukoht ${distanceRounded} m objektist (lubatud ${radius} m).`,
+              events: [
+                {
+                  type: inside ? "ENTER" : "EXIT",
+                  occurredAt: new Date().toISOString(),
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy: position.coords.accuracy,
+                  source: "foreground",
+                },
+              ],
             },
           });
-          if (!cancelled) {
-            onAutoEnded(
-              `Tööpäev lõpetati automaatselt, kuna olid objektist ${distanceRounded} m kaugusel (lubatud raadius ${radius} m).`
-            );
-          }
         }
+
+        if (!cancelled) onChangeRef.current({ inside, distanceMeters: Math.round(distance) });
       } catch (err) {
         console.error("Geolokatsiooni viga:", err);
       }

@@ -71,10 +71,34 @@ model TimeLog {
   lunch          Decimal?    @db.Decimal(5, 2)
   manualWorkDuration Decimal? @map("manual_work_duration") @db.Decimal(5, 2)
 
-  user   User       @relation(fields: [userId], references: [id])
-  object WorkObject @relation(fields: [objectId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  object         WorkObject      @relation(fields: [objectId], references: [id])
+  presenceEvents PresenceEvent[]
 
   @@map("time_logs")
+}
+
+// Append-only kohaloleku sündmuste logi: iga objekti raadiusesse
+// sisenemine/väljumine. Petmisvastase tööriista puhul on auditijälg
+// olulisem kui kompaktne "kokku väljas X minutit" loendur — admin peab
+// hiljem nägema, millal täpselt lahkuti ja naasti.
+model PresenceEvent {
+  id         Int      @id @default(autoincrement())
+  timeLogId  Int      @map("time_log_id")
+  type       String   @db.VarChar(10) // "ENTER" | "EXIT"
+  occurredAt DateTime @map("occurred_at")
+  latitude   Decimal? @db.Decimal(10, 7)
+  longitude  Decimal? @db.Decimal(10, 7)
+  accuracy   Decimal? @db.Decimal(10, 2)
+  source     String   @db.VarChar(20) // "manual" | "foreground" | "native"
+
+  timeLog TimeLog @relation(fields: [timeLogId], references: [id], onDelete: Cascade)
+
+  // Idempotentsus: natiivne järjekord võib sama sündmuse partii korduvalt
+  // saata (nt kui üleslaadimine katkes pärast serveri kirjutamist).
+  @@unique([timeLogId, type, occurredAt])
+  @@index([timeLogId, occurredAt])
+  @@map("presence_events")
 }
 
 model Setting {

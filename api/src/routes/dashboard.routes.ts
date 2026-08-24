@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { hoursBetween, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
+import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
 
 export const dashboardRouter = Router();
 
@@ -28,15 +28,18 @@ dashboardRouter.get(
         });
 
     const { start, end } = monthRange();
-    // HUOM: originaal (dashboard.php) EI lahuta siin lõunat, erinevalt
-    // work_history.php koguarvestusest, mis lahutab. Käitumine on siia
-    // teadlikult üle kantud muutmata kujul — kontrolli äriga, kas see
-    // lahknevus on tahtlik enne kui sellele toetuda.
+    // Kuu tunnid arvutatakse nüüd kohaloleku põhjal (computeWorkedHours),
+    // sama helperiga mis tööajalugu ja raportid — varem oli siin oma valem,
+    // mis erines ajaloost (ei lahutanud lõunat) ja andis suurema tulemuse.
     const finishedLogsThisMonth = await prisma.timeLog.findMany({
       where: { userId, endTime: { not: null }, startTime: { gte: start, lte: end } },
+      include: { presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
     const totalHours = round2(
-      finishedLogsThisMonth.reduce((sum, log) => sum + hoursBetween(log.startTime, log.endTime!), 0)
+      finishedLogsThisMonth.reduce((sum, log) => {
+        const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
+        return sum + (manual ?? computeWorkedHours(log).net);
+      }, 0)
     );
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });

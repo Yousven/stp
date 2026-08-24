@@ -9,6 +9,16 @@ export interface WorkObject {
   deleted: boolean;
 }
 
+export interface PresenceEvent {
+  id: number;
+  type: "ENTER" | "EXIT";
+  occurredAt: string;
+  latitude: string | null;
+  longitude: string | null;
+  accuracy: string | null;
+  source: "manual" | "foreground" | "native";
+}
+
 export interface TimeLog {
   id: number;
   userId: number;
@@ -19,7 +29,13 @@ export interface TimeLog {
   travelDuration: string | null;
   lunch: string | null;
   object: WorkObject;
+  presenceEvents?: PresenceEvent[];
+  /** Kohaloleku põhjal arvutatud netotunnid (lõuna maha arvatud). */
   durationHours?: number | null;
+  /** Tööpäeva kogukestus algusest lõpuni, sõltumata kohalolekust. */
+  grossHours?: number | null;
+  /** Tööpäeva jooksul objektist eemal viibitud aeg. */
+  awayHours?: number | null;
 }
 
 export interface MonthSummary {

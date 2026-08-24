@@ -8,7 +8,7 @@ import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { hoursBetween } from "../utils/timeStats.js";
+import { computeWorkedHours } from "../utils/timeStats.js";
 
 export const reportsRouter = Router();
 reportsRouter.use(requireAuth, requireAdmin);
@@ -43,12 +43,29 @@ async function fetchReportLogs(organizationId: number, filters: z.infer<typeof r
         : {}),
     },
     orderBy: { startTime: "desc" },
-    include: { user: true, object: true },
+    include: { user: true, object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
   });
 }
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+type ReportLog = Awaited<ReturnType<typeof fetchReportLogs>>[number];
+
+// Ühine tundide arvutus mõlemale ekspordile: kohaloleku põhjal, admini
+// käsitsi määratud väärtus (manualWorkDuration) võidab automaatika.
+function reportHours(log: ReportLog) {
+  if (!log.endTime) return { gross: null, net: null, away: null, earnings: null };
+  const { net, gross, awayHours } = computeWorkedHours(log);
+  const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
+  const effectiveNet = manual ?? net;
+  return {
+    gross: round2(gross),
+    net: round2(effectiveNet),
+    away: round2(awayHours),
+    earnings: round2(effectiveNet * Number(log.user.hourlyRate)),
+  };
 }
 
 // Port: public/export_report_excel.php
@@ -67,24 +84,24 @@ reportsRouter.get(
       { header: "Lõppes", key: "end", width: 20 },
       { header: "Brutotunnid", key: "gross", width: 14 },
       { header: "Lõuna (tunnid)", key: "lunch", width: 14 },
+      { header: "Objektilt eemal (t)", key: "away", width: 18 },
       { header: "Netotunnid", key: "net", width: 14 },
       { header: "Tulu (€)", key: "earnings", width: 14 },
       { header: "Kommentaar", key: "comment", width: 30 },
     ];
 
     for (const log of logs) {
-      const lunch = Number(log.lunch ?? 0);
-      const gross = log.endTime ? hoursBetween(log.startTime, log.endTime) : null;
-      const net = gross !== null ? gross - lunch : null;
+      const hours = reportHours(log);
       sheet.addRow({
         username: log.user.username,
         object: log.object.name,
         start: log.startTime.toISOString().slice(0, 19).replace("T", " "),
         end: log.endTime ? log.endTime.toISOString().slice(0, 19).replace("T", " ") : "Aktiivne",
-        gross: gross !== null ? round2(gross) : "",
-        lunch: gross !== null ? lunch : "",
-        net: net !== null ? round2(net) : "",
-        earnings: net !== null ? round2(net * Number(log.user.hourlyRate)) : "",
+        gross: hours.gross ?? "",
+        lunch: log.endTime ? Number(log.lunch ?? 0) : "",
+        away: hours.away ?? "",
+        net: hours.net ?? "",
+        earnings: hours.earnings ?? "",
         comment: log.comment ?? "",
       });
     }
@@ -114,16 +131,15 @@ reportsRouter.get(
     const logs = await fetchReportLogs(req.user!.organizationId, filters);
 
     const rows = logs.map((log) => {
-      const lunch = Number(log.lunch ?? 0);
-      const duration = log.endTime ? hoursBetween(log.startTime, log.endTime) - lunch : null;
-      const earnings = duration !== null ? round2(duration * Number(log.user.hourlyRate)) : null;
+      const hours = reportHours(log);
       return [
         log.user.username,
         log.object.name,
         log.startTime.toISOString().slice(0, 19).replace("T", " "),
         log.endTime ? log.endTime.toISOString().slice(0, 19).replace("T", " ") : "Aktiivne",
-        duration !== null ? String(round2(duration)) : "Aktiivne",
-        earnings !== null ? String(earnings) : "-",
+        hours.net !== null ? String(hours.net) : "Aktiivne",
+        hours.away !== null ? String(hours.away) : "-",
+        hours.earnings !== null ? String(hours.earnings) : "-",
         log.comment ?? "",
       ];
     });
@@ -135,12 +151,11 @@ reportsRouter.get(
         {
           table: {
             headerRows: 1,
-            widths: ["auto", "auto", "auto", "auto", "auto", "auto", "*"],
+            widths: ["auto", "auto", "auto", "auto", "auto", "auto", "auto", "*"],
             body: [
-              ["Töötaja", "Objekt", "Alustas", "Lõppes", "Töötunnid", "Tulu (€)", "Kommentaar"].map((text) => ({
-                text,
-                bold: true,
-              })),
+              ["Töötaja", "Objekt", "Alustas", "Lõppes", "Töötunnid", "Eemal (t)", "Tulu (€)", "Kommentaar"].map(
+                (text) => ({ text, bold: true })
+              ),
               ...rows,
             ],
           },

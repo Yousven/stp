@@ -2,14 +2,14 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { hoursBetween, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
+import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
 
 export const teamPerformanceRouter = Router();
 teamPerformanceRouter.use(requireAuth, requireAdmin);
 
 // Port: public/team_performance.php
-// HUOM: nagu originaalis, ei lahutata siin lõunat (erinevalt work_history.php-st)
-// — vt sama märkus dashboard.routes.ts-is.
+// Tunnid arvutatakse kohaloleku põhjal (computeWorkedHours), sama helperiga
+// mis dashboard/ajalugu/raportid.
 teamPerformanceRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -22,7 +22,13 @@ teamPerformanceRouter.get(
         username: true,
         timeLogs: {
           where: { endTime: { not: null }, startTime: { gte: start, lte: end } },
-          select: { startTime: true, endTime: true },
+          select: {
+            startTime: true,
+            endTime: true,
+            lunch: true,
+            manualWorkDuration: true,
+            presenceEvents: { select: { type: true, occurredAt: true }, orderBy: { occurredAt: "asc" } },
+          },
         },
       },
       orderBy: { username: "asc" },
@@ -31,7 +37,10 @@ teamPerformanceRouter.get(
     let totalTeamHours = 0;
     const performance = users.map((user) => {
       const actualHours = round2(
-        user.timeLogs.reduce((sum, log) => sum + hoursBetween(log.startTime, log.endTime!), 0)
+        user.timeLogs.reduce((sum, log) => {
+          const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
+          return sum + (manual ?? computeWorkedHours(log).net);
+        }, 0)
       );
       totalTeamHours += actualHours;
       return {
