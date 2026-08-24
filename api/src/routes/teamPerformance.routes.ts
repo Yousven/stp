@@ -17,7 +17,9 @@ teamPerformanceRouter.get(
     const monthlyTarget = monthlyTargetHours();
 
     const users = await prisma.user.findMany({
-      where: { organizationId: req.user!.organizationId },
+      // Ainult aktiivsed: ootel/tagasi lükatud taotlused ei ole veel
+      // töötajad ja rikuksid meeskonna statistikat nullidega.
+      where: { organizationId: req.user!.organizationId, status: "active" },
       select: {
         username: true,
         timeLogs: {

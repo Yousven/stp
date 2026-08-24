@@ -72,6 +72,15 @@ export function DashboardPage() {
         </div>
       )}
 
+      {user?.role === "admin" && (data.pendingRequests ?? 0) > 0 && (
+        <Link to="/admin/requests" className="alert alert-info" style={{ display: "block", textDecoration: "none" }}>
+          <strong>
+            {data.pendingRequests} uus liitumistaotlus{(data.pendingRequests ?? 0) > 1 ? "t" : ""}
+          </strong>{" "}
+          ootab kinnitamist — vajuta siia.
+        </Link>
+      )}
+
       {activeLog && (backgroundPermission === "prompt" || backgroundPermission === "denied") && (
         <div className="alert alert-info">
           Luba asukoht ka taustal, siis märgitakse objektilt lahkumine ja naasmine automaatselt ka suletud rakenduse
@@ -160,6 +169,9 @@ export function DashboardPage() {
             </Link>
             <Link className="btn btn-secondary" to="/admin/users">
               Halda kasutajaid
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/requests">
+              Liitumistaotlused{(data.pendingRequests ?? 0) > 0 ? ` (${data.pendingRequests})` : ""}
             </Link>
             <Link className="btn btn-secondary" to="/admin/team-performance">
               Meeskonna ülevaade

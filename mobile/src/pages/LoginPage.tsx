@@ -48,6 +48,9 @@ export function LoginPage() {
           {submitting ? "Palun oota..." : "Logi sisse"}
         </button>
       </form>
+      <Link to="/join" className="btn btn-link" style={{ alignSelf: "center" }}>
+        Liitu ettevõttega
+      </Link>
       <Link to="/register" className="btn btn-link" style={{ alignSelf: "center" }}>
         Registreeri oma ettevõte
       </Link>

@@ -51,9 +51,17 @@ dashboardRouter.get(
     const monthlyTarget = monthlyTargetHours();
     const progress = monthlyTarget > 0 ? Math.min(Math.round((totalHours / monthlyTarget) * 100), 100) : 0;
 
+    // Admin näeb dashboardil, kui keegi ootab liitumise kinnitust — muidu
+    // jääks taotlus märkamatult seisma, kuna keegi ei tea seda otsida.
+    const pendingRequests =
+      req.user!.role === "admin"
+        ? await prisma.user.count({ where: { organizationId: req.user!.organizationId, status: "pending" } })
+        : 0;
+
     res.json({
       activeLog,
       lastFinished,
+      pendingRequests,
       monthSummary: {
         totalHours,
         hourlyRate,

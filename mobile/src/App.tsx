@@ -3,6 +3,8 @@ import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterOrganizationPage } from "./pages/RegisterOrganizationPage";
+import { RequestAccessPage } from "./pages/RequestAccessPage";
+import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { StartWorkPage } from "./pages/StartWorkPage";
 import { EndWorkPage } from "./pages/EndWorkPage";
@@ -21,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterOrganizationPage />} />
+        <Route path="/join" element={<RequestAccessPage />} />
         <Route
           path="/dashboard"
           element={
@@ -114,6 +117,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/requests"
+          element={
+            <ProtectedRoute>
+              <PendingRequestsPage />
             </ProtectedRoute>
           }
         />

@@ -33,6 +33,11 @@ model User {
   hourlyRate     Decimal         @map("hourly_rate") @db.Decimal(10, 2)
   advance        Decimal         @db.Decimal(10, 2)
   role           String          @db.VarChar(20) // "admin" | "employee"
+  // "active" | "pending" | "rejected". Vaikimisi "active", et olemasolevad
+  // kasutajad (ja admini enda loodud kontod) töötaksid muutmata kujul —
+  // "pending" tekib ainult isetenindus-liitumistaotlusest.
+  status         String          @default("active") @db.VarChar(20)
+  requestedAt    DateTime?       @map("requested_at")
   organization   Organization    @relation(fields: [organizationId], references: [id])
   timeLogs       TimeLog[]
   passwordResets PasswordReset[]

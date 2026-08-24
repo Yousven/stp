@@ -52,6 +52,8 @@ export interface DashboardResponse {
   activeLog: TimeLog | null;
   lastFinished: TimeLog | null;
   monthSummary: MonthSummary;
+  /** Ootel liitumistaotluste arv (ainult adminile, muidu 0). */
+  pendingRequests?: number;
 }
 
 export interface AuthUser {
@@ -85,4 +87,7 @@ export interface AdminUser {
   hourlyRate: string;
   advance: string;
   role: "admin" | "employee";
+  /** "active" = tavatöötaja; "pending" = ootab liitumise kinnitust. */
+  status?: "active" | "pending" | "rejected";
+  requestedAt?: string | null;
 }

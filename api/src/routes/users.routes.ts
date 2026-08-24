@@ -17,18 +17,88 @@ const userSelect = {
   hourlyRate: true,
   advance: true,
   role: true,
+  status: true,
+  requestedAt: true,
 } satisfies Record<string, boolean>;
 
 // Port: public/admin_users.php
+// Vaikimisi ainult aktiivsed töötajad; ootel taotlused tulevad eraldi
+// endpointist, et need ei seguneks tavanimekirjaga.
 usersRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const users = await prisma.user.findMany({
-      where: { organizationId: req.user!.organizationId },
+      where: { organizationId: req.user!.organizationId, status: "active" },
       select: userSelect,
       orderBy: { username: "asc" },
     });
     res.json(users);
+  })
+);
+
+// Ootel liitumistaotlused (isetenindus-liitumisest).
+usersRouter.get(
+  "/pending",
+  asyncHandler(async (req, res) => {
+    const users = await prisma.user.findMany({
+      where: { organizationId: req.user!.organizationId, status: "pending" },
+      select: userSelect,
+      orderBy: { requestedAt: "asc" },
+    });
+    res.json(users);
+  })
+);
+
+const approveSchema = z.object({
+  hourlyRate: z.number().nonnegative(),
+  advance: z.number().optional().default(0),
+  role: z.enum(["admin", "employee"]).optional().default("employee"),
+});
+
+/**
+ * Kinnitab liitumistaotluse.
+ *
+ * Tunnihind on kinnitamisel KOHUSTUSLIK: taotlus luuakse hinnaga 0 ja kui
+ * admin saaks kinnitada ilma seda määramata, tekiks aktiivne töötaja, kelle
+ * palgaarvestus näitaks vaikselt nulli.
+ */
+usersRouter.post(
+  "/:id/approve",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const { hourlyRate, advance, role } = approveSchema.parse(req.body);
+
+    const pending = await prisma.user.findFirst({
+      where: { id, organizationId: req.user!.organizationId, status: "pending" },
+    });
+    if (!pending) throw new HttpError(404, "Ootel taotlust ei leitud.");
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { status: "active", hourlyRate, advance, role },
+      select: userSelect,
+    });
+    res.json(user);
+  })
+);
+
+usersRouter.post(
+  "/:id/reject",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const pending = await prisma.user.findFirst({
+      where: { id, organizationId: req.user!.organizationId, status: "pending" },
+    });
+    if (!pending) throw new HttpError(404, "Ootel taotlust ei leitud.");
+
+    // Jätame kirje alles "rejected" olekus, mitte ei kustuta — muidu saaks
+    // tagasi lükatud inimene kohe uue taotluse esitada ja adminit spämmida.
+    const user = await prisma.user.update({
+      where: { id },
+      data: { status: "rejected" },
+      select: userSelect,
+    });
+    res.json(user);
   })
 );
 

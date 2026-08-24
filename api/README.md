@@ -34,24 +34,49 @@ Demo kasutajad pärast seedimist: `admin` / `employee`, parool mõlemal
    andmebaasi vastu ilma varunduseta — see rakendus ei loo/kustuta tabeleid
    toodangus, ainult loeb/kirjutab olemasolevaid ridu.
 
-## Teadaolevad lihtsustused (Faas 1 ulatus)
+## Kasutajate liitumine (App Store / Play Store voog)
+
+Kolm teed konto saamiseks, kõik kaetud:
+
+1. **Uus ettevõte** — `POST /auth/register-organization`. Loob organisatsiooni
+   + esimese admini. Kasutaja saab kohe tokenid.
+2. **Liitumistaotlus** — `POST /auth/request-access`. Töötaja sisestab
+   ettevõtte koodi ja loob konto, mis jääb `status: "pending"` olekusse.
+   **Tokeneid ei tagastata** ja login annab 403 kuni admin kinnitab
+   (`POST /users/:id/approve`, kus tunnihind on kohustuslik) või lükkab
+   tagasi (`POST /users/:id/reject`).
+3. **Admin loob otse** — `POST /users`. Konto on kohe `active`.
+
+Ettevõtte kood üksi ei anna ligipääsu — see ütleb ainult, kellelt luba
+küsitakse. Tagasi lükatud taotlus jääb alles `rejected` olekus, et sama
+inimene ei saaks kohe uut taotlust esitada ja adminit spämmida.
+
+`GET /users` tagastab ainult aktiivsed; ootel taotlused on eraldi
+`GET /users/pending`, et need ei seguneks töötajate nimekirjaga.
+`GET /me/dashboard` sisaldab adminile `pendingRequests` loendurit —
+muidu jääks taotlus märkamatult seisma.
+
+## Teadaolevad lihtsustused
 
 - `POST /auth/logout` ei tühista tokeneid serveri poolel (stateless JWT).
   Kui vaja päris tühistamist (nt seadme vargus), lisada hiljem
   refresh-token-registri tabel.
 - Parooli lähtestamine (`forgot-password`/`reset-password`, `password_resets`
-  tabel) ja admini CRUD (kasutajad/objektid) on veel portimata — Faas 3.
-- `GET /me/dashboard` kuu-kokkuvõte ei lahuta lõunapause (port originaalist
-  `dashboard.php`), aga `GET /time-logs` (töölugu) lahutab — see lahknevus
-  on originaalis olemas ja on siia teadlikult üle kantud, mitte parandatud.
+  tabel) on veel portimata — vajab töötavat e-posti serverit.
+- Liitumistaotlusest ei lähe adminile teavitust (e-kiri/push) — ta näeb
+  seda dashboardi loenduris. Push-teavitused on eraldi töö.
 
 ## Struktuur
 
-- `src/routes/auth.routes.ts` — login/refresh/logout
+- `src/routes/auth.routes.ts` — login/refresh/logout, ettevõtte
+  registreerimine, liitumistaotlus
 - `src/routes/dashboard.routes.ts` — koondvaade (port `dashboard.php`)
-- `src/routes/timeLogs.routes.ts` — start/end/ajalugu (port `start_work_action.php`,
-  `end_work_action.php`, `work_history.php`)
-- `src/utils/geofence.ts` — Haversine distants (port dashboardi brauseri-JS-ist)
+- `src/routes/timeLogs.routes.ts` — start/end/ajalugu + kohaloleku sündmused
+- `src/routes/users.routes.ts` — admini kasutajate CRUD + taotluste kinnitamine
+- `src/utils/timeStats.ts` — tundide arvutus kohaloleku põhjal (**ühikutestid
+  `timeStats.test.ts`, `npm test`** — see loogika toidab palgaarvestust)
+- `src/utils/geofence.ts` — Haversine distants, kasutusel serveripoolses
+  sisseregistreerimise kontrollis
 - `src/utils/password.ts` — bcrypt ühilduvus PHP `password_hash()` hashidega
 
 ## Deploy Proxmoxi / serverisse

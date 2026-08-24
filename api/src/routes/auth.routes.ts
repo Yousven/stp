@@ -68,6 +68,18 @@ authRouter.post(
       throw invalidCredentials();
     }
 
+    // Parool on õige, aga liitumistaotlus pole veel läbi vaadatud. Siin võib
+    // anda täpse põhjuse — kasutaja on end juba autentinud, seega infot ei leki.
+    if (user.status === "pending") {
+      throw new HttpError(
+        403,
+        "Sinu liitumistaotlus ootab veel ettevõtte administraatori kinnitust. Proovi hiljem uuesti."
+      );
+    }
+    if (user.status === "rejected") {
+      throw new HttpError(403, "Sinu liitumistaotlus lükati tagasi. Võta ühendust ettevõtte administraatoriga.");
+    }
+
     const payload = { sub: user.id, organizationId: user.organizationId, username: user.username, role: user.role };
     res.json({
       accessToken: signAccessToken(payload),
@@ -123,6 +135,72 @@ authRouter.post(
       refreshToken: signRefreshToken(payload),
       user: { id: user.id, username: user.username, role: user.role },
       organization: { id: organization.id, name: organization.name, slug: organization.slug },
+    });
+  })
+);
+
+const requestAccessSchema = z.object({
+  orgSlug: loginOrgSlugSchema,
+  username: z.string().min(1).max(255),
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+/**
+ * Isetenindus-liitumine olemasoleva ettevõttega.
+ *
+ * Töötaja laeb äpi, sisestab ettevõtte koodi ja loob endale konto; konto
+ * jääb "pending" olekusse kuni ettevõtte admin selle kinnitab. Nii ei pea
+ * admin paroole käsitsi edastama ega töötaja ootama, et talle konto tehtaks.
+ *
+ * Ettevõtte kood üksi ei anna ligipääsu — see ütleb ainult, KELLELT luba
+ * küsitakse. Sisse pääseb alles pärast admini kinnitust.
+ */
+authRouter.post(
+  "/request-access",
+  loginLimiter,
+  asyncHandler(async (req, res) => {
+    const { orgSlug, username, email, password } = requestAccessSchema.parse(req.body);
+
+    const passwordError = validatePasswordPolicy(password);
+    if (passwordError) throw new HttpError(400, passwordError);
+
+    const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+    if (!organization) {
+      throw new HttpError(404, "Sellist ettevõtte koodi ei leitud. Kontrolli koodi oma tööandjalt.");
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { organizationId: organization.id, OR: [{ username }, { email }] },
+    });
+    if (existing) {
+      // Ära lekita, kumb väli kattus ega millises olekus konto on.
+      if (existing.status === "pending") {
+        throw new HttpError(409, "Sellise nimega taotlus on juba esitatud ja ootab kinnitust.");
+      }
+      throw new HttpError(409, "See kasutajanimi või e-mail on selles ettevõttes juba kasutusel.");
+    }
+
+    await prisma.user.create({
+      data: {
+        organizationId: organization.id,
+        username,
+        email,
+        password: await hashPassword(password),
+        hourlyRate: 0,
+        advance: 0,
+        role: "employee",
+        status: "pending",
+        requestedAt: new Date(),
+      },
+    });
+
+    // Tahtlikult EI tagastata tokeneid — kasutaja ei tohi enne kinnitust
+    // midagi teha.
+    res.status(202).json({
+      status: "pending",
+      organization: { name: organization.name, slug: organization.slug },
+      message: "Taotlus saadetud. Ettevõtte administraator peab selle kinnitama, enne kui saad sisse logida.",
     });
   })
 );
