@@ -1,0 +1,15 @@
+# Sõltuvused ja ehitusväljundid on kummagi alamprojekti enda .gitignore'is
+# (api/, mobile/). Siin on ainult see, mis kuulub juurkausta.
+
+# Saladused — .env EI TOHI kunagi gitti jõuda, ainult .env.example.
+.env
+.env.*
+!.env.example
+
+# Vana PHP rakenduse jäänused, kui keegi selle kunagi kohalikult taastab.
+/vendor/
+/logs/
+/tmp/
+composer.lock
+
+.DS_Store
