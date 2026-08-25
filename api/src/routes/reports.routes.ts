@@ -9,7 +9,9 @@ import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { reportLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { computeWorkedHours } from "../utils/timeStats.js";
+import { computeWorkedHours, splitOvertime, type OvertimeRules } from "../utils/timeStats.js";
+import { overtimeRulesFor } from "../utils/orgSettings.js";
+import { env } from "../env.js";
 
 export const reportsRouter = Router();
 // Raportid on kallid (käivad läbi kõik töölogid) — kitsam limiit.
@@ -70,6 +72,43 @@ function reportHours(log: ReportLog) {
   };
 }
 
+/** Kohalik kuupäev YYYY-MM-DD kujul ületundide päeva-/nädalarühmituseks. */
+function localDate(date: Date): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: env.timezone }).format(date);
+}
+
+/**
+ * Ületunnid töötaja kaupa.
+ *
+ * Ületund tekib päeva või nädala normi ületamisest, seega seda EI saa
+ * arvutada üksiku töölogi pealt — tuleb koguda kõik selle töötaja päevad
+ * kokku. Sama päeva mitu logi (eri objektid) liidetakse.
+ */
+function overtimeByUser(logs: ReportLog[], rules: OvertimeRules) {
+  const perUser = new Map<number, Map<string, number>>();
+
+  for (const log of logs) {
+    if (!log.endTime) continue;
+    const hours = reportHours(log).net ?? 0;
+    const day = localDate(log.startTime);
+    const days = perUser.get(log.user.id) ?? new Map<string, number>();
+    days.set(day, (days.get(day) ?? 0) + hours);
+    perUser.set(log.user.id, days);
+  }
+
+  const result = new Map<number, ReturnType<typeof splitOvertime>>();
+  for (const [userId, days] of perUser) {
+    result.set(
+      userId,
+      splitOvertime(
+        [...days.entries()].map(([date, hours]) => ({ date, hours })),
+        rules
+      )
+    );
+  }
+  return result;
+}
+
 // Port: public/export_report_excel.php
 reportsRouter.get(
   "/excel",
@@ -107,6 +146,48 @@ reportsRouter.get(
         comment: log.comment ?? "",
       });
     }
+
+    // Ületunnid eraldi lehel: neid ei saa reakaupa näidata, kuna ületund
+    // tekib päeva/nädala kogusummast, mitte üksikust töölogist.
+    const rules = await overtimeRulesFor(req.user!.organizationId);
+    const overtime = overtimeByUser(logs, rules);
+
+    if (overtime.size > 0) {
+      const summary = workbook.addWorksheet("Ületunnid");
+      summary.columns = [
+        { header: "Töötaja", key: "username", width: 20 },
+        { header: "Tavatunnid", key: "regular", width: 14 },
+        { header: "Ületunnid", key: "overtime", width: 14 },
+        { header: `Tasustatavad tunnid (×${rules.multiplier})`, key: "payable", width: 26 },
+        { header: "Tunnihind (€)", key: "rate", width: 14 },
+        { header: "Tasu kokku (€)", key: "total", width: 16 },
+      ];
+
+      const usersById = new Map(logs.map((l) => [l.user.id, l.user]));
+      for (const [userId, breakdown] of overtime) {
+        const user = usersById.get(userId);
+        if (!user) continue;
+        const rate = Number(user.hourlyRate);
+        summary.addRow({
+          username: user.username,
+          regular: breakdown.regularHours,
+          overtime: breakdown.overtimeHours,
+          payable: breakdown.payableHours,
+          rate,
+          total: round2(breakdown.payableHours * rate),
+        });
+      }
+
+      summary.getRow(1).font = { bold: true };
+      summary.addRow({});
+      summary.addRow({
+        username: "Reeglid:",
+        regular: rules.dailyThreshold > 0 ? `üle ${rules.dailyThreshold}h/päevas` : "päevareegel väljas",
+        overtime: rules.weeklyThreshold > 0 ? `üle ${rules.weeklyThreshold}h/nädalas` : "nädalareegel väljas",
+      });
+    }
+
+    sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
     const filename = `tooajaaruanne_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;

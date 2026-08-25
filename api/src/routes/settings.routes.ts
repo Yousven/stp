@@ -12,6 +12,11 @@ const DEFAULTS: Record<string, string> = {
   check_out_deadline: "18:00:00",
   tolerance: "5",
   admin_email: "admin@example.com",
+  // Ületunnid: kumbki reegel saab olla eraldi väljas ("0"), kuna
+  // ettevõtted lepivad erinevalt kokku. TÖS § 44 kordaja on 1,5.
+  overtime_daily_threshold: "8",
+  overtime_weekly_threshold: "40",
+  overtime_multiplier: "1.5",
 };
 
 // Port: public/admin_settings.php (GET osa)
@@ -24,11 +29,21 @@ settingsRouter.get(
   })
 );
 
+const numericString = (max: number) =>
+  z
+    .string()
+    .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= max, {
+      message: `Väärtus peab olema arv vahemikus 0-${max}`,
+    });
+
 const settingsSchema = z.object({
   check_in_deadline: z.string().min(1),
   check_out_deadline: z.string().min(1),
   tolerance: z.string().min(1),
   admin_email: z.string().email(),
+  overtime_daily_threshold: numericString(24).optional(),
+  overtime_weekly_threshold: numericString(168).optional(),
+  overtime_multiplier: numericString(5).optional(),
 });
 
 // Port: public/admin_settings.php (POST/REPLACE osa)

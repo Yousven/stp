@@ -131,3 +131,83 @@ export function computeWorkedHours(log: WorkLogLike, now: Date = new Date()): Wo
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+// --- Ületunnid ---
+
+export interface OvertimeRules {
+  /** Üle mitme tunni päevas läheb ületunniks (0 = reegel välja lülitatud). */
+  dailyThreshold: number;
+  /** Üle mitme tunni nädalas läheb ületunniks (0 = välja lülitatud). */
+  weeklyThreshold: number;
+  /** Kordaja, TÖS § 44 järgi 1,5. */
+  multiplier: number;
+}
+
+export const DEFAULT_OVERTIME_RULES: OvertimeRules = {
+  dailyThreshold: 8,
+  weeklyThreshold: 40,
+  multiplier: 1.5,
+};
+
+export interface DayHours {
+  /** YYYY-MM-DD kohalikus ajavööndis. */
+  date: string;
+  hours: number;
+}
+
+export interface OvertimeBreakdown {
+  regularHours: number;
+  overtimeHours: number;
+  /** Tasustatavad tunnid kordajaga: regular + overtime × multiplier. */
+  payableHours: number;
+}
+
+/**
+ * Jagab töötatud tunnid tava- ja ületundideks.
+ *
+ * Mõlemad reeglid (päeva- ja nädalapõhine) võivad korraga kehtida, kuna
+ * ettevõtted lepivad erinevalt kokku. Sel juhul EI liideta neid kokku —
+ * võetakse suurem, muidu loetaks sama tund kaks korda ületunniks
+ * (nt 12 h ühel päeval ületab nii päeva- kui nädalanormi).
+ *
+ * Nädalad algavad esmaspäeval (ISO), nagu Eestis tavaks.
+ */
+export function splitOvertime(days: DayHours[], rules: OvertimeRules = DEFAULT_OVERTIME_RULES): OvertimeBreakdown {
+  const totalHours = days.reduce((sum, d) => sum + d.hours, 0);
+
+  let dailyOvertime = 0;
+  if (rules.dailyThreshold > 0) {
+    dailyOvertime = days.reduce((sum, d) => sum + Math.max(d.hours - rules.dailyThreshold, 0), 0);
+  }
+
+  let weeklyOvertime = 0;
+  if (rules.weeklyThreshold > 0) {
+    const byWeek = new Map<string, number>();
+    for (const day of days) {
+      const key = isoWeekKey(day.date);
+      byWeek.set(key, (byWeek.get(key) ?? 0) + day.hours);
+    }
+    for (const weekHours of byWeek.values()) {
+      weeklyOvertime += Math.max(weekHours - rules.weeklyThreshold, 0);
+    }
+  }
+
+  const overtimeHours = round2(Math.min(Math.max(dailyOvertime, weeklyOvertime), totalHours));
+  const regularHours = round2(totalHours - overtimeHours);
+
+  return {
+    regularHours,
+    overtimeHours,
+    payableHours: round2(regularHours + overtimeHours * rules.multiplier),
+  };
+}
+
+/** ISO nädala võti kujul "2026-W35" — nädal algab esmaspäeval. */
+export function isoWeekKey(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  const day = date.getUTCDay() || 7; // pühapäev 0 -> 7
+  date.setUTCDate(date.getUTCDate() + 4 - day); // liigu nädala neljapäevale
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
