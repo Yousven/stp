@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { ApiError, apiRequest } from "../api/client";
-import type { WorkObject } from "../api/types";
+import type { CostCode, WorkObject } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/offlineCache";
@@ -51,6 +51,8 @@ export function StartWorkPage() {
   const navigate = useNavigate();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
+  const [costCodes, setCostCodes] = useState<CostCode[]>([]);
+  const [costCodeId, setCostCodeId] = useState<number | "">("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +77,28 @@ export function StartWorkPage() {
         else setError("Objektide laadimine ebaõnnestus.");
       });
   }, []);
+
+  // Kulukoodid sõltuvad objektist: server tagastab nii objekti omad kui
+  // üldised. Ilma valikuta läheksid kõik tunnid arveldusraportis
+  // "määramata" alla ja kliendile jääks arve esitamata.
+  useEffect(() => {
+    if (objectId === "") return;
+    let cancelled = false;
+    apiRequest<CostCode[]>(`/cost-codes?objectId=${objectId}`)
+      .then((list) => {
+        if (cancelled) return;
+        setCostCodes(list);
+        setCostCodeId("");
+      })
+      .catch(() => {
+        // Levita või seadistamata kulukoodide korral peab alustamine ikka
+        // toimima — see väli on valikuline.
+        if (!cancelled) setCostCodes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [objectId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -113,6 +137,7 @@ export function StartWorkPage() {
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
         mocked,
+        ...(costCodeId === "" ? {} : { costCodeId }),
       };
       const occurredAt = new Date().toISOString();
 
@@ -183,6 +208,22 @@ export function StartWorkPage() {
             ))}
           </select>
         </label>
+        {costCodes.length > 0 && (
+          <label>
+            Töö liik
+            <select
+              value={costCodeId}
+              onChange={(e) => setCostCodeId(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              <option value="">Määramata</option>
+              {costCodes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} — {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="form-hint">Tööpäeva saab alustada ainult objektil kohapeal — asukohta kontrollitakse.</div>
         <button type="submit" className="btn btn-primary" disabled={submitting || objectId === ""}>
           {submitting ? status || "Palun oota..." : "Alusta tööpäeva"}

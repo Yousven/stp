@@ -255,6 +255,9 @@ export function DashboardPage() {
         <Link className="btn btn-secondary" to="/history">
           Tööajalugu
         </Link>
+        <Link className="btn btn-secondary" to="/absences">
+          Puudumised
+        </Link>
         {user?.role === "admin" && (
           <>
             <Link className="btn btn-secondary" to="/admin/objects">
@@ -272,8 +275,17 @@ export function DashboardPage() {
             <Link className="btn btn-secondary" to="/admin/settings">
               Seaded
             </Link>
+            <Link className="btn btn-secondary" to="/admin/cost-codes">
+              Kulukoodid
+            </Link>
             <Link className="btn btn-secondary" to="/admin/reports">
               Raportid
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/billing">
+              Arveldus
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/subscription">
+              Tellimus
             </Link>
           </>
         )}

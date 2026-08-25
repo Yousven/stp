@@ -19,6 +19,10 @@ import { UserFormPage } from "./pages/UserFormPage";
 import { TeamPerformancePage } from "./pages/TeamPerformancePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { AbsencesPage } from "./pages/AbsencesPage";
+import { CostCodesPage } from "./pages/CostCodesPage";
+import { BillingPage } from "./pages/BillingPage";
+import { SubscriptionPage } from "./pages/SubscriptionPage";
 
 /**
  * Peab olema AuthProvideri JA Routeri sees, kuna registreerimine sõltub
@@ -149,6 +153,38 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/absences"
+          element={
+            <ProtectedRoute>
+              <AbsencesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cost-codes"
+          element={
+            <ProtectedRoute>
+              <CostCodesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/billing"
+          element={
+            <ProtectedRoute>
+              <BillingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subscription"
+          element={
+            <ProtectedRoute>
+              <SubscriptionPage />
             </ProtectedRoute>
           }
         />

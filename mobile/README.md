@@ -7,10 +7,15 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 ## Ekraanid
 
 - Login → Dashboard (aktiivne/viimane töölogi, kuu kokkuvõte)
-- Alusta tööpäeva (objekti valik, nõuab asukohta)
+- Alusta tööpäeva (objekti ja töö liigi valik, nõuab asukohta)
 - Lõpeta tööpäev (kommentaar, sõidu-/lõunaaeg)
 - Tööajalugu (filtreeritav nimekiri, kokku tunnid)
-- Admin: objektid, kasutajad, meeskonna ülevaade, seaded, raportid
+- Puudumised (töötaja näeb enda omi; admin lisab ja kustutab)
+- Admin: objektid, kasutajad, meeskonna ülevaade, seaded, raportid,
+  kulukoodid, arveldus, tellimus
+
+Dashboard, objektide loend ja tööpäeva lõpetamine töötavad ka ilma levita —
+vt `src/api/offlineQueue.ts` ja API README peatükki "Töötamine ilma levita".
 
 ## Kohaloleku kontroll (petmisvastane tuum)
 

@@ -91,3 +91,68 @@ export interface AdminUser {
   status?: "active" | "pending" | "rejected";
   requestedAt?: string | null;
 }
+
+export type AbsenceType = "vacation" | "sick" | "unpaid" | "other";
+
+export interface Absence {
+  id: number;
+  userId: number;
+  type: AbsenceType;
+  /** YYYY-MM-DD, kaasa arvatud. */
+  startDate: string;
+  endDate: string;
+  comment: string | null;
+  user: { id: number; username: string };
+}
+
+export interface CostCode {
+  id: number;
+  objectId: number | null;
+  code: string;
+  name: string;
+  /** Kliendile esitatav tunnihind; null = arveldusmäär määramata. */
+  billableRate: string | null;
+  deleted: boolean;
+}
+
+export interface BillingLine {
+  costCode: string;
+  hours: number;
+  rate: number | null;
+  billable: number;
+}
+
+export interface BillingObject {
+  objectId: number;
+  objectName: string;
+  clientName: string | null;
+  budgetHours: number | null;
+  hours: number;
+  /** Eelarvet ületavad tunnid; null kui eelarvet pole määratud. */
+  overBudgetHours: number | null;
+  cost: number;
+  billable: number;
+  margin: number;
+  /** Tunnid ilma arveldusmäärata — need EI ole arvel. */
+  unbilledHours: number;
+  lines: BillingLine[];
+}
+
+export interface BillingResponse {
+  objects: BillingObject[];
+  totals: { hours: number; cost: number; billable: number; margin: number; unbilledHours: number };
+}
+
+export interface SubscriptionState {
+  status: string;
+  seats: number;
+  pricePerSeat: number;
+  monthlyTotal: number;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  billingMode: string;
+  active: boolean;
+  trialDaysLeft: number | null;
+  /** Kas maksete vastuvõtt on serveris seadistatud. */
+  stripeAvailable: boolean;
+}

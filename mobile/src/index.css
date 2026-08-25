@@ -223,6 +223,15 @@ button {
   color: #2e9e5b;
 }
 
+.text-error {
+  color: var(--danger);
+}
+
+/* Puuduv seadistus (nt määramata arveldusmäär) — ei ole viga, aga jätta ei tohi. */
+.text-warning {
+  color: #b26a00;
+}
+
 .stat-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
