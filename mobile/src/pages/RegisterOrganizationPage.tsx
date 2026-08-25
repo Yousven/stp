@@ -52,7 +52,9 @@ export function RegisterOrganizationPage() {
         auth: false,
       });
       await applySession(data);
-      navigate("/admin/objects/new", { replace: true });
+      // Tühi "lisa objekt" vorm ei ütle uuele kasutajale midagi selle kohta,
+      // mida süsteem temalt ootab ja mis järjekorras.
+      navigate("/onboarding", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registreerimine ebaõnnestus.");
     } finally {

@@ -23,6 +23,7 @@ import { AbsencesPage } from "./pages/AbsencesPage";
 import { CostCodesPage } from "./pages/CostCodesPage";
 import { BillingPage } from "./pages/BillingPage";
 import { SubscriptionPage } from "./pages/SubscriptionPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 
 /**
  * Peab olema AuthProvideri JA Routeri sees, kuna registreerimine sõltub
@@ -185,6 +186,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SubscriptionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
             </ProtectedRoute>
           }
         />

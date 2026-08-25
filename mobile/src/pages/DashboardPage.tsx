@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../api/client";
-import type { DashboardResponse } from "../api/types";
+import type { DashboardResponse, OnboardingState } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { useGeofence } from "../hooks/useGeofence";
 import { useOfflineSync } from "../hooks/useOfflineSync";
@@ -25,6 +25,7 @@ export function DashboardPage() {
   // "Lõpeta tööpäev" nupuni ja päev jääks sulgemata.
   const [offlineLog, setOfflineLog] = useState<{ objectName: string; startTime: string } | null>(null);
   const [offline, setOffline] = useState(false);
+  const [onboarding, setOnboarding] = useState<OnboardingState | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -75,6 +76,16 @@ export function DashboardPage() {
   useEffect(() => {
     checkBackgroundPermission().then(setBackgroundPermission);
   }, [data?.activeLog?.id]);
+
+  // Seadistusjuhis jääb silme ette, kuni ettevõte on päriselt töövalmis.
+  // Ilma objektita ei saa keegi tööpäeva alustada, seega vaikselt tühjale
+  // dashboardile jätmine oleks umbtee.
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    apiRequest<OnboardingState>("/me/onboarding")
+      .then(setOnboarding)
+      .catch(() => setOnboarding(null));
+  }, [user?.role, data?.activeLog?.id]);
 
   async function enableBackgroundTracking() {
     const result = await requestBackgroundPermission();
@@ -163,6 +174,18 @@ export function DashboardPage() {
             Sulge
           </button>
         </div>
+      )}
+
+      {onboarding && !onboarding.complete && !onboarding.dismissed && (
+        <Link to="/onboarding" className="alert alert-info" style={{ display: "block", textDecoration: "none" }}>
+          <strong>Ettevõte pole veel töövalmis.</strong>{" "}
+          {!onboarding.hasObject
+            ? "Lisa esimene objekt — ilma selleta ei saa keegi tööpäeva alustada."
+            : !onboarding.hasEmployee
+              ? "Too töötajad süsteemi."
+              : "Proovi ise üks tööpäev läbi."}{" "}
+          Vajuta siia.
+        </Link>
       )}
 
       {user?.role === "admin" && (data.pendingRequests ?? 0) > 0 && (

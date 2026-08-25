@@ -156,3 +156,14 @@ export interface SubscriptionState {
   /** Kas maksete vastuvõtt on serveris seadistatud. */
   stripeAvailable: boolean;
 }
+
+export interface OnboardingState {
+  organization: { name: string; slug: string };
+  hasObject: boolean;
+  hasEmployee: boolean;
+  hasCostCode: boolean;
+  hasTimeLog: boolean;
+  /** Kõik alustamiseks vajalikud sammud tehtud (kulukoodid ei loe). */
+  complete: boolean;
+  dismissed: boolean;
+}

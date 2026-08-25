@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
 import { absentWorkDaysInMonth, holidaysForMonth } from "../utils/workCalendar.js";
@@ -77,6 +77,70 @@ dashboardRouter.get(
         progress,
       },
     });
+  })
+);
+
+const ONBOARDING_DISMISSED_KEY = "onboarding_dismissed";
+
+/**
+ * Uue ettevõtte seadistamise seis.
+ *
+ * Värskelt registreerunud admin ei tea, mida esimesena teha — ilma
+ * objektita ei saa keegi tööpäeva alustada ja ilma töötajateta pole
+ * kellelgi midagi alustada. Sammud tuletatakse päris andmetest, mitte
+ * eraldi lipust, et nimekiri ei saaks tegelikkusest lahku minna.
+ */
+dashboardRouter.get(
+  "/onboarding",
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const organizationId = req.user!.organizationId;
+
+    const [organization, objectCount, employeeCount, costCodeCount, timeLogCount, dismissedRow] = await Promise.all([
+      prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { name: true, slug: true } }),
+      prisma.workObject.count({ where: { organizationId, deleted: false } }),
+      // Admin ise ei ole "kutsutud töötaja" — muidu näiks samm tehtuna
+      // kohe registreerumise järel.
+      prisma.user.count({ where: { organizationId, status: "active", id: { not: req.user!.sub } } }),
+      prisma.costCode.count({ where: { organizationId, deleted: false } }),
+      prisma.timeLog.count({ where: { user: { organizationId } } }),
+      prisma.setting.findUnique({
+        where: { organizationId_key: { organizationId, key: ONBOARDING_DISMISSED_KEY } },
+      }),
+    ]);
+
+    const steps = {
+      hasObject: objectCount > 0,
+      hasEmployee: employeeCount > 0,
+      hasCostCode: costCodeCount > 0,
+      hasTimeLog: timeLogCount > 0,
+    };
+
+    res.json({
+      organization,
+      ...steps,
+      // Kulukoodid on vajalikud ainult kliendiarvelduseks, seega need ei
+      // takista alustamist ega loe "valmis" tingimusse.
+      complete: steps.hasObject && steps.hasEmployee && steps.hasTimeLog,
+      dismissed: dismissedRow?.value === "1",
+    });
+  })
+);
+
+/** Peidab seadistusjuhise, kui admin ei taha seda enam näha. */
+dashboardRouter.post(
+  "/onboarding/dismiss",
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const organizationId = req.user!.organizationId;
+    await prisma.setting.upsert({
+      where: { organizationId_key: { organizationId, key: ONBOARDING_DISMISSED_KEY } },
+      create: { organizationId, key: ONBOARDING_DISMISSED_KEY, value: "1" },
+      update: { value: "1" },
+    });
+    res.status(204).end();
   })
 );
 
