@@ -100,6 +100,10 @@ export async function runRemindersOnce(): Promise<void> {
             role: "employee",
             status: "active",
             timeLogs: { none: { startTime: { gte: start, lte: end } } },
+            // Puhkusel/haiguslehel olija ei tohi saada "registreerimata"
+            // meeldetuletust — see oli originaali käitumine ja tekitaks
+            // põhjendamatuid teateid nii töötajale kui adminile.
+            absences: { none: { startDate: { lte: date }, endDate: { gte: date } } },
           },
           select: { id: true, username: true },
         });

@@ -1,18 +1,49 @@
-// Port dashboard.php dünaamilise kuu eesmärgi arvutusest: loeb tööpäevad
-// (esmaspäev-reede) käesolevast kuust ja korrutab 8 tunniga.
-export function monthlyTargetHours(referenceDate: Date = new Date()): number {
+export interface HolidayLike {
+  date: string; // YYYY-MM-DD
+  shortenedHours?: number | null;
+}
+
+/**
+ * Kuu normtunnid.
+ *
+ * Port dashboard.php arvutusest (tööpäevad E-R × 8), aga riigipühade võrra
+ * korrigeerituna: püha kaotab terve 8-tunnise päeva, lühendatud tööpäev
+ * lahutab ainult oma tundide arvu. Ilma selleta oli norm Eestis
+ * süstemaatiliselt liiga kõrge (12 riigipüha aastas).
+ *
+ * `absentDays` — töötaja puhkuse-/haiguspäevad selles kuus, mis samuti
+ * normi vähendavad, et puhkusel olija ei näeks välja alatäitjana.
+ */
+export function monthlyTargetHours(
+  referenceDate: Date = new Date(),
+  holidays: HolidayLike[] = [],
+  absentWorkDays = 0
+): number {
   const year = referenceDate.getFullYear();
   const month = referenceDate.getMonth();
   const lastDay = new Date(year, month + 1, 0).getDate();
 
-  let workDays = 0;
+  const holidayByDate = new Map(holidays.map((h) => [h.date, h]));
+
+  let hours = 0;
   for (let day = 1; day <= lastDay; day++) {
-    const dayOfWeek = new Date(year, month, day).getDay(); // 0=Sun..6=Sat
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      workDays++;
+    const current = new Date(year, month, day);
+    const dayOfWeek = current.getDay(); // 0=Sun..6=Sat
+    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+    const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const holiday = holidayByDate.get(key);
+
+    if (!holiday) {
+      hours += 8;
+    } else if (holiday.shortenedHours) {
+      // Lühendatud tööpäev: normist läheb maha ainult lühenduse jagu.
+      hours += Math.max(8 - Number(holiday.shortenedHours), 0);
     }
+    // Täispüha: 0 tundi, ei liideta midagi.
   }
-  return workDays * 8;
+
+  return Math.max(hours - absentWorkDays * 8, 0);
 }
 
 export function monthRange(referenceDate: Date = new Date()): { start: Date; end: Date } {

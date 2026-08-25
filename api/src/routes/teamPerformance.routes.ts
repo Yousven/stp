@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
+import { absentWorkDaysInMonth, holidaysForMonth } from "../utils/workCalendar.js";
 
 export const teamPerformanceRouter = Router();
 teamPerformanceRouter.use(requireAuth, requireAdmin);
@@ -14,13 +15,17 @@ teamPerformanceRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const { start, end } = monthRange();
-    const monthlyTarget = monthlyTargetHours();
+    const holidays = await holidaysForMonth(req.user!.organizationId, new Date());
+    // Baasnorm ilma puhkuseta; iga töötaja oma norm arvutatakse allpool,
+    // kuna puhkusepäevad on inimeseti erinevad.
+    const baseTarget = monthlyTargetHours(new Date(), holidays, 0);
 
     const users = await prisma.user.findMany({
       // Ainult aktiivsed: ootel/tagasi lükatud taotlused ei ole veel
       // töötajad ja rikuksid meeskonna statistikat nullidega.
       where: { organizationId: req.user!.organizationId, status: "active" },
       select: {
+        id: true,
         username: true,
         timeLogs: {
           where: { endTime: { not: null }, startTime: { gte: start, lte: end } },
@@ -37,23 +42,32 @@ teamPerformanceRouter.get(
     });
 
     let totalTeamHours = 0;
-    const performance = users.map((user) => {
-      const actualHours = round2(
-        user.timeLogs.reduce((sum, log) => {
-          const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
-          return sum + (manual ?? computeWorkedHours(log).net);
-        }, 0)
-      );
-      totalTeamHours += actualHours;
-      return {
-        username: user.username,
-        norm: monthlyTarget,
-        actual: actualHours,
-        percent: monthlyTarget > 0 ? round2((actualHours / monthlyTarget) * 100) : 0,
-      };
-    });
+    const performance = await Promise.all(
+      users.map(async (user) => {
+        const actualHours = round2(
+          user.timeLogs.reduce((sum, log) => {
+            const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
+            return sum + (manual ?? computeWorkedHours(log).net);
+          }, 0)
+        );
+        totalTeamHours += actualHours;
 
-    res.json({ performance, totalTeamHours: round2(totalTeamHours) });
+        // Igal töötajal oma norm: puhkusel olija norm on väiksem, muidu
+        // näeks ta välja alatäitjana, kuigi tegi kõik ettenähtud päevad.
+        const absentDays = await absentWorkDaysInMonth(user.id, new Date(), holidays);
+        const norm = monthlyTargetHours(new Date(), holidays, absentDays);
+
+        return {
+          username: user.username,
+          norm,
+          absentDays,
+          actual: actualHours,
+          percent: norm > 0 ? round2((actualHours / norm) * 100) : 0,
+        };
+      })
+    );
+
+    res.json({ performance, totalTeamHours: round2(totalTeamHours), baseTarget });
   })
 );
 

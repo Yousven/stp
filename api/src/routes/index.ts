@@ -9,6 +9,7 @@ import { settingsRouter } from "./settings.routes.js";
 import { reportsRouter } from "./reports.routes.js";
 import { deviceTokensRouter } from "./deviceTokens.routes.js";
 import { passwordResetRouter } from "./passwordReset.routes.js";
+import { absencesRouter } from "./absences.routes.js";
 
 export const apiRouter = Router();
 
@@ -23,5 +24,6 @@ apiRouter.use("/time-logs", timeLogsRouter);
 apiRouter.use("/objects", objectsRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/team-performance", teamPerformanceRouter);
+apiRouter.use("/absences", absencesRouter);
 apiRouter.use("/settings", settingsRouter);
 apiRouter.use("/reports", reportsRouter);

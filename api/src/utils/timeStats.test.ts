@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeWorkedHours } from "./timeStats.js";
+import { computeWorkedHours, monthlyTargetHours } from "./timeStats.js";
 
 const H = (hour: number, minute = 0) => new Date(2026, 7, 24, hour, minute, 0);
 
@@ -95,4 +95,39 @@ test("aktiivne (lõpetamata) tööpäev arvestab kuni praeguse hetkeni", () => {
     now
   );
   assert.equal(result.net, 4);
+});
+
+// --- Kuu normtunnid ---
+
+test("kuu norm ilma pühadeta = tööpäevad × 8", () => {
+  // August 2026: 21 tööpäeva (E-R).
+  const target = monthlyTargetHours(new Date(2026, 7, 15), []);
+  assert.equal(target, 21 * 8);
+});
+
+test("riigipüha vähendab normi terve päeva võrra", () => {
+  // 20. august 2026 on neljapäev (taasiseseisvumispäev).
+  const target = monthlyTargetHours(new Date(2026, 7, 15), [{ date: "2026-08-20" }]);
+  assert.equal(target, 20 * 8);
+});
+
+test("nädalavahetusele langev püha ei muuda normi", () => {
+  // 23. august 2026 on pühapäev — ei olnud niikuinii tööpäev.
+  const target = monthlyTargetHours(new Date(2026, 7, 15), [{ date: "2026-08-23" }]);
+  assert.equal(target, 21 * 8);
+});
+
+test("lühendatud tööpäev lahutab ainult lühenduse jagu", () => {
+  const target = monthlyTargetHours(new Date(2026, 7, 15), [{ date: "2026-08-20", shortenedHours: 3 }]);
+  assert.equal(target, 21 * 8 - 3);
+});
+
+test("puhkusepäevad vähendavad normi", () => {
+  const target = monthlyTargetHours(new Date(2026, 7, 15), [], 5);
+  assert.equal(target, 21 * 8 - 5 * 8);
+});
+
+test("norm ei lähe kunagi negatiivseks", () => {
+  const target = monthlyTargetHours(new Date(2026, 7, 15), [], 100);
+  assert.equal(target, 0);
 });

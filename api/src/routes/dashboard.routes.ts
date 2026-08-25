@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
+import { absentWorkDaysInMonth, holidaysForMonth } from "../utils/workCalendar.js";
 
 export const dashboardRouter = Router();
 
@@ -48,7 +49,11 @@ dashboardRouter.get(
     const totalEarnings = round2(totalHours * hourlyRate);
     const netSalary = round2(totalEarnings - advance);
 
-    const monthlyTarget = monthlyTargetHours();
+    // Norm arvestab riigipühi ja töötaja puhkust — muidu näeks puhkusel
+    // olija välja alatäitjana ja püharohke kuu norm oleks liiga kõrge.
+    const holidays = await holidaysForMonth(req.user!.organizationId, new Date());
+    const absentDays = await absentWorkDaysInMonth(userId, new Date(), holidays);
+    const monthlyTarget = monthlyTargetHours(new Date(), holidays, absentDays);
     const progress = monthlyTarget > 0 ? Math.min(Math.round((totalHours / monthlyTarget) * 100), 100) : 0;
 
     // Admin näeb dashboardil, kui keegi ootab liitumise kinnitust — muidu

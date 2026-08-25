@@ -20,6 +20,7 @@ model Organization {
   users     User[]
   objects   WorkObject[]
   settings  Setting[]
+  holidays  Holiday[]
 
   @@map("organizations")
 }
@@ -43,6 +44,7 @@ model User {
   passwordResets  PasswordReset[]
   deviceTokens    DeviceToken[]
   tokenRevocation TokenRevocation?
+  absences        Absence[]
 
   @@unique([organizationId, username])
   @@unique([organizationId, email])
@@ -66,6 +68,55 @@ model DeviceToken {
 
   @@index([userId])
   @@map("device_tokens")
+}
+
+/**
+ * Riigipühad. Kuu norm arvutati varem kui "kõik tööpäevad × 8", mis on
+ * Eestis süstemaatiliselt vale — 12 riigipüha aastas tähendab, et norm
+ * oli mõnel kuul terve tööpäeva võrra liiga kõrge ja töötaja "täitmine %"
+ * seetõttu põhjendamatult madal.
+ *
+ * `organizationId` on nullitav: NULL tähendab riiklikku püha (kehtib
+ * kõigile), täidetud väärtus ettevõtte enda vaba päeva.
+ */
+model Holiday {
+  id             Int           @id @default(autoincrement())
+  organizationId Int?          @map("organization_id")
+  /** YYYY-MM-DD kohalikus ajavööndis. */
+  date           String        @db.VarChar(10)
+  name           String        @db.VarChar(120)
+  /** Lühendatud tööpäev (nt jõululaupäev): mitu tundi normist maha. */
+  shortenedHours Decimal?      @map("shortened_hours") @db.Decimal(4, 2)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date])
+  @@index([date])
+  @@map("holidays")
+}
+
+/**
+ * Puhkus, haigusleht ja muu planeeritud äraolek. Ilma selleta näeb
+ * puhkusel olija välja täpselt nagu see, kes lihtsalt tööle ei tulnud —
+ * ja saab põhjendamatu "registreerimata" meeldetuletuse.
+ */
+model Absence {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  userId         Int      @map("user_id")
+  /** "vacation" | "sick" | "unpaid" | "other" */
+  type           String   @db.VarChar(20)
+  /** Kaasa arvatud, YYYY-MM-DD. */
+  startDate      String   @map("start_date") @db.VarChar(10)
+  endDate        String   @map("end_date") @db.VarChar(10)
+  comment        String?  @db.Text
+  createdById    Int      @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startDate, endDate])
+  @@index([userId])
+  @@map("absences")
 }
 
 /**
