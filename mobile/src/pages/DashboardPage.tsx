@@ -4,6 +4,9 @@ import { apiRequest } from "../api/client";
 import type { DashboardResponse } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { useGeofence } from "../hooks/useGeofence";
+import { useOfflineSync } from "../hooks/useOfflineSync";
+import { clearActiveLog, readActiveLog, writeActiveLog } from "../api/offlineCache";
+import { isOfflineError } from "../api/offlineQueue";
 import {
   checkBackgroundPermission,
   requestBackgroundPermission,
@@ -18,13 +21,38 @@ export function DashboardPage() {
   const [backgroundPermission, setBackgroundPermission] = useState<
     "granted" | "denied" | "prompt" | "unsupported" | null
   >(null);
+  // Levita kuvatakse vahemälust: muidu ei jõuaks töötaja siit üldse
+  // "Lõpeta tööpäev" nupuni ja päev jääks sulgemata.
+  const [offlineLog, setOfflineLog] = useState<{ objectName: string; startTime: string } | null>(null);
+  const [offline, setOffline] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await apiRequest<DashboardResponse>("/me/dashboard");
       setData(res);
-    } catch {
-      setError("Andmete laadimine ebaõnnestus.");
+      setError("");
+      setOfflineLog(null);
+      setOffline(false);
+      if (res.activeLog) {
+        await writeActiveLog({
+          logId: res.activeLog.id,
+          objectName: res.activeLog.object.name,
+          startTime: res.activeLog.startTime,
+        });
+      } else {
+        await clearActiveLog();
+      }
+    } catch (err) {
+      if (!isOfflineError(err)) {
+        setError("Andmete laadimine ebaõnnestus.");
+        return;
+      }
+      // Ühenduseta: tööpäeva peab saama nii alustada kui lõpetada, seega
+      // näitame vahemälu ka siis, kui aktiivset tööpäeva ei ole.
+      const cached = await readActiveLog();
+      setOfflineLog(cached ? { objectName: cached.objectName, startTime: cached.startTime } : null);
+      setOffline(true);
+      setError("");
     }
   }, []);
 
@@ -41,6 +69,9 @@ export function DashboardPage() {
   // seadmes kogunenud sündmused serverisse äpi avamisel.
   useBackgroundGeofence(data?.activeLog ?? null, load);
 
+  // Offline salvestatud tegevused saadetakse ära, kui võrk taastub.
+  const { pending: offlinePending, lastResult: offlineResult, clearResult } = useOfflineSync(load);
+
   useEffect(() => {
     checkBackgroundPermission().then(setBackgroundPermission);
   }, [data?.activeLog?.id]);
@@ -52,6 +83,47 @@ export function DashboardPage() {
   }
 
   if (error) return <div className="page">{error}</div>;
+
+  // Ühenduseta vaade: ainult see, mis on telefonis teada, ja tee tööpäeva
+  // lõpetamiseni. Kuu kokkuvõtet ei saa arvutada ilma serverita.
+  if (!data && offline) {
+    return (
+      <div className="page">
+        <header className="topbar">
+          <h1>Tere, {user?.username}!</h1>
+        </header>
+        <div className="alert alert-info">
+          Ühendust pole. Näidatakse telefoni salvestatud andmeid; tehtu saadetakse ära, kui võrk taastub.
+        </div>
+        <section className="card">
+          {offlineLog ? (
+            <>
+              <h2>Tööpäev avatud</h2>
+              <p>
+                <strong>Objekt:</strong> {offlineLog.objectName}
+                <br />
+                <strong>Alates:</strong> {new Date(offlineLog.startTime).toLocaleString("et-EE")}
+              </p>
+            </>
+          ) : (
+            <h2>Aktiivset tööpäeva pole registreeritud</h2>
+          )}
+        </section>
+        <nav className="button-stack">
+          {offlineLog ? (
+            <Link className="btn btn-warning" to="/end-work">
+              Lõpeta tööpäev
+            </Link>
+          ) : (
+            <Link className="btn btn-primary" to="/start-work">
+              Alusta tööpäeva
+            </Link>
+          )}
+        </nav>
+      </div>
+    );
+  }
+
   if (!data) return <div className="page-loading">Laadin...</div>;
 
   const { activeLog, lastFinished, monthSummary } = data;
@@ -69,6 +141,27 @@ export function DashboardPage() {
         <div className="alert alert-error">
           Oled objektist {presence.distanceMeters} m kaugusel — tööaja arvestus on peatatud. Kell jookseb edasi, kui
           naased objektile.
+        </div>
+      )}
+
+      {offlinePending > 0 && (
+        <div className="alert alert-info">
+          {offlinePending} salvestatud tegevus{offlinePending > 1 ? "t" : ""} ootab ühendust. Need saadetakse
+          automaatselt, kui võrk taastub.
+        </div>
+      )}
+
+      {offlineResult && offlineResult.rejected.length > 0 && (
+        <div className="alert alert-error">
+          <strong>Osa salvestatud tegevusi ei õnnestunud saata:</strong>
+          {offlineResult.rejected.map((r, i) => (
+            <div key={i}>
+              {r.label}: {r.reason}
+            </div>
+          ))}
+          <button className="btn btn-link" style={{ padding: "0.35rem 0" }} onClick={clearResult}>
+            Sulge
+          </button>
         </div>
       )}
 

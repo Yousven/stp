@@ -261,6 +261,18 @@ model TimeLog {
    * märget ja saab kontrollida.
    */
   locationMocked Boolean     @default(false) @map("location_mocked")
+  /**
+   * Offline-režiimis loodud kirje: telefon salvestas selle ilma
+   * ühenduseta ja saatis hiljem. `startTime` tuleb siis seadme kellast,
+   * mitte serverilt.
+   */
+  createdOffline Boolean     @default(false) @map("created_offline")
+  /**
+   * Seadme ja serveri kella erinevus sekundites saatmise hetkel.
+   * Suur väärtus tähendab, et kella on nihutatud — võimalik pettus,
+   * mille admin peab üle vaatama.
+   */
+  clockDriftSeconds Int?     @map("clock_drift_seconds")
 
   costCode       CostCode?       @relation(fields: [costCodeId], references: [id])
   user           User            @relation(fields: [userId], references: [id])

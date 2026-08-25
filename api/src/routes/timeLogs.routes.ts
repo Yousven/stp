@@ -26,14 +26,25 @@ const startSchema = z.object({
   costCodeId: z.number().int().positive().optional(),
   /** Seade teatas võltsitud asukohast (mock location). */
   mocked: z.boolean().optional().default(false),
+  /**
+   * Offline-režiimis salvestatud aeg (ISO). Kui antud, kasutatakse seda
+   * tööpäeva alguseks serveri aja asemel — töötaja alustas siis, kui
+   * levi polnud.
+   */
+  occurredAt: z.string().datetime().optional(),
 });
+
+/** Kui kaugele minevikku tohib offline-kirje ulatuda. */
+const MAX_OFFLINE_AGE_MS = 7 * 24 * 3600 * 1000;
+/** Kellanihe, millest alates märgime kirje kahtlaseks. */
+const SUSPICIOUS_DRIFT_SECONDS = 300;
 
 // Port: public/start_work_action.php (+ serveripoolne asukoha kontroll,
 // mida originaalis EI olnud — seal sai sisse registreerida kust tahes).
 timeLogsRouter.post(
   "/start",
   asyncHandler(async (req, res) => {
-    const { objectId, latitude, longitude, accuracy, costCodeId, mocked } = startSchema.parse(req.body);
+    const { objectId, latitude, longitude, accuracy, costCodeId, mocked, occurredAt } = startSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
@@ -94,13 +105,41 @@ timeLogsRouter.post(
       if (!code) throw new HttpError(404, "Valitud kulukoodi ei leitud.");
     }
 
-    const startTime = new Date();
+    /**
+     * Offline: telefon salvestas alustamise ilma ühenduseta ja saadab
+     * nüüd. Usaldame seadme aega, aga piiratult — tulevikku suunatud või
+     * väga vana aeg lükatakse tagasi, ja kellanihe salvestatakse, et
+     * admin näeks, kui keegi on kella nihutanud.
+     */
+    const now = new Date();
+    let startTime = now;
+    let createdOffline = false;
+    let clockDriftSeconds: number | null = null;
+
+    if (occurredAt) {
+      const reported = new Date(occurredAt);
+      const driftMs = now.getTime() - reported.getTime();
+
+      if (driftMs < -SUSPICIOUS_DRIFT_SECONDS * 1000) {
+        throw new HttpError(400, "Seadme kell näitab tulevikku. Kontrolli telefoni kellaaega ja proovi uuesti.");
+      }
+      if (driftMs > MAX_OFFLINE_AGE_MS) {
+        throw new HttpError(400, "Salvestatud tööpäev on liiga vana, et seda automaatselt lisada. Võta ühendust administraatoriga.");
+      }
+
+      startTime = reported;
+      createdOffline = true;
+      clockDriftSeconds = Math.round(driftMs / 1000);
+    }
+
     const log = await prisma.timeLog.create({
       data: {
         userId,
         objectId,
         costCodeId,
         startTime,
+        createdOffline,
+        clockDriftSeconds,
         startLatitude: latitude,
         startLongitude: longitude,
         // Võltsitud asukohta EI blokeerita: see võib olla ka seadme või
@@ -178,6 +217,8 @@ const endSchema = z.object({
   comment: z.string().optional().default(""),
   travelDuration: z.number().nonnegative().optional().default(0),
   lunch: z.number().nonnegative().optional().default(0),
+  /** Offline-režiimis salvestatud lõpetamise aeg. */
+  occurredAt: z.string().datetime().optional(),
 });
 
 // Port: public/end_work_action.php (katab nii käsitsi kui geofence-põhise auto-lõpetamise,
@@ -186,7 +227,7 @@ timeLogsRouter.post(
   "/:id/end",
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const { comment, travelDuration, lunch } = endSchema.parse(req.body);
+    const { comment, travelDuration, lunch, occurredAt } = endSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Turvatäiendus originaali suhtes: kontrollime, et töölogi kuulub
@@ -196,7 +237,20 @@ timeLogsRouter.post(
       throw new HttpError(409, "Aktiivset töölogi ei leitud. Tööpäev pole alustatud või on juba lõpetatud.");
     }
 
-    const endTime = new Date();
+    // Offline-lõpetamine: sama loogika mis alustamisel, aga lisaks ei tohi
+    // lõpp olla enne algust — muidu tuleks negatiivne tööaeg.
+    let endTime = new Date();
+    if (occurredAt) {
+      const reported = new Date(occurredAt);
+      if (reported.getTime() > Date.now() + SUSPICIOUS_DRIFT_SECONDS * 1000) {
+        throw new HttpError(400, "Seadme kell näitab tulevikku. Kontrolli telefoni kellaaega.");
+      }
+      if (reported.getTime() < log.startTime.getTime()) {
+        throw new HttpError(400, "Lõpetamise aeg on tööpäeva algusest varasem.");
+      }
+      endTime = reported;
+    }
+
     const updated = await prisma.timeLog.update({
       where: { id },
       data: {

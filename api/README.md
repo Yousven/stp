@@ -108,6 +108,28 @@ töö ja taastab seaded:
 REMINDERS_ENABLED=false npx tsx scripts/test-reminders.ts demo
 ```
 
+## Töötamine ilma levita (offline)
+
+Ehitusobjektil — keldris, metallkonstruktsioonide vahel, maapiirkonnas — võib
+levi puududa terve päeva. Seetõttu peab telefon suutma tööpäeva nii alustada
+kui lõpetada ilma serverita ja saata tehtu ära hiljem.
+
+- `POST /time-logs/start` ja `POST /time-logs/:id/end` võtavad valikulise
+  `occurredAt` välja: **aeg, mil töötaja tegevuse tegi**, mitte aeg, mil
+  päring serverisse jõudis. Tunnid arvestatakse selle järgi.
+- Server ei usu telefoni kella pimesi. Tulevikku näitav kell (üle 5 minuti)
+  ja üle 7 päeva vanad kirjed lükatakse tagasi; vahepealne kellanihe
+  salvestatakse `time_logs.clock_drift_seconds`-i ja kirje märgitakse
+  `created_offline`-iks, et admin näeks, mis tuli järelsaadetuna.
+- **Asukohakontroll kehtib ka offline'is.** Koordinaadid salvestatakse
+  telefonis tegevuse hetkel ja server kontrollib neid saatmisel — offline ei
+  ole viis objektilt eemalt sisse registreerida.
+
+Telefoni pool (`mobile/src/api/offlineQueue.ts`) hoiab järjekorda ja saadab
+selle ära äpi avamisel, `online` sündmusel ja taustalt naasmisel. Serveri
+sisuline keeldumine (nt "oled objektist liiga kaugel") **ei** lähe järjekorda
+— see näidatakse kasutajale kohe, sest kordamine annaks sama vastuse.
+
 ## Teadaolevad lihtsustused
 
 - `POST /auth/logout` ei tühista tokeneid serveri poolel (stateless JWT).
