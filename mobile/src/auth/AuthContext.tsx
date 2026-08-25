@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { apiRequest } from "../api/client";
 import type { AuthUser, LoginResponse } from "../api/types";
 import { clearSession, getAccessToken, getStoredUser, setSession } from "./tokenStore";
+import { unregisterPushToken } from "../hooks/usePushNotifications";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -42,6 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
+    // Eemalda seade teavituste alt ENNE sessiooni kustutamist — pärast seda
+    // puuduks päringuks vajalik token.
+    await unregisterPushToken();
     await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
     await clearSession();
     setUser(null);

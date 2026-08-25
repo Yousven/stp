@@ -101,6 +101,24 @@ debugimine on lubatud, või kopeeri fail telefoni ja ava — nõuab
 päris telefoni pole käepärast) on Android Studio siiski mugavam, aga
 CLI-only variant on ka võimalik `avdmanager` + `emulator` binaaridega.
 
+## Push-teavitused
+
+Kood on valmis ja degradeerub vaikselt, kui push pole saadaval (veeb,
+Firebase seadistamata, Apple konto puudub) — `src/hooks/usePushNotifications.ts`.
+Registreerimine käib sisselogimisel, token saadetakse serverisse ainult siis
+kui see on muutunud, ja väljalogimisel eemaldatakse.
+
+Töölesaamiseks vajalik (vt ka `../api/README.md`):
+
+- **Android**: Firebase projekt → `google-services.json` faili
+  `android/app/google-services.json`. Ilma selleta build õnnestub, aga
+  registreerimine ebaõnnestub vaikselt (`android/app/build.gradle` rakendab
+  google-services plugina ainult siis, kui fail on olemas).
+- **iOS**: **tasuline Apple Developer konto (99$/a)**. Tasuta Personal Team
+  ei toeta Push Notifications võimekust — seda ei saa koodiga lahendada.
+  Kontoga: Xcode → Signing & Capabilities → + Capability → Push
+  Notifications, ja APNs .p8 võti Firebase'i.
+
 ### iOS — vajab Xcode't
 
 Erinevalt Androidist pole siin käsurea-only teed: täismahus **Xcode**

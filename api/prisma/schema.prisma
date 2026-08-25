@@ -41,10 +41,46 @@ model User {
   organization   Organization    @relation(fields: [organizationId], references: [id])
   timeLogs       TimeLog[]
   passwordResets PasswordReset[]
+  deviceTokens   DeviceToken[]
 
   @@unique([organizationId, username])
   @@unique([organizationId, email])
   @@map("users")
+}
+
+/**
+ * Push-teavituste seadmetokenid. Üks kasutaja võib olla mitmes seadmes,
+ * seega üks-mitmele. Token on globaalselt unikaalne — kui sama seade
+ * logitakse teise kontoga sisse, liigub token uue kasutaja alla.
+ */
+model DeviceToken {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  token      String   @unique @db.VarChar(255)
+  platform   String   @db.VarChar(20) // "ios" | "android" | "web"
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @updatedAt @map("last_seen_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+/**
+ * Takistab sama meeldetuletuse mitmekordset saatmist. Meeldetuletuste job
+ * käib iga 15 min tagant (kuna tähtajad on ettevõtete kaupa seadistatavad),
+ * seega peab olema kirje selle kohta, mis on juba täna saadetud.
+ */
+model ReminderLog {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  type           String   @db.VarChar(30) // "check_in" | "check_out"
+  forDate        String   @map("for_date") @db.VarChar(10) // YYYY-MM-DD
+  sentAt         DateTime @default(now()) @map("sent_at")
+
+  @@unique([organizationId, type, forDate])
+  @@map("reminder_logs")
 }
 
 model WorkObject {

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterOrganizationPage } from "./pages/RegisterOrganizationPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
@@ -17,9 +18,20 @@ import { TeamPerformancePage } from "./pages/TeamPerformancePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 
+/**
+ * Peab olema AuthProvideri JA Routeri sees, kuna registreerimine sõltub
+ * sisselogitud kasutajast ja teavitusel klõpsamine navigeerib.
+ */
+function PushNotificationBridge() {
+  const { user } = useAuth();
+  usePushNotifications(user !== null);
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
+      <PushNotificationBridge />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterOrganizationPage />} />

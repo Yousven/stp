@@ -56,6 +56,58 @@ inimene ei saaks kohe uut taotlust esitada ja adminit spämmida.
 `GET /me/dashboard` sisaldab adminile `pendingRequests` loendurit —
 muidu jääks taotlus märkamatult seisma.
 
+## Teavitused (push + e-post)
+
+Millal midagi saadetakse:
+
+| Sündmus | Kellele |
+|---|---|
+| Uus liitumistaotlus | Ettevõtte adminidele (push) |
+| Taotlus kinnitatud / tagasi lükatud | Taotlejale (push) |
+| Sisseregistreerimine tegemata (tähtaeg möödas) | Töötajale (push) + adminile (push + e-post) |
+| Tööpäev lõpetamata (tähtaeg möödas) | Töötajale (push) + adminile (push + e-post) |
+
+Tähtajad tulevad iga ettevõtte enda seadetest (`check_in_deadline`,
+`check_out_deadline`, `admin_email`). Taustatöö käib **iga 15 minuti tagant**,
+kuna tähtajad on ettevõtete kaupa erinevad; `reminder_logs` tabel tagab, et
+sama päeva teavitus läheb välja täpselt üks kord.
+
+**Ilma mandaatideta rakendus töötab edasi** — teavitused lihtsalt logitakse
+konsooli. Serveri käivitusteade ütleb selgelt, kumb on seadistatud, et
+seadistamata push ei paistaks töötavana.
+
+### Push-teavituste seadistamine (Firebase)
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → uus projekt
+2. **Android**: lisa Android-äpp package nimega `ee.nutisemud.smarttimeplanning`,
+   laadi alla `google-services.json` → pane faili
+   `mobile/android/app/google-services.json` (build lisab plugina automaatselt,
+   kui fail on olemas — vt `android/app/build.gradle` lõpp)
+3. **iOS**: nõuab **tasulist Apple Developer kontot** (99$/a). Tasuta
+   "Personal Team" allkirjastamine EI toeta Push Notifications võimekust
+   üldse — see on Apple'i piirang, mitte rakenduse oma. Kui konto on olemas:
+   loo APNs Auth Key (.p8) ja laadi see Firebase'i, lisa Xcode's
+   Signing & Capabilities → + Capability → Push Notifications.
+4. **Server**: Firebase Project settings → Service accounts → Generate new
+   private key. JSON-ist võta `project_id`, `client_email`, `private_key`
+   ja pane `.env` faili (vt `.env.example`).
+
+### E-posti seadistamine
+
+Täida `.env`-s `SMTP_*` väärtused. Gmailiga on vaja
+[app password](https://support.google.com/accounts/answer/185833), mitte
+tavaparooli.
+
+### Meeldetuletuste käsitsi testimine
+
+Meeldetuletused sõltuvad kellaajast, seega tavaliselt ei saa neid suvalisel
+hetkel käivitada. Testiskript seab tähtajad ajutiselt 00:00 peale, käivitab
+töö ja taastab seaded:
+
+```bash
+REMINDERS_ENABLED=false npx tsx scripts/test-reminders.ts demo
+```
+
 ## Teadaolevad lihtsustused
 
 - `POST /auth/logout` ei tühista tokeneid serveri poolel (stateless JWT).
@@ -63,8 +115,10 @@ muidu jääks taotlus märkamatult seisma.
   refresh-token-registri tabel.
 - Parooli lähtestamine (`forgot-password`/`reset-password`, `password_resets`
   tabel) on veel portimata — vajab töötavat e-posti serverit.
-- Liitumistaotlusest ei lähe adminile teavitust (e-kiri/push) — ta näeb
-  seda dashboardi loenduris. Push-teavitused on eraldi töö.
+- Push-teavituste kohalejõudmist ei kinnitata: FCM võtab sõnumi vastu, aga
+  seda, kas telefon selle päriselt kuvas, server ei tea. Aegunud tokenid
+  (`UNREGISTERED`) koristatakse automaatselt ära.
+- iOS push nõuab tasulist Apple Developer kontot — vt ülalt.
 
 ## Struktuur
 

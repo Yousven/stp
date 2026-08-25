@@ -6,6 +6,7 @@ import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { hashPassword, validatePasswordPolicy } from "../utils/password.js";
+import { notifyRequestDecision } from "../notifications/notify.js";
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireAdmin);
@@ -78,6 +79,13 @@ usersRouter.post(
       data: { status: "active", hourlyRate, advance, role },
       select: userSelect,
     });
+
+    const organization = await prisma.organization.findUniqueOrThrow({
+      where: { id: req.user!.organizationId },
+      select: { name: true },
+    });
+    notifyRequestDecision(id, true, organization.name);
+
     res.json(user);
   })
 );
@@ -98,6 +106,13 @@ usersRouter.post(
       data: { status: "rejected" },
       select: userSelect,
     });
+
+    const organization = await prisma.organization.findUniqueOrThrow({
+      where: { id: req.user!.organizationId },
+      select: { name: true },
+    });
+    notifyRequestDecision(id, false, organization.name);
+
     res.json(user);
   })
 );

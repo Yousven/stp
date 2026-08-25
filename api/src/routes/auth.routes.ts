@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { hashPassword, validatePasswordPolicy, verifyPassword } from "../utils/password.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/tokens.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import { notifyJoinRequest } from "../notifications/notify.js";
 
 export const authRouter = Router();
 
@@ -194,6 +195,10 @@ authRouter.post(
         requestedAt: new Date(),
       },
     });
+
+    // Ilma selleta jääks taotlus dashboardi loenduris ootama, kuni admin
+    // juhtub äppi avama.
+    notifyJoinRequest(organization.id, username);
 
     // Tahtlikult EI tagastata tokeneid — kasutaja ei tohi enne kinnitust
     // midagi teha.
