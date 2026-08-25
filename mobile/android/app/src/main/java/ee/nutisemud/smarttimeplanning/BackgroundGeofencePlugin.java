@@ -155,6 +155,47 @@ public class BackgroundGeofencePlugin extends Plugin {
             .addOnFailureListener(e -> call.reject("Geofence'i eemaldamine ebaõnnestus: " + e.getMessage()));
     }
 
+    /**
+     * Kas viimane teadaolev asukoht on võltsitud?
+     *
+     * Kasutame viimast vahemälus olevat asukohta, mitte ei küsi uut —
+     * JS küsib asukoha Geolocation pluginaga ja see kutse toimub kohe
+     * pärast, seega vahemälus on sama fikseering.
+     */
+    @PluginMethod
+    public void isMocked(PluginCall call) {
+        JSObject result = new JSObject();
+        try {
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                result.put("mocked", false);
+                call.resolve(result);
+                return;
+            }
+            LocationServices.getFusedLocationProviderClient(getContext())
+                .getLastLocation()
+                .addOnSuccessListener(location -> {
+                    JSObject res = new JSObject();
+                    boolean mocked = false;
+                    if (location != null) {
+                        mocked = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                            ? location.isMock()
+                            : location.isFromMockProvider();
+                    }
+                    res.put("mocked", mocked);
+                    call.resolve(res);
+                })
+                .addOnFailureListener(e -> {
+                    JSObject res = new JSObject();
+                    res.put("mocked", false);
+                    call.resolve(res);
+                });
+        } catch (SecurityException e) {
+            result.put("mocked", false);
+            call.resolve(result);
+        }
+    }
+
     @PluginMethod
     public void getPendingEvents(PluginCall call) {
         JSObject result = new JSObject();

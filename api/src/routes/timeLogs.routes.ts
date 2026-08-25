@@ -24,6 +24,8 @@ const startSchema = z.object({
   accuracy: z.number().nonnegative().optional(),
   /** Mis tööd tehakse — vajalik kliendiarvelduseks. Valikuline. */
   costCodeId: z.number().int().positive().optional(),
+  /** Seade teatas võltsitud asukohast (mock location). */
+  mocked: z.boolean().optional().default(false),
 });
 
 // Port: public/start_work_action.php (+ serveripoolne asukoha kontroll,
@@ -31,7 +33,7 @@ const startSchema = z.object({
 timeLogsRouter.post(
   "/start",
   asyncHandler(async (req, res) => {
-    const { objectId, latitude, longitude, accuracy, costCodeId } = startSchema.parse(req.body);
+    const { objectId, latitude, longitude, accuracy, costCodeId, mocked } = startSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
@@ -56,9 +58,30 @@ timeLogsRouter.post(
       );
     }
 
+    /**
+     * Objektilt objektile liikumine on ehituses igapäevane, seega avatud
+     * tööpäev EI blokeeri enam uue alustamist — kui uus objekt on teine,
+     * lõpetame eelmise automaatselt ja alustame uue. Nii ei pea töötaja
+     * kaks korda nuppu vajutama ega jää eelmine päev lahtiseks.
+     *
+     * Sama objektiga on tegu ilmselt eksitusega (topeltvajutus), seega
+     * seal jääb varasem käitumine alles.
+     */
     const activeLog = await prisma.timeLog.findFirst({ where: { userId, endTime: null } });
     if (activeLog) {
-      throw new HttpError(409, "Tööpäev on juba alustatud. Palun lõpetage olemasolev tööpäev enne uue alustamist.");
+      if (activeLog.objectId === objectId) {
+        throw new HttpError(409, "Tööpäev sellel objektil on juba alustatud.");
+      }
+
+      const switchedAt = new Date();
+      await prisma.timeLog.update({
+        where: { id: activeLog.id },
+        data: {
+          endTime: switchedAt,
+          comment: "Automaatselt lõpetatud: töötaja alustas tööd teisel objektil.",
+          presenceEvents: { create: { type: "EXIT", occurredAt: switchedAt, source: "manual" } },
+        },
+      });
     }
 
     // Kulukood peab kuuluma samale ettevõttele; vale ID vaikiv ignoreerimine
@@ -80,9 +103,13 @@ timeLogsRouter.post(
         startTime,
         startLatitude: latitude,
         startLongitude: longitude,
+        // Võltsitud asukohta EI blokeerita: see võib olla ka seadme või
+        // arendajarežiimi kõrvalmõju ja tööpäeva kaotamine oleks ausa
+        // töötaja jaoks liiga karm. Märgime ja näitame adminile.
+        locationMocked: mocked,
         // Sisseregistreerimine ise on esimene kohaloleku tõend.
         presenceEvents: {
-          create: { type: "ENTER", occurredAt: startTime, latitude, longitude, accuracy, source: "manual" },
+          create: { type: "ENTER", occurredAt: startTime, latitude, longitude, accuracy, source: "manual", mocked },
         },
       },
       include: { object: true, presenceEvents: true },
@@ -101,6 +128,7 @@ const presenceEventsSchema = z.object({
         longitude: z.number().min(-180).max(180).optional(),
         accuracy: z.number().nonnegative().optional(),
         source: z.enum(["manual", "foreground", "native"]).optional().default("foreground"),
+        mocked: z.boolean().optional().default(false),
       })
     )
     .min(1)
@@ -132,6 +160,7 @@ timeLogsRouter.post(
         longitude: e.longitude,
         accuracy: e.accuracy,
         source: e.source,
+        mocked: e.mocked,
       })),
       skipDuplicates: true,
     });

@@ -35,9 +35,17 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
 
         Double latitude = null;
         Double longitude = null;
+        boolean mocked = false;
         if (event.getTriggeringLocation() != null) {
             latitude = event.getTriggeringLocation().getLatitude();
             longitude = event.getTriggeringLocation().getLongitude();
+            // Arendajarežiimis saab asukohta võltsida; märgime selle ära,
+            // et admin näeks raportis kahtlast kirjet.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                mocked = event.getTriggeringLocation().isMock();
+            } else {
+                mocked = event.getTriggeringLocation().isFromMockProvider();
+            }
         }
 
         List<Geofence> triggering = event.getTriggeringGeofences();
@@ -45,6 +53,6 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
             return;
         }
 
-        GeofenceQueue.add(context, type, latitude, longitude);
+        GeofenceQueue.add(context, type, latitude, longitude, mocked);
     }
 }

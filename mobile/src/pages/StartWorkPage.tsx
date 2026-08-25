@@ -4,6 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject } from "../api/types";
+import { isLocationMocked } from "../plugins/mockLocation";
 
 const LOCATION_REQUIRED_MESSAGE =
   "Tööpäeva alustamiseks on vaja asukoha luba, et kinnitada, et oled objektil. " +
@@ -64,6 +65,10 @@ export function StartWorkPage() {
         throw new Error(LOCATION_REQUIRED_MESSAGE);
       }
 
+      // Võltsitud GPS ei blokeeri alustamist (vale positiivne jätaks ausa
+      // töötaja tööpäevata), aga lipp läheb serverisse ja admin näeb seda.
+      const mocked = await isLocationMocked();
+
       setStatus("Registreerin tööpäeva...");
       await apiRequest("/time-logs/start", {
         method: "POST",
@@ -72,6 +77,7 @@ export function StartWorkPage() {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
+          mocked,
         },
       });
       navigate("/dashboard", { replace: true });

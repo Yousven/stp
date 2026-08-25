@@ -126,6 +126,7 @@ reportsRouter.get(
       { header: "Brutotunnid", key: "gross", width: 14 },
       { header: "Lõuna (tunnid)", key: "lunch", width: 14 },
       { header: "Objektilt eemal (t)", key: "away", width: 18 },
+      { header: "Asukoht kahtlane", key: "mocked", width: 18 },
       { header: "Netotunnid", key: "net", width: 14 },
       { header: "Tulu (€)", key: "earnings", width: 14 },
       { header: "Kommentaar", key: "comment", width: 30 },
@@ -141,6 +142,8 @@ reportsRouter.get(
         gross: hours.gross ?? "",
         lunch: log.endTime ? Number(log.lunch ?? 0) : "",
         away: hours.away ?? "",
+        // Võltsitud GPS ei blokeeri tööpäeva, aga peab raportis silma paistma.
+        mocked: log.locationMocked ? "JAH" : "",
         net: hours.net ?? "",
         earnings: hours.earnings ?? "",
         comment: log.comment ?? "",

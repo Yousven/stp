@@ -7,6 +7,8 @@ export interface QueuedGeofenceEvent {
   latitude?: number;
   longitude?: number;
   accuracy?: number;
+  /** Seade teatas võltsitud asukohast. */
+  mocked?: boolean;
 }
 
 export interface BackgroundGeofencePlugin {

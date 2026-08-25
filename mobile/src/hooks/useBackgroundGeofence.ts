@@ -40,6 +40,7 @@ export function useBackgroundGeofence(activeLog: TimeLog | null, onSynced: () =>
               latitude: e.latitude,
               longitude: e.longitude,
               accuracy: e.accuracy,
+              mocked: e.mocked ?? false,
               source: "native",
             })),
           },

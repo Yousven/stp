@@ -255,6 +255,12 @@ model TimeLog {
   manualWorkDuration Decimal? @map("manual_work_duration") @db.Decimal(5, 2)
   /** Mis tööd tehti — vajalik kliendiarvelduseks ja projektikalkulatsiooniks. */
   costCodeId     Int?        @map("cost_code_id")
+  /**
+   * Sisseregistreerimisel tuvastati võltsitud asukoht. Tööpäeva EI
+   * blokeerita (viga võib olla ka seadmes), aga admin näeb raportis
+   * märget ja saab kontrollida.
+   */
+  locationMocked Boolean     @default(false) @map("location_mocked")
 
   costCode       CostCode?       @relation(fields: [costCodeId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
@@ -277,6 +283,8 @@ model PresenceEvent {
   longitude  Decimal? @db.Decimal(10, 7)
   accuracy   Decimal? @db.Decimal(10, 2)
   source     String   @db.VarChar(20) // "manual" | "foreground" | "native"
+  /** Kas seade teatas, et asukoht on võltsitud (mock location app). */
+  mocked     Boolean  @default(false)
 
   timeLog TimeLog @relation(fields: [timeLogId], references: [id], onDelete: Cascade)
 

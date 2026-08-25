@@ -24,7 +24,8 @@ public class BackgroundGeofencePlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
         CAPPluginMethod(name: "getPendingEvents", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearPendingEvents", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isMocked", returnType: CAPPluginReturnPromise)
     ]
 
     private let locationManager = CLLocationManager()
@@ -139,6 +140,26 @@ public class BackgroundGeofencePlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
 
     public func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         enqueue(type: "EXIT", region: region)
+    }
+
+    // MARK: - Mock location
+
+    /**
+     * iOS 15+ annab CLLocation'ile `sourceInformation`, mis ütleb, kas
+     * asukoht tuli simulaatorist või võltsimisäpist. Vanematel versioonidel
+     * seda infot pole, seega tagastame false.
+     */
+    @objc func isMocked(_ call: CAPPluginCall) {
+        guard let location = locationManager.location else {
+            call.resolve(["mocked": false])
+            return
+        }
+        if #available(iOS 15.0, *) {
+            let simulated = location.sourceInformation?.isSimulatedBySoftware ?? false
+            call.resolve(["mocked": simulated])
+        } else {
+            call.resolve(["mocked": false])
+        }
     }
 
     // MARK: - Event queue

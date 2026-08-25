@@ -37,7 +37,7 @@ public final class GeofenceQueue {
         return format.format(new Date());
     }
 
-    public static synchronized void add(Context context, String type, Double latitude, Double longitude) {
+    public static synchronized void add(Context context, String type, Double latitude, Double longitude, boolean mocked) {
         try {
             JSONArray queue = read(context);
             JSONObject event = new JSONObject();
@@ -45,6 +45,7 @@ public final class GeofenceQueue {
             event.put("occurredAt", isoNow());
             if (latitude != null) event.put("latitude", latitude);
             if (longitude != null) event.put("longitude", longitude);
+            event.put("mocked", mocked);
             queue.put(event);
 
             // Kaitse piiramatu kasvamise eest, kui äppi ei avata pikalt.
