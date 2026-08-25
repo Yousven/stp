@@ -172,10 +172,43 @@ model WorkObject {
   longitude      Decimal      @db.Decimal(10, 7)
   radius         Int
   deleted        Boolean      @default(false)
+  // --- Kliendiarvelduse väljad ---
+  /** Kliendi nimi, kellele objekti tunde arveldatakse. */
+  clientName     String?      @map("client_name") @db.VarChar(255)
+  /** Kliendile esitatav tunnihind. Erineb töötaja palgamäärast — vahe on kate. */
+  billableRate   Decimal?     @map("billable_rate") @db.Decimal(10, 2)
+  /** Kokkulepitud eelarve tundides, et näha ületamist. */
+  budgetHours    Decimal?     @map("budget_hours") @db.Decimal(10, 2)
   organization   Organization @relation(fields: [organizationId], references: [id])
   timeLogs       TimeLog[]
+  costCodes      CostCode[]
 
   @@map("objects")
+}
+
+/**
+ * Kulukood ehk tööliik (müüritöö, elektritöö, koristus).
+ *
+ * Ilma selleta salvestub ainult "kus tööd tehti", mitte "mida tehti" —
+ * kliendile arve koostamiseks ja projekti kalkulatsiooniks on vaja teist.
+ * `objectId` on nullitav: NULL tähendab kogu ettevõttes kasutatavat koodi,
+ * täidetud väärtus ainult ühe objekti oma.
+ */
+model CostCode {
+  id             Int         @id @default(autoincrement())
+  organizationId Int         @map("organization_id")
+  objectId       Int?        @map("object_id")
+  code           String      @db.VarChar(40)
+  name           String      @db.VarChar(255)
+  /** Kliendile esitatav tunnihind selle tööliigi eest (võidab objekti oma). */
+  billableRate   Decimal?    @map("billable_rate") @db.Decimal(10, 2)
+  deleted        Boolean     @default(false)
+  object         WorkObject? @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  timeLogs       TimeLog[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deleted])
+  @@map("cost_codes")
 }
 
 model TimeLog {
@@ -190,7 +223,10 @@ model TimeLog {
   travelDuration Decimal?    @map("travel_duration") @db.Decimal(5, 2)
   lunch          Decimal?    @db.Decimal(5, 2)
   manualWorkDuration Decimal? @map("manual_work_duration") @db.Decimal(5, 2)
+  /** Mis tööd tehti — vajalik kliendiarvelduseks ja projektikalkulatsiooniks. */
+  costCodeId     Int?        @map("cost_code_id")
 
+  costCode       CostCode?       @relation(fields: [costCodeId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
   object         WorkObject      @relation(fields: [objectId], references: [id])
   presenceEvents PresenceEvent[]

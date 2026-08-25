@@ -22,6 +22,8 @@ const startSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   accuracy: z.number().nonnegative().optional(),
+  /** Mis tööd tehakse — vajalik kliendiarvelduseks. Valikuline. */
+  costCodeId: z.number().int().positive().optional(),
 });
 
 // Port: public/start_work_action.php (+ serveripoolne asukoha kontroll,
@@ -29,7 +31,7 @@ const startSchema = z.object({
 timeLogsRouter.post(
   "/start",
   asyncHandler(async (req, res) => {
-    const { objectId, latitude, longitude, accuracy } = startSchema.parse(req.body);
+    const { objectId, latitude, longitude, accuracy, costCodeId } = startSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
@@ -59,11 +61,22 @@ timeLogsRouter.post(
       throw new HttpError(409, "Tööpäev on juba alustatud. Palun lõpetage olemasolev tööpäev enne uue alustamist.");
     }
 
+    // Kulukood peab kuuluma samale ettevõttele; vale ID vaikiv ignoreerimine
+    // annaks arvele valed read.
+    if (costCodeId) {
+      const code = await prisma.costCode.findFirst({
+        where: { id: costCodeId, organizationId: req.user!.organizationId, deleted: false },
+        select: { id: true },
+      });
+      if (!code) throw new HttpError(404, "Valitud kulukoodi ei leitud.");
+    }
+
     const startTime = new Date();
     const log = await prisma.timeLog.create({
       data: {
         userId,
         objectId,
+        costCodeId,
         startTime,
         startLatitude: latitude,
         startLongitude: longitude,
