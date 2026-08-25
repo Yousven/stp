@@ -1,5 +1,28 @@
 # Asenda domeeniga, mis osutab su Proxmoxi hostile (nt api.tarmel.gretmar.ee).
 # Caddy hangib ja uuendab Let's Encrypt TLS sertifikaadi automaatselt.
+#
+# --- Cloudflare'i taga (oranž pilv) ---
+#
+# 1. Cloudflare'i SSL/TLS režiim peab olema **Full (strict)**, mitte
+#    "Flexible". "Flexible" tähendab, et Cloudflare räägib serveriga üle
+#    HTTP-i, aga Caddy suunab HTTP → HTTPS — tulemuseks lõputu ümbersuunamise
+#    tsükkel, mis paistab välja nagu "ERR_TOO_MANY_REDIRECTS".
+#
+# 2. Esimesel korral sertifikaati hankides peab Let's Encrypti HTTP-01
+#    väljakutse serverini jõudma. Kui see ei õnnestu, on lihtsaim tee lülitada
+#    kirje ajutiselt "DNS only" (hall pilv), lasta Caddyl sertifikaat hankida
+#    ja seejärel proksimine tagasi sisse lülitada.
+#
+# 3. Cloudflare'i taga on API ees KAKS proksit, seega serveri `.env`-s peab
+#    olema `TRUST_PROXY_HOPS=2`. Ilma selleta näeb API kliendi IP-na
+#    Cloudflare'i serva-IP-d ja sisselogimise piirang (20 katset 15 min
+#    kohta) hakkab lugema kõiki kasutajaid üheks — üks ründaja lukustaks
+#    välja terve ettevõtte. Kontrolli pärast käivitamist:
+#
+#      curl https://<domeen>/api/health
+#
+#    `clientIp` peab olema sinu enda avalik IP, mitte 172.x Cloudflare'i oma.
+
 api.example.com {
 	reverse_proxy api:3000
 }

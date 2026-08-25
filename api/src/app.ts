@@ -12,9 +12,10 @@ import { stripeWebhookRouter } from "./routes/stripeWebhook.routes.js";
 export function createApp() {
   const app = express();
 
-  // Reverse proxy (Caddy) taga on req.ip muidu alati proxy oma, mis lõhuks
-  // nii rate-limiti kui logid.
-  app.set("trust proxy", 1);
+  // Reverse proxy taga on req.ip muidu alati proxy oma, mis lõhuks nii
+  // rate-limiti kui logid. Hüpete arv sõltub sellest, kas ees on ainult
+  // Caddy või ka Cloudflare — vt env.trustProxyHops.
+  app.set("trust proxy", env.trustProxyHops);
 
   app.use(helmet());
   app.use(

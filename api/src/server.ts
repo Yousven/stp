@@ -16,6 +16,11 @@ app.listen(env.port, () => {
   console.log(`  push-teavitused: ${isPushConfigured() ? "seadistatud" : "SEADISTAMATA (ainult logitakse)"}`);
   console.log(`  e-post: ${isEmailConfigured() ? "seadistatud" : "SEADISTAMATA (ainult logitakse)"}`);
   console.log(`  vigade jälgimine: ${isObservabilityEnabled() ? "Sentry aktiivne" : "SEADISTAMATA (ainult konsool)"}`);
+  // Vale hüppearv annab vaikselt vale kliendi-IP, seega ütleme selle välja.
+  console.log(
+    `  proksi-hüppeid: ${env.trustProxyHops} ` +
+      `(${env.trustProxyHops >= 2 ? "Cloudflare + Caddy" : "ainult Caddy / otseühendus"})`
+  );
   startReminderJob();
 });
 

@@ -17,6 +17,20 @@ export const env = {
   jwtRefreshTtl: process.env.JWT_REFRESH_TTL ?? "30d",
   corsOrigins: (process.env.CORS_ORIGIN ?? "").split(",").map((s) => s.trim()).filter(Boolean),
 
+  /**
+   * Mitu reverse proxy'd on API ees.
+   *
+   * Express võtab kliendi IP `X-Forwarded-For`-ist, lugedes paremalt
+   * niipalju hüppeid, kui siin öeldud. Vale arv ei anna viga, vaid vale
+   * IP — ja kuna sisselogimise piirang käib IP kaupa, tähendaks liiga
+   * väike arv, et kõik kasutajad jagavad üht Cloudflare'i serva-IP-d ja
+   * ühe ründaja katsed lukustaksid välja terve ettevõtte.
+   *
+   *   1 = ainult Caddy (domeen otse serverile, Cloudflare "DNS only")
+   *   2 = Cloudflare + Caddy (Cloudflare'i proksi sees, "oranž pilv")
+   */
+  trustProxyHops: Number(process.env.TRUST_PROXY_HOPS ?? 1),
+
   // Ajavöönd, mille järgi arvutatakse meeldetuletuste tähtajad ja "täna".
   // Originaal (cron/send_reminders.php) kasutas Europe/Tallinn.
   timezone: process.env.TZ_NAME ?? "Europe/Tallinn",

@@ -16,7 +16,18 @@ import { subscriptionRouter } from "./subscription.routes.js";
 
 export const apiRouter = Router();
 
-apiRouter.get("/health", (_req, res) => res.json({ status: "ok" }));
+/**
+ * Tervisekontroll + proksi-diagnostika.
+ *
+ * `clientIp` on see, mida server arvab kliendi IP-ks. Reverse proxy taga
+ * on seda vaja kontrollida: kui siin paistab Cloudflare'i serva-IP oma
+ * asemel, on TRUST_PROXY_HOPS vale ja sisselogimise piirang loeb kõiki
+ * kasutajaid üheks. Kliendile näidatakse ainult tema enda IP-d, seega
+ * midagi ei lekitata.
+ */
+apiRouter.get("/health", (req, res) =>
+  res.json({ status: "ok", clientIp: req.ip, forwardedFor: req.headers["x-forwarded-for"] ?? null })
+);
 apiRouter.use("/auth", passwordResetRouter);
 apiRouter.use("/auth", authRouter);
 // Täpsem tee peab olema enne üldisemat "/me"-d, muidu püüaks dashboardRouter
