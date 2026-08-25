@@ -3,13 +3,7 @@ import { Link } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import type { Absence, AbsenceType, AdminUser } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
-
-const TYPE_LABELS: Record<AbsenceType, string> = {
-  vacation: "Puhkus",
-  sick: "Haigusleht",
-  unpaid: "Palgata puhkus",
-  other: "Muu",
-};
+import { useT } from "../i18n";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -23,6 +17,7 @@ function dayCount(startDate: string, endDate: string): number {
 
 export function AbsencesPage() {
   const { user } = useAuth();
+  const d = useT();
   const isAdmin = user?.role === "admin";
 
   const [absences, setAbsences] = useState<Absence[] | null>(null);
@@ -42,9 +37,9 @@ export function AbsencesPage() {
     try {
       setAbsences(await apiRequest<Absence[]>("/absences"));
     } catch {
-      setError("Puudumiste laadimine ebaõnnestus.");
+      setError(d.absences.loadFailed);
     }
-  }, []);
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -59,8 +54,8 @@ export function AbsencesPage() {
         setUsers(active);
         if (active.length > 0) setUserId(active[0].id);
       })
-      .catch(() => setError("Kasutajate laadimine ebaõnnestus."));
-  }, [isAdmin]);
+      .catch(() => setError(d.absences.usersLoadFailed));
+  }, [isAdmin, d]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -78,29 +73,29 @@ export function AbsencesPage() {
     } catch (err) {
       // Serveri teade on siin sisukam kui üldine tekst: kattuva puudumise
       // korral ütleb ta, millise perioodiga see kattub.
-      setFormError(err instanceof ApiError ? err.message : "Puudumise lisamine ebaõnnestus.");
+      setFormError(err instanceof ApiError ? err.message : d.absences.addFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(absence: Absence) {
-    if (!confirm(`Kustutada ${absence.user.username} puudumine ${absence.startDate} – ${absence.endDate}?`)) return;
+    if (!confirm(d.absences.confirmDelete(absence.user.username, absence.startDate, absence.endDate))) return;
     try {
       await apiRequest(`/absences/${absence.id}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Kustutamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.common.deleteFailed);
     }
   }
 
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Puudumised</h1>
+        <h1>{d.absences.title}</h1>
         {isAdmin && (
           <button className="btn btn-link" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Loobu" : "Lisa"}
+            {showForm ? d.common.cancel : d.common.add}
           </button>
         )}
       </header>
@@ -109,8 +104,7 @@ export function AbsencesPage() {
 
       {!isAdmin && (
         <p className="subtitle">
-          Siin on sinu puudumised. Puudumine vähendab kuu töötundide normi, seega puhkusenädal ei näita
-          kuuülevaates enam puudujääki.
+          {d.absences.employeeIntro}
         </p>
       )}
 
@@ -118,7 +112,7 @@ export function AbsencesPage() {
         <form className="card" onSubmit={handleSubmit}>
           {formError && <div className="alert alert-error">{formError}</div>}
           <label>
-            Töötaja
+            {d.absences.employee}
             <select value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -128,38 +122,38 @@ export function AbsencesPage() {
             </select>
           </label>
           <label>
-            Liik
+            {d.absences.type}
             <select value={type} onChange={(e) => setType(e.target.value as AbsenceType)}>
-              {(Object.keys(TYPE_LABELS) as AbsenceType[]).map((t) => (
+              {(Object.keys(d.absences.types) as AbsenceType[]).map((t) => (
                 <option key={t} value={t}>
-                  {TYPE_LABELS[t]}
+                  {d.absences.types[t]}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Algus
+            {d.absences.start}
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
           </label>
           <label>
-            Lõpp (kaasa arvatud)
+            {d.absences.end}
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
           </label>
           <label>
-            Kommentaar
+            {d.common.comment}
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={500} />
           </label>
           <button type="submit" className="btn btn-primary" disabled={submitting || users.length === 0}>
-            {submitting ? "Salvestan..." : "Lisa puudumine"}
+            {submitting ? d.common.saving : d.absences.submit}
           </button>
         </form>
       )}
 
-      {!absences && !error && <div className="page-loading">Laadin...</div>}
+      {!absences && !error && <div className="page-loading">{d.common.loading}</div>}
 
       {absences && absences.length === 0 && (
         <div className="card">
-          <p>Puudumisi pole kirjas.</p>
+          <p>{d.absences.none}</p>
         </div>
       )}
 
@@ -168,7 +162,10 @@ export function AbsencesPage() {
           {absences.map((a) => (
             <li key={a.id} className="card log-item">
               <strong>
-                {TYPE_LABELS[a.type]} <span className="subtitle">({dayCount(a.startDate, a.endDate)} p)</span>
+                {d.absences.types[a.type]}{" "}
+                <span className="subtitle">
+                  ({dayCount(a.startDate, a.endDate)} {d.common.days})
+                </span>
               </strong>
               {isAdmin && <div>{a.user.username}</div>}
               <div>
@@ -181,7 +178,7 @@ export function AbsencesPage() {
                   style={{ marginTop: "0.5rem" }}
                   onClick={() => handleDelete(a)}
                 >
-                  Kustuta
+                  {d.common.delete}
                 </button>
               )}
             </li>
@@ -190,7 +187,7 @@ export function AbsencesPage() {
       )}
 
       <Link className="btn btn-link" to="/dashboard">
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </Link>
     </div>
   );

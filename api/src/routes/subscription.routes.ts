@@ -24,7 +24,7 @@ subscriptionRouter.post(
   "/checkout",
   asyncHandler(async (req, res) => {
     if (!isStripeConfigured()) {
-      throw new HttpError(503, "Maksete vastuvõtt pole veel seadistatud. Võta ühendust Nutisemud'iga.");
+      throw new HttpError(503, req.m.billing.notConfiguredContact);
     }
 
     const admin = await prisma.user.findUniqueOrThrow({
@@ -40,7 +40,7 @@ subscriptionRouter.post(
 subscriptionRouter.post(
   "/portal",
   asyncHandler(async (req, res) => {
-    if (!isStripeConfigured()) throw new HttpError(503, "Maksete vastuvõtt pole seadistatud.");
+    if (!isStripeConfigured()) throw new HttpError(503, req.m.billing.notConfigured);
     const url = await createPortalSession(req.user!.organizationId);
     res.json({ url });
   })

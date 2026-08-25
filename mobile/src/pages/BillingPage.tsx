@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import type { BillingResponse, WorkObject } from "../api/types";
+import { useT } from "../i18n";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -17,6 +18,7 @@ function eur(n: number): string {
 }
 
 export function BillingPage() {
+  const d = useT();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
@@ -35,7 +37,7 @@ export function BillingPage() {
       if (objectId !== "") params.set("objectId", String(objectId));
       setData(await apiRequest<BillingResponse>(`/billing?${params}`));
     } catch {
-      setError("Arveldusandmete laadimine ebaõnnestus.");
+      setError(d.billing.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -57,22 +59,21 @@ export function BillingPage() {
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Arveldus</h1>
+        <h1>{d.billing.title}</h1>
       </header>
 
       <p className="subtitle">
-        Sama tunniandmestik, mis palgaarvestuses, aga teisest otsast: mida objektile kulus ja mida saab
-        kliendilt küsida. Vahe on kate.
+        {d.billing.intro}
       </p>
 
       <form className="card" onSubmit={load}>
         <label>
-          Objekt
+          {d.common.object}
           <select
             value={objectId}
             onChange={(e) => setObjectId(e.target.value === "" ? "" : Number(e.target.value))}
           >
-            <option value="">Kõik objektid</option>
+            <option value="">{d.common.allObjects}</option>
             {objects.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
@@ -81,15 +82,15 @@ export function BillingPage() {
           </select>
         </label>
         <label>
-          Alates
+          {d.common.from}
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </label>
         <label>
-          Kuni
+          {d.common.to}
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </label>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Arvutan..." : "Näita"}
+          {loading ? d.billing.calculating : d.common.show}
         </button>
       </form>
 
@@ -97,29 +98,28 @@ export function BillingPage() {
 
       {totals && (
         <section className="card">
-          <h2>Kokku</h2>
+          <h2>{d.billing.total}</h2>
           <dl className="stat-list">
             <div>
-              <dt>Tunde</dt>
+              <dt>{d.billing.hours}</dt>
               <dd>{totals.hours}</dd>
             </div>
             <div>
-              <dt>Kulu</dt>
+              <dt>{d.billing.cost}</dt>
               <dd>{eur(totals.cost)}</dd>
             </div>
             <div>
-              <dt>Arveldatav</dt>
+              <dt>{d.billing.billable}</dt>
               <dd>{eur(totals.billable)}</dd>
             </div>
             <div>
-              <dt>Kate</dt>
+              <dt>{d.billing.margin}</dt>
               <dd className={totals.margin < 0 ? "text-error" : "text-success"}>{eur(totals.margin)}</dd>
             </div>
           </dl>
           {totals.unbilledHours > 0 && (
             <div className="alert alert-error" style={{ marginTop: "0.75rem" }}>
-              {totals.unbilledHours} tundi on ilma arveldusmäärata ja neid EI ole ülal arvestatud. Määra
-              arveldusmäär objektile või kulukoodile, muidu jääb see raha küsimata.
+              {d.billing.unbilledWarning(totals.unbilledHours)}
             </div>
           )}
         </section>
@@ -127,43 +127,43 @@ export function BillingPage() {
 
       {data && data.objects.length === 0 && (
         <div className="card">
-          <p>Valitud perioodil pole lõpetatud tööpäevi.</p>
+          <p>{d.billing.noData}</p>
         </div>
       )}
 
       {data?.objects.map((o) => (
         <section key={o.objectId} className="card">
           <h2>{o.objectName}</h2>
-          {o.clientName && <p className="subtitle">Klient: {o.clientName}</p>}
+          {o.clientName && <p className="subtitle">{d.billing.client(o.clientName)}</p>}
 
           <dl className="stat-list">
             <div>
-              <dt>Tunde</dt>
+              <dt>{d.billing.hours}</dt>
               <dd>{o.hours}</dd>
             </div>
             <div>
-              <dt>Kulu</dt>
+              <dt>{d.billing.cost}</dt>
               <dd>{eur(o.cost)}</dd>
             </div>
             <div>
-              <dt>Arveldatav</dt>
+              <dt>{d.billing.billable}</dt>
               <dd>{eur(o.billable)}</dd>
             </div>
             <div>
-              <dt>Kate</dt>
+              <dt>{d.billing.margin}</dt>
               <dd className={o.margin < 0 ? "text-error" : "text-success"}>{eur(o.margin)}</dd>
             </div>
           </dl>
 
           {o.budgetHours !== null && (
             <p className={o.overBudgetHours && o.overBudgetHours > 0 ? "text-error" : "subtitle"}>
-              Eelarve: {o.budgetHours} h
-              {o.overBudgetHours && o.overBudgetHours > 0 ? ` — ületatud ${o.overBudgetHours} h võrra` : ""}
+              {d.billing.budget(o.budgetHours)}
+              {o.overBudgetHours && o.overBudgetHours > 0 ? d.billing.overBudget(o.overBudgetHours) : ""}
             </p>
           )}
 
           {o.unbilledHours > 0 && (
-            <p className="text-warning">{o.unbilledHours} h ilma arveldusmäärata</p>
+            <p className="text-warning">{d.billing.unbilledShort(o.unbilledHours)}</p>
           )}
 
           <button
@@ -171,7 +171,7 @@ export function BillingPage() {
             style={{ padding: "0.35rem 0" }}
             onClick={() => setExpanded(expanded === o.objectId ? null : o.objectId)}
           >
-            {expanded === o.objectId ? "Peida kulukoodid" : "Näita kulukoodide kaupa"}
+            {expanded === o.objectId ? d.billing.hideLines : d.billing.showLines}
           </button>
 
           {expanded === o.objectId && (
@@ -181,7 +181,7 @@ export function BillingPage() {
                   <strong>{line.costCode}</strong>
                   <div>
                     {line.hours} h ×{" "}
-                    {line.rate === null ? <span className="text-warning">määramata</span> : `${eur(line.rate)}/h`} ={" "}
+                    {line.rate === null ? <span className="text-warning">{d.billing.rateUndefined}</span> : `${eur(line.rate)}/h`} ={" "}
                     {eur(line.billable)}
                   </div>
                 </li>
@@ -192,7 +192,7 @@ export function BillingPage() {
       ))}
 
       <Link className="btn btn-link" to="/dashboard">
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </Link>
     </div>
   );

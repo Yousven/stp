@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
+import { useT } from "../i18n";
 
 interface PerformanceRow {
   username: string;
@@ -16,31 +17,32 @@ interface TeamPerformanceResponse {
 
 export function TeamPerformancePage() {
   const navigate = useNavigate();
+  const d = useT();
   const [data, setData] = useState<TeamPerformanceResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     apiRequest<TeamPerformanceResponse>("/team-performance")
       .then(setData)
-      .catch(() => setError("Andmete laadimine ebaõnnestus."));
-  }, []);
+      .catch(() => setError(d.common.loadFailed));
+  }, [d]);
 
   return (
     <div className="page">
-      <h1>Meeskonna tööaja ülevaade (kuu)</h1>
+      <h1>{d.teamPerformance.title}</h1>
       {error && <div className="alert alert-error">{error}</div>}
-      {!data && !error && <div className="page-loading">Laadin...</div>}
+      {!data && !error && <div className="page-loading">{d.common.loading}</div>}
       {data && (
         <>
           <div className="alert alert-info">
-            Kokku töötunnid: <strong>{data.totalTeamHours}</strong>
+            {d.teamPerformance.totalHours} <strong>{data.totalTeamHours}</strong>
           </div>
           <ul className="log-list">
             {data.performance.map((row) => (
               <li key={row.username} className="card log-item">
                 <strong>{row.username}</strong>
                 <div>
-                  {row.actual} / {row.norm} tundi
+                  {d.teamPerformance.ofHours(row.actual, row.norm)}
                 </div>
                 <div className="progress-bar">
                   <div className="progress-bar-fill" style={{ width: `${Math.min(row.percent, 100)}%` }} />
@@ -48,12 +50,12 @@ export function TeamPerformancePage() {
                 <div className="subtitle">{row.percent}%</div>
               </li>
             ))}
-            {data.performance.length === 0 && <li>Ühtegi kasutajat pole veel.</li>}
+            {data.performance.length === 0 && <li>{d.teamPerformance.none}</li>}
           </ul>
         </>
       )}
       <button className="btn btn-link" onClick={() => navigate("/dashboard")}>
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </button>
     </div>
   );

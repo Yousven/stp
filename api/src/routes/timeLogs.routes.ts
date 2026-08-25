@@ -54,7 +54,7 @@ timeLogsRouter.post(
       where: { id: objectId, organizationId: req.user!.organizationId, deleted: false },
     });
     if (!object) {
-      throw new HttpError(404, "Valitud objekti ei leitud.");
+      throw new HttpError(404, req.m.objects.selectedNotFound);
     }
 
     // Asukoha kontroll serveri poolel: klient ei saa seda vahele jätta ega
@@ -62,11 +62,7 @@ timeLogsRouter.post(
     const distance = distanceMeters(latitude, longitude, Number(object.latitude), Number(object.longitude));
     const allowance = Math.min(accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
     if (distance > object.radius + allowance) {
-      throw new HttpError(
-        403,
-        `Sa oled objektist ${Math.round(distance)} m kaugusel (lubatud ${object.radius} m). ` +
-          "Tööpäeva saab alustada ainult objektil kohapeal."
-      );
+      throw new HttpError(403, req.m.timeLogs.tooFar(Math.round(distance), object.radius));
     }
 
     /**
@@ -81,7 +77,7 @@ timeLogsRouter.post(
     const activeLog = await prisma.timeLog.findFirst({ where: { userId, endTime: null } });
     if (activeLog) {
       if (activeLog.objectId === objectId) {
-        throw new HttpError(409, "Tööpäev sellel objektil on juba alustatud.");
+        throw new HttpError(409, req.m.timeLogs.alreadyStarted);
       }
 
       const switchedAt = new Date();
@@ -102,7 +98,7 @@ timeLogsRouter.post(
         where: { id: costCodeId, organizationId: req.user!.organizationId, deleted: false },
         select: { id: true },
       });
-      if (!code) throw new HttpError(404, "Valitud kulukoodi ei leitud.");
+      if (!code) throw new HttpError(404, req.m.costCodes.selectedNotFound);
     }
 
     /**
@@ -121,10 +117,10 @@ timeLogsRouter.post(
       const driftMs = now.getTime() - reported.getTime();
 
       if (driftMs < -SUSPICIOUS_DRIFT_SECONDS * 1000) {
-        throw new HttpError(400, "Seadme kell näitab tulevikku. Kontrolli telefoni kellaaega ja proovi uuesti.");
+        throw new HttpError(400, req.m.timeLogs.clockInFuture);
       }
       if (driftMs > MAX_OFFLINE_AGE_MS) {
-        throw new HttpError(400, "Salvestatud tööpäev on liiga vana, et seda automaatselt lisada. Võta ühendust administraatoriga.");
+        throw new HttpError(400, req.m.timeLogs.tooOldOffline);
       }
 
       startTime = reported;
@@ -186,7 +182,7 @@ timeLogsRouter.post(
     const userId = req.user!.sub;
 
     const log = await prisma.timeLog.findFirst({ where: { id, userId } });
-    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+    if (!log) throw new HttpError(404, req.m.timeLogs.notFound);
 
     // skipDuplicates + @@unique([timeLogId, type, occurredAt]) teeb korduva
     // partii saatmise ohutuks: juba salvestatud sündmused jäetakse vahele.
@@ -234,7 +230,7 @@ timeLogsRouter.post(
     // sisselogitud kasutajale (originaal kontrollis ainult, et log on aktiivne).
     const log = await prisma.timeLog.findFirst({ where: { id, userId } });
     if (!log || log.endTime) {
-      throw new HttpError(409, "Aktiivset töölogi ei leitud. Tööpäev pole alustatud või on juba lõpetatud.");
+      throw new HttpError(409, req.m.timeLogs.noActiveLog);
     }
 
     // Offline-lõpetamine: sama loogika mis alustamisel, aga lisaks ei tohi
@@ -243,10 +239,10 @@ timeLogsRouter.post(
     if (occurredAt) {
       const reported = new Date(occurredAt);
       if (reported.getTime() > Date.now() + SUSPICIOUS_DRIFT_SECONDS * 1000) {
-        throw new HttpError(400, "Seadme kell näitab tulevikku. Kontrolli telefoni kellaaega.");
+        throw new HttpError(400, req.m.timeLogs.clockInFutureShort);
       }
       if (reported.getTime() < log.startTime.getTime()) {
-        throw new HttpError(400, "Lõpetamise aeg on tööpäeva algusest varasem.");
+        throw new HttpError(400, req.m.timeLogs.endBeforeStart);
       }
       endTime = reported;
     }
@@ -336,15 +332,12 @@ timeLogsRouter.patch(
       where: { id, user: { organizationId: req.user!.organizationId } },
       include: { presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
-    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+    if (!log) throw new HttpError(404, req.m.timeLogs.notFound);
 
     const overridingHours = workDuration !== undefined && Number(log.manualWorkDuration ?? NaN) !== workDuration;
     if (overridingHours && !reason?.trim()) {
       const computed = computeWorkedHours(log).net;
-      throw new HttpError(
-        400,
-        `Tundide käsitsi muutmiseks on vaja põhjendust. Kohaloleku järgi arvutatud tunnid: ${computed} h.`
-      );
+      throw new HttpError(400, req.m.timeLogs.reasonRequired(computed));
     }
 
     const updated = await prisma.timeLog.update({
@@ -390,7 +383,7 @@ timeLogsRouter.get(
       where: { id, user: { organizationId: req.user!.organizationId } },
       select: { id: true },
     });
-    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+    if (!log) throw new HttpError(404, req.m.timeLogs.notFound);
 
     const entries = await prisma.auditLog.findMany({
       where: { organizationId: req.user!.organizationId, entityType: "time_log", entityId: id },

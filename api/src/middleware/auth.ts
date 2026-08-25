@@ -20,7 +20,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : queryToken;
 
   if (!token) {
-    res.status(401).json({ error: "Autentimine puudub." });
+    res.status(401).json({ error: req.m.access.missingAuth });
     return;
   }
 
@@ -28,14 +28,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   try {
     payload = verifyAccessToken(token);
   } catch {
-    res.status(401).json({ error: "Token on vale või aegunud." });
+    res.status(401).json({ error: req.m.access.invalidToken });
     return;
   }
 
   // Allkiri on kehtiv, aga token võib olla tühistatud (vallandamine,
   // varastatud telefon, parooli vahetus).
   if (await isTokenRevoked(payload.sub, payload.iat)) {
-    res.status(401).json({ error: "Sessioon on lõpetatud. Palun logi uuesti sisse." });
+    res.status(401).json({ error: req.m.access.sessionEnded });
     return;
   }
 
@@ -45,7 +45,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.user?.role !== "admin") {
-    res.status(403).json({ error: "Ligipääs keelatud." });
+    res.status(403).json({ error: req.m.access.forbidden });
     return;
   }
   next();

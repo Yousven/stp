@@ -46,7 +46,7 @@ authRouter.post(
 
     // Sama üldine veateade nii vale org-koodi kui vale kasutajanime/parooli
     // korral, et mitte lekitada, millised ettevõtte koodid eksisteerivad.
-    const invalidCredentials = () => new HttpError(401, "Vale ettevõtte kood, kasutajanimi või parool.");
+    const invalidCredentials = () => new HttpError(401, req.m.auth.invalidCredentials);
 
     const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
     if (!organization) throw invalidCredentials();
@@ -64,13 +64,10 @@ authRouter.post(
     // Parool on õige, aga liitumistaotlus pole veel läbi vaadatud. Siin võib
     // anda täpse põhjuse — kasutaja on end juba autentinud, seega infot ei leki.
     if (user.status === "pending") {
-      throw new HttpError(
-        403,
-        "Sinu liitumistaotlus ootab veel ettevõtte administraatori kinnitust. Proovi hiljem uuesti."
-      );
+      throw new HttpError(403, req.m.auth.pendingApproval);
     }
     if (user.status === "rejected") {
-      throw new HttpError(403, "Sinu liitumistaotlus lükati tagasi. Võta ühendust ettevõtte administraatoriga.");
+      throw new HttpError(403, req.m.auth.requestRejected);
     }
 
     const payload = { sub: user.id, organizationId: user.organizationId, username: user.username, role: user.role };
@@ -98,11 +95,11 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const { orgName, orgSlug, adminUsername, adminEmail, adminPassword } = registerOrgSchema.parse(req.body);
 
-    const passwordError = validatePasswordPolicy(adminPassword);
+    const passwordError = validatePasswordPolicy(adminPassword, req.m);
     if (passwordError) throw new HttpError(400, passwordError);
 
     const existing = await prisma.organization.findUnique({ where: { slug: orgSlug } });
-    if (existing) throw new HttpError(409, "See ettevõtte kood on juba kasutusel.");
+    if (existing) throw new HttpError(409, req.m.auth.orgCodeTaken);
 
     const hashed = await hashPassword(adminPassword);
 
@@ -155,12 +152,12 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const { orgSlug, username, email, password } = requestAccessSchema.parse(req.body);
 
-    const passwordError = validatePasswordPolicy(password);
+    const passwordError = validatePasswordPolicy(password, req.m);
     if (passwordError) throw new HttpError(400, passwordError);
 
     const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
     if (!organization) {
-      throw new HttpError(404, "Sellist ettevõtte koodi ei leitud. Kontrolli koodi oma tööandjalt.");
+      throw new HttpError(404, req.m.auth.orgCodeNotFound);
     }
 
     const existing = await prisma.user.findFirst({
@@ -169,9 +166,9 @@ authRouter.post(
     if (existing) {
       // Ära lekita, kumb väli kattus ega millises olekus konto on.
       if (existing.status === "pending") {
-        throw new HttpError(409, "Sellise nimega taotlus on juba esitatud ja ootab kinnitust.");
+        throw new HttpError(409, req.m.auth.requestAlreadyPending);
       }
-      throw new HttpError(409, "See kasutajanimi või e-mail on selles ettevõttes juba kasutusel.");
+      throw new HttpError(409, req.m.auth.usernameOrEmailTakenInOrg);
     }
 
     await prisma.user.create({
@@ -212,7 +209,7 @@ authRouter.post(
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      throw new HttpError(401, "Refresh-token on vale või aegunud.");
+      throw new HttpError(401, req.m.auth.invalidRefreshToken);
     }
     const { sub, organizationId, username, role } = payload;
     res.json({ accessToken: signAccessToken({ sub, organizationId, username, role }) });

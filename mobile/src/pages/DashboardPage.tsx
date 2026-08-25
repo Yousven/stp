@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import type { DashboardResponse, OnboardingState } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
+import { useLocale, useT } from "../i18n";
 import { useGeofence } from "../hooks/useGeofence";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { clearActiveLog, readActiveLog, writeActiveLog } from "../api/offlineCache";
@@ -15,6 +16,8 @@ import {
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
+  const d = useT();
+  const locale = useLocale();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState("");
   const [presence, setPresence] = useState<{ inside: boolean; distanceMeters: number } | null>(null);
@@ -45,7 +48,7 @@ export function DashboardPage() {
       }
     } catch (err) {
       if (!isOfflineError(err)) {
-        setError("Andmete laadimine ebaõnnestus.");
+        setError(d.common.loadFailed);
         return;
       }
       // Ühenduseta: tööpäeva peab saama nii alustada kui lõpetada, seega
@@ -55,7 +58,7 @@ export function DashboardPage() {
       setOffline(true);
       setError("");
     }
-  }, []);
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -101,33 +104,33 @@ export function DashboardPage() {
     return (
       <div className="page">
         <header className="topbar">
-          <h1>Tere, {user?.username}!</h1>
+          <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
         </header>
         <div className="alert alert-info">
-          Ühendust pole. Näidatakse telefoni salvestatud andmeid; tehtu saadetakse ära, kui võrk taastub.
+          {d.dashboard.offlineNotice}
         </div>
         <section className="card">
           {offlineLog ? (
             <>
-              <h2>Tööpäev avatud</h2>
+              <h2>{d.dashboard.workdayOpen}</h2>
               <p>
-                <strong>Objekt:</strong> {offlineLog.objectName}
+                <strong>{d.common.object}:</strong> {offlineLog.objectName}
                 <br />
-                <strong>Alates:</strong> {new Date(offlineLog.startTime).toLocaleString("et-EE")}
+                <strong>{d.dashboard.since}:</strong> {new Date(offlineLog.startTime).toLocaleString(locale)}
               </p>
             </>
           ) : (
-            <h2>Aktiivset tööpäeva pole registreeritud</h2>
+            <h2>{d.dashboard.noActiveWorkday}</h2>
           )}
         </section>
         <nav className="button-stack">
           {offlineLog ? (
             <Link className="btn btn-warning" to="/end-work">
-              Lõpeta tööpäev
+              {d.dashboard.endWork}
             </Link>
           ) : (
             <Link className="btn btn-primary" to="/start-work">
-              Alusta tööpäeva
+              {d.dashboard.startWork}
             </Link>
           )}
         </nav>
@@ -135,74 +138,71 @@ export function DashboardPage() {
     );
   }
 
-  if (!data) return <div className="page-loading">Laadin...</div>;
+  if (!data) return <div className="page-loading">{d.common.loading}</div>;
 
   const { activeLog, lastFinished, monthSummary } = data;
 
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Tere, {user?.username}!</h1>
+        <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
         <button className="btn btn-link" onClick={() => logout()}>
-          Logi välja
+          {d.login.logout}
         </button>
       </header>
 
       {activeLog && presence && !presence.inside && (
         <div className="alert alert-error">
-          Oled objektist {presence.distanceMeters} m kaugusel — tööaja arvestus on peatatud. Kell jookseb edasi, kui
-          naased objektile.
+          {d.dashboard.awayFromSite(presence.distanceMeters)}
         </div>
       )}
 
       {offlinePending > 0 && (
         <div className="alert alert-info">
-          {offlinePending} salvestatud tegevus{offlinePending > 1 ? "t" : ""} ootab ühendust. Need saadetakse
-          automaatselt, kui võrk taastub.
+          {d.dashboard.offlinePending(offlinePending)}
         </div>
       )}
 
       {offlineResult && offlineResult.rejected.length > 0 && (
         <div className="alert alert-error">
-          <strong>Osa salvestatud tegevusi ei õnnestunud saata:</strong>
+          <strong>{d.dashboard.offlineRejected}</strong>
           {offlineResult.rejected.map((r, i) => (
             <div key={i}>
               {r.label}: {r.reason}
             </div>
           ))}
           <button className="btn btn-link" style={{ padding: "0.35rem 0" }} onClick={clearResult}>
-            Sulge
+            {d.common.close}
           </button>
         </div>
       )}
 
       {onboarding && !onboarding.complete && !onboarding.dismissed && (
         <Link to="/onboarding" className="alert alert-info" style={{ display: "block", textDecoration: "none" }}>
-          <strong>Ettevõte pole veel töövalmis.</strong>{" "}
+          <strong>{d.dashboard.notReadyTitle}</strong>{" "}
           {!onboarding.hasObject
-            ? "Lisa esimene objekt — ilma selleta ei saa keegi tööpäeva alustada."
+            ? d.dashboard.notReadyObject
             : !onboarding.hasEmployee
-              ? "Too töötajad süsteemi."
-              : "Proovi ise üks tööpäev läbi."}{" "}
-          Vajuta siia.
+              ? d.dashboard.notReadyEmployee
+              : d.dashboard.notReadyTimeLog}{" "}
+          {d.dashboard.tapHere}
         </Link>
       )}
 
       {user?.role === "admin" && (data.pendingRequests ?? 0) > 0 && (
         <Link to="/admin/requests" className="alert alert-info" style={{ display: "block", textDecoration: "none" }}>
           <strong>
-            {data.pendingRequests} uus liitumistaotlus{(data.pendingRequests ?? 0) > 1 ? "t" : ""}
+            {d.dashboard.pendingRequests(data.pendingRequests ?? 0)}
           </strong>{" "}
-          ootab kinnitamist — vajuta siia.
+          {d.dashboard.pendingRequestsTail}
         </Link>
       )}
 
       {activeLog && (backgroundPermission === "prompt" || backgroundPermission === "denied") && (
         <div className="alert alert-info">
-          Luba asukoht ka taustal, siis märgitakse objektilt lahkumine ja naasmine automaatselt ka suletud rakenduse
-          korral. Asukohta ei jälgita pidevalt — ainult objekti piiri ületamisel, seega akut see praktiliselt ei kuluta.
+          {d.dashboard.backgroundPrompt}
           <button className="btn btn-link" style={{ padding: "0.35rem 0" }} onClick={enableBackgroundTracking}>
-            Luba taustal
+            {d.dashboard.enableBackground}
           </button>
         </div>
       )}
@@ -211,26 +211,26 @@ export function DashboardPage() {
         {activeLog ? (
           <>
             <h2 className={presence && !presence.inside ? "" : "text-success"}>
-              {presence && !presence.inside ? "Tööpäev avatud (objektilt eemal)" : "Tööle registreeritud"}
+              {presence && !presence.inside ? d.dashboard.workdayOpenAway : d.dashboard.clockedIn}
             </h2>
             <p>
-              <strong>Objekt:</strong> {activeLog.object.name}
+              <strong>{d.common.object}:</strong> {activeLog.object.name}
               <br />
-              <strong>Alates:</strong> {new Date(activeLog.startTime).toLocaleString("et-EE")}
+              <strong>{d.dashboard.since}:</strong> {new Date(activeLog.startTime).toLocaleString(locale)}
             </p>
           </>
         ) : (
           <>
-            <h2>Aktiivset tööpäeva pole registreeritud</h2>
+            <h2>{d.dashboard.noActiveWorkday}</h2>
             {lastFinished && (
               <p>
-                <strong>Viimane lõpetatud tööpäev:</strong>
+                <strong>{d.dashboard.lastFinished}</strong>
                 <br />
-                Objekt: {lastFinished.object.name}
+                {d.common.object}: {lastFinished.object.name}
                 <br />
-                Algas: {new Date(lastFinished.startTime).toLocaleString("et-EE")}
+                {d.dashboard.started}: {new Date(lastFinished.startTime).toLocaleString(locale)}
                 <br />
-                Lõppes: {lastFinished.endTime && new Date(lastFinished.endTime).toLocaleString("et-EE")}
+                {d.dashboard.ended}: {lastFinished.endTime && new Date(lastFinished.endTime).toLocaleString(locale)}
               </p>
             )}
           </>
@@ -238,22 +238,22 @@ export function DashboardPage() {
       </section>
 
       <section className="card">
-        <h2>Kuu kokkuvõte</h2>
+        <h2>{d.dashboard.monthSummary}</h2>
         <dl className="stat-list">
           <div>
-            <dt>Töötunde</dt>
+            <dt>{d.dashboard.hoursWorked}</dt>
             <dd>{monthSummary.totalHours}</dd>
           </div>
           <div>
-            <dt>Tunnihind</dt>
+            <dt>{d.dashboard.hourlyRate}</dt>
             <dd>€{monthSummary.hourlyRate.toFixed(2)}</dd>
           </div>
           <div>
-            <dt>Teenitud</dt>
+            <dt>{d.dashboard.earned}</dt>
             <dd>€{monthSummary.totalEarnings.toFixed(2)}</dd>
           </div>
           <div>
-            <dt>Netopalk</dt>
+            <dt>{d.dashboard.netSalary}</dt>
             <dd>€{monthSummary.netSalary.toFixed(2)}</dd>
           </div>
         </dl>
@@ -261,54 +261,55 @@ export function DashboardPage() {
           <div className="progress-bar-fill" style={{ width: `${monthSummary.progress}%` }} />
         </div>
         <p className="subtitle">
-          Eesmärk: {monthSummary.monthlyTarget} tundi ({monthSummary.progress}%)
+          {d.dashboard.target(monthSummary.monthlyTarget, monthSummary.progress)}
         </p>
       </section>
 
       <nav className="button-stack">
         {activeLog ? (
           <Link className="btn btn-warning" to="/end-work">
-            Lõpeta tööpäev
+            {d.dashboard.endWork}
           </Link>
         ) : (
           <Link className="btn btn-primary" to="/start-work">
-            Alusta tööpäeva
+            {d.dashboard.startWork}
           </Link>
         )}
         <Link className="btn btn-secondary" to="/history">
-          Tööajalugu
+          {d.dashboard.history}
         </Link>
         <Link className="btn btn-secondary" to="/absences">
-          Puudumised
+          {d.dashboard.absences}
         </Link>
         {user?.role === "admin" && (
           <>
             <Link className="btn btn-secondary" to="/admin/objects">
-              Halda objekte
+              {d.dashboard.manageObjects}
             </Link>
             <Link className="btn btn-secondary" to="/admin/users">
-              Halda kasutajaid
+              {d.dashboard.manageUsers}
             </Link>
             <Link className="btn btn-secondary" to="/admin/requests">
-              Liitumistaotlused{(data.pendingRequests ?? 0) > 0 ? ` (${data.pendingRequests})` : ""}
+              {d.dashboard.joinRequests}
+              {(data.pendingRequests ?? 0) > 0 ? ` (${data.pendingRequests})` : ""}
             </Link>
             <Link className="btn btn-secondary" to="/admin/team-performance">
-              Meeskonna ülevaade
+              {d.dashboard.teamOverview}
             </Link>
             <Link className="btn btn-secondary" to="/admin/settings">
-              Seaded
+              {d.dashboard.settings}
             </Link>
             <Link className="btn btn-secondary" to="/admin/cost-codes">
-              Kulukoodid
+              {d.dashboard.costCodes}
             </Link>
             <Link className="btn btn-secondary" to="/admin/reports">
-              Raportid
+              {d.dashboard.reports}
             </Link>
             <Link className="btn btn-secondary" to="/admin/billing">
-              Arveldus
+              {d.dashboard.billing}
             </Link>
             <Link className="btn btn-secondary" to="/admin/subscription">
-              Tellimus
+              {d.dashboard.subscription}
             </Link>
           </>
         )}

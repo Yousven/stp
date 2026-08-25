@@ -5,16 +5,9 @@ import { Geolocation } from "@capacitor/geolocation";
 import { ApiError, apiRequest } from "../api/client";
 import type { CostCode, WorkObject } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
+import { useT } from "../i18n";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/offlineCache";
-
-const LOCATION_REQUIRED_MESSAGE =
-  "Tööpäeva alustamiseks on vaja asukoha luba, et kinnitada, et oled objektil. " +
-  "Luba asukoha kasutamine seadetes ja proovi uuesti.";
-
-const LOCATION_UNAVAILABLE_MESSAGE =
-  "Asukohta ei õnnestunud määrata. Sisetingimustes või ilma levita võtab GPS aega — " +
-  "mine võimalusel lahtise taeva alla ja proovi uuesti.";
 
 /** Brauseri GeolocationPositionError.code: 1 = luba puudub. */
 const PERMISSION_DENIED = 1;
@@ -27,12 +20,12 @@ const PERMISSION_DENIED = 1;
  * leebemate tingimustega — muidu jääks töötaja just seal, kus offline-tugi
  * kõige rohkem vajalik on, tööpäevata.
  */
-async function resolvePosition() {
+async function resolvePosition(messages: { required: string; unavailable: string }) {
   try {
     return await Geolocation.getCurrentPosition({ timeout: 20000, enableHighAccuracy: true, maximumAge: 0 });
   } catch (first) {
     if ((first as { code?: number })?.code === PERMISSION_DENIED) {
-      throw new Error(LOCATION_REQUIRED_MESSAGE);
+      throw new Error(messages.required);
     }
     try {
       return await Geolocation.getCurrentPosition({ timeout: 30000, enableHighAccuracy: false, maximumAge: 60000 });
@@ -40,15 +33,16 @@ async function resolvePosition() {
       // Tegelik põhjus konsooli, et vea uurimine ei algaks nullist.
       console.warn("Asukoha määramine ebaõnnestus", first, second);
       if ((second as { code?: number })?.code === PERMISSION_DENIED) {
-        throw new Error(LOCATION_REQUIRED_MESSAGE);
+        throw new Error(messages.required);
       }
-      throw new Error(LOCATION_UNAVAILABLE_MESSAGE);
+      throw new Error(messages.unavailable);
     }
   }
 }
 
 export function StartWorkPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
   const [costCodes, setCostCodes] = useState<CostCode[]>([]);
@@ -74,7 +68,7 @@ export function StartWorkPage() {
         // alustadagi. Viimane teadaolev nimekiri on selleks piisav.
         const cached = isOfflineError(err) ? await readCachedObjects<WorkObject>() : null;
         if (cached && cached.length > 0) show(cached);
-        else setError("Objektide laadimine ebaõnnestus.");
+        else setError(d.startWork.objectsLoadFailed);
       });
   }, []);
 
@@ -109,7 +103,7 @@ export function StartWorkPage() {
     try {
       // Asukoht on kohustuslik: server kontrollib, et oled päriselt objektil.
       // Ilma loata ei saa tööpäeva alustada — see on kogu süsteemi mõte.
-      setStatus("Kontrollin asukohta...");
+      setStatus(d.startWork.checkingLocation);
 
       // checkPermissions/requestPermissions on olemas ainult natiivsel
       // platvormil; veebis viskab plugin "Not implemented on web" ja seal
@@ -119,18 +113,21 @@ export function StartWorkPage() {
         if (permission.location !== "granted") {
           const requested = await Geolocation.requestPermissions();
           if (requested.location !== "granted") {
-            throw new Error(LOCATION_REQUIRED_MESSAGE);
+            throw new Error(d.startWork.locationRequired);
           }
         }
       }
 
-      const position = await resolvePosition();
+      const position = await resolvePosition({
+        required: d.startWork.locationRequired,
+        unavailable: d.startWork.locationUnavailable,
+      });
 
       // Võltsitud GPS ei blokeeri alustamist (vale positiivne jätaks ausa
       // töötaja tööpäevata), aga lipp läheb serverisse ja admin näeb seda.
       const mocked = await isLocationMocked();
 
-      setStatus("Registreerin tööpäeva...");
+      setStatus(d.startWork.registering);
       const body = {
         objectId,
         latitude: position.coords.latitude,
@@ -154,7 +151,7 @@ export function StartWorkPage() {
           method: "POST",
           body,
           occurredAt,
-          label: `Tööpäeva alustamine (${objectName})`,
+          label: d.startWork.queueLabel(objectName),
         });
         // Ilma selleta ei saaks töötaja sama tööpäeva levita lõpetada:
         // lõpetamise vorm vajab viidet tööpäevale, mida serveris veel pole.
@@ -170,7 +167,7 @@ export function StartWorkPage() {
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("Tööpäeva alustamine ebaõnnestus.");
+        setError(d.startWork.failed);
       }
     } finally {
       setStatus("");
@@ -181,13 +178,12 @@ export function StartWorkPage() {
   if (offlineNotice) {
     return (
       <div className="page">
-        <h1>Salvestatud offline</h1>
+        <h1>{d.startWork.savedOffline}</h1>
         <div className="alert alert-info">
-          Ühendust ei olnud, aga tööpäeva algus on telefoni salvestatud koos praeguse kellaaja ja asukohaga. See
-          saadetakse automaatselt, kui võrk taastub — sa ei pea midagi tegema.
+          {d.startWork.savedOfflineBody}
         </div>
         <button className="btn btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
-          Selge
+          {d.common.ok}
         </button>
       </div>
     );
@@ -195,11 +191,11 @@ export function StartWorkPage() {
 
   return (
     <div className="page">
-      <h1>Alusta tööpäeva</h1>
+      <h1>{d.startWork.title}</h1>
       {error && <div className="alert alert-error">{error}</div>}
       <form className="card" onSubmit={handleSubmit}>
         <label>
-          Objekt
+          {d.common.object}
           <select value={objectId} onChange={(e) => setObjectId(Number(e.target.value))} required>
             {objects.map((o) => (
               <option key={o.id} value={o.id}>
@@ -210,12 +206,12 @@ export function StartWorkPage() {
         </label>
         {costCodes.length > 0 && (
           <label>
-            Töö liik
+            {d.startWork.workType}
             <select
               value={costCodeId}
               onChange={(e) => setCostCodeId(e.target.value === "" ? "" : Number(e.target.value))}
             >
-              <option value="">Määramata</option>
+              <option value="">{d.common.undefinedValue}</option>
               {costCodes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.code} — {c.name}
@@ -224,13 +220,13 @@ export function StartWorkPage() {
             </select>
           </label>
         )}
-        <div className="form-hint">Tööpäeva saab alustada ainult objektil kohapeal — asukohta kontrollitakse.</div>
+        <div className="form-hint">{d.startWork.hint}</div>
         <button type="submit" className="btn btn-primary" disabled={submitting || objectId === ""}>
-          {submitting ? status || "Palun oota..." : "Alusta tööpäeva"}
+          {submitting ? status || d.common.pleaseWait : d.startWork.title}
         </button>
       </form>
       <button className="btn btn-link" onClick={() => navigate(-1)}>
-        Tagasi
+        {d.common.back}
       </button>
     </div>
   );

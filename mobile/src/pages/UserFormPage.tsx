@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import type { AdminUser } from "../api/types";
+import { useT } from "../i18n";
 
 // Kasutaja loomise/muutmise vorm. Muutmisel jäetakse parool tühjaks, kui
 // seda ei taheta uuendada — sama käitumine mis admin_edit_user.php-s.
@@ -9,6 +10,7 @@ export function UserFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEdit = id !== undefined;
   const navigate = useNavigate();
+  const d = useT();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -26,7 +28,7 @@ export function UserFormPage() {
       .then((users) => {
         const user = users.find((u) => u.id === Number(id));
         if (!user) {
-          setError("Kasutajat ei leitud.");
+          setError(d.userForm.notFound);
           return;
         }
         setUsername(user.username);
@@ -35,9 +37,9 @@ export function UserFormPage() {
         setAdvance(user.advance);
         setRole(user.role);
       })
-      .catch(() => setError("Kasutaja laadimine ebaõnnestus."))
+      .catch(() => setError(d.userForm.loadFailed))
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  }, [id, isEdit, d]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -59,53 +61,53 @@ export function UserFormPage() {
       }
       navigate("/admin/users", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Salvestamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.common.saveFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <div className="page-loading">Laadin...</div>;
+  if (loading) return <div className="page-loading">{d.common.loading}</div>;
 
   return (
     <div className="page">
-      <h1>{isEdit ? "Muuda kasutajat" : "Lisa kasutaja"}</h1>
+      <h1>{isEdit ? d.userForm.titleEdit : d.userForm.titleNew}</h1>
       {error && <div className="alert alert-error">{error}</div>}
       <form className="card" onSubmit={handleSubmit}>
         <label>
-          Kasutajanimi
+          {d.login.username}
           <input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
         </label>
         <label>
-          E-mail
+          {d.userForm.email}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
-          {isEdit ? "Uus parool" : "Parool"}
+          {isEdit ? d.resetPassword.newPassword : d.login.password}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!isEdit} />
         </label>
-        <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
+        <div className="form-hint">{d.passwordPolicy}</div>
         <label>
-          Tunnihind (€)
+          {d.userForm.hourlyRate} (€)
           <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} required />
         </label>
         <label>
-          Avanss (€)
+          {d.userForm.advance} (€)
           <input type="number" step="0.01" value={advance} onChange={(e) => setAdvance(e.target.value)} required />
         </label>
         <label>
-          Roll
+          {d.userForm.role}
           <select value={role} onChange={(e) => setRole(e.target.value as "admin" | "employee")}>
-            <option value="employee">Töötaja</option>
-            <option value="admin">Admin</option>
+            <option value="employee">{d.roles.employee}</option>
+            <option value="admin">{d.roles.admin}</option>
           </select>
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Palun oota..." : "Salvesta"}
+          {submitting ? d.common.pleaseWait : d.common.save}
         </button>
       </form>
       <button className="btn btn-link" onClick={() => navigate(-1)}>
-        Tagasi
+        {d.common.back}
       </button>
     </div>
   );

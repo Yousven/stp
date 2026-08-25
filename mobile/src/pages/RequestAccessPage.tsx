@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
+import { useT } from "../i18n";
 
 interface RequestAccessResponse {
   status: string;
@@ -14,6 +15,7 @@ interface RequestAccessResponse {
  */
 export function RequestAccessPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [orgSlug, setOrgSlug] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -27,7 +29,7 @@ export function RequestAccessPage() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("Paroolid ei ühti.");
+      setError(d.passwordsDoNotMatch);
       return;
     }
     setSubmitting(true);
@@ -39,7 +41,7 @@ export function RequestAccessPage() {
       });
       setSubmitted(result);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Taotluse saatmine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.requestAccess.failed);
     } finally {
       setSubmitting(false);
     }
@@ -49,18 +51,18 @@ export function RequestAccessPage() {
     return (
       <div className="page page-center">
         <div className="card">
-          <h1>Taotlus saadetud</h1>
+          <h1>{d.requestAccess.sentTitle}</h1>
           <div className="alert alert-info">{submitted.message}</div>
           <p>
-            Ettevõte: <strong>{submitted.organization.name}</strong>
+            {d.requestAccess.company} <strong>{submitted.organization.name}</strong>
             <br />
-            Kasutajanimi: <strong>{username}</strong>
+            {d.requestAccess.usernameLabel} <strong>{username}</strong>
           </p>
           <p className="subtitle">
-            Kui administraator on taotluse kinnitanud, saad samade andmetega sisse logida.
+            {d.requestAccess.afterApproval}
           </p>
           <button className="btn btn-primary" onClick={() => navigate("/login", { replace: true })}>
-            Tagasi sisselogimisse
+            {d.requestAccess.backToLogin}
           </button>
         </div>
       </div>
@@ -70,29 +72,29 @@ export function RequestAccessPage() {
   return (
     <div className="page page-center">
       <form className="card" onSubmit={handleSubmit}>
-        <h1>Liitu ettevõttega</h1>
-        <p className="subtitle">Loo endale konto. Ettevõtte administraator peab selle kinnitama.</p>
+        <h1>{d.requestAccess.title}</h1>
+        <p className="subtitle">{d.requestAccess.intro}</p>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
-          Ettevõtte kood
+          {d.login.orgCode}
           <input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} required autoFocus />
         </label>
-        <div className="form-hint">Küsi see kood oma tööandjalt.</div>
+        <div className="form-hint">{d.requestAccess.orgCodeHint}</div>
         <label>
-          Kasutajanimi
+          {d.login.username}
           <input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
-          E-mail
+          {d.userForm.email}
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
-          Parool
+          {d.login.password}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
+        <div className="form-hint">{d.passwordPolicy}</div>
         <label>
-          Kinnita parool
+          {d.confirmPassword}
           <input
             type="password"
             value={confirmPassword}
@@ -101,11 +103,11 @@ export function RequestAccessPage() {
           />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Saadan..." : "Saada liitumistaotlus"}
+          {submitting ? d.requestAccess.sending : d.requestAccess.submit}
         </button>
       </form>
       <Link to="/login" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Tagasi sisselogimisse
+        {d.requestAccess.backToLogin}
       </Link>
     </div>
   );

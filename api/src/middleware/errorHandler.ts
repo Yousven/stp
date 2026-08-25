@@ -11,7 +11,10 @@ export class HttpError extends Error {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
   if (err instanceof ZodError) {
-    res.status(400).json({ error: "Sisendandmed on vigased.", details: err.flatten() });
+    // Zodi enda väljateated jäävad eesti keelde: need on skeemides
+    // staatilised ja neid näeb ainult vigase päringu korral, mida äpp ise
+    // ei tekita. Ümbritsev teade on tõlgitud.
+    res.status(400).json({ error: req.m?.invalidInput ?? "Sisendandmed on vigased.", details: err.flatten() });
     return;
   }
   // HttpError on tahtlik, oodatud vastus (nt "objektist liiga kaugel") —
@@ -27,5 +30,5 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     userId: req.user?.sub,
     organizationId: req.user?.organizationId,
   });
-  res.status(500).json({ error: "Serveri viga." });
+  res.status(500).json({ error: req.m?.serverError ?? "Serveri viga." });
 }

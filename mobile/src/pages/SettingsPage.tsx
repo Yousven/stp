@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
+import { useT } from "../i18n";
+import { LanguagePicker } from "../components/LanguagePicker";
 
 interface Settings {
   check_in_deadline: string;
@@ -11,6 +13,7 @@ interface Settings {
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -19,8 +22,8 @@ export function SettingsPage() {
   useEffect(() => {
     apiRequest<Settings>("/settings")
       .then(setSettings)
-      .catch(() => setError("Seadete laadimine ebaõnnestus."));
-  }, []);
+      .catch(() => setError(d.settings.loadFailed));
+  }, [d]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -32,23 +35,26 @@ export function SettingsPage() {
       await apiRequest("/settings", { method: "PUT", body: settings });
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Salvestamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.common.saveFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!settings && !error) return <div className="page-loading">Laadin...</div>;
+  if (!settings && !error) return <div className="page-loading">{d.common.loading}</div>;
 
   return (
     <div className="page">
-      <h1>Admin seadistused</h1>
+      <h1>{d.settings.title}</h1>
       {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-info">Seaded salvestatud.</div>}
+      {success && <div className="alert alert-info">{d.settings.saved}</div>}
+      <div className="card">
+        <LanguagePicker />
+      </div>
       {settings && (
         <form className="card" onSubmit={handleSubmit}>
           <label>
-            Check-in tähtaeg
+            {d.settings.checkInDeadline}
             <input
               type="time"
               step="1"
@@ -58,7 +64,7 @@ export function SettingsPage() {
             />
           </label>
           <label>
-            Check-out tähtaeg
+            {d.settings.checkOutDeadline}
             <input
               type="time"
               step="1"
@@ -68,7 +74,7 @@ export function SettingsPage() {
             />
           </label>
           <label>
-            Tolerants (meetrites)
+            {d.settings.tolerance}
             <input
               type="number"
               value={settings.tolerance}
@@ -77,7 +83,7 @@ export function SettingsPage() {
             />
           </label>
           <label>
-            Admin e-posti aadress
+            {d.settings.adminEmail}
             <input
               type="email"
               value={settings.admin_email}
@@ -86,12 +92,12 @@ export function SettingsPage() {
             />
           </label>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Palun oota..." : "Salvesta seaded"}
+            {submitting ? d.common.pleaseWait : d.settings.submit}
           </button>
         </form>
       )}
       <button className="btn btn-link" onClick={() => navigate("/dashboard")}>
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </button>
     </div>
   );

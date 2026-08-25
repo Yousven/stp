@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import type { OnboardingState } from "../api/types";
+import { useT } from "../i18n";
 
 interface Step {
   done: boolean;
@@ -15,6 +16,7 @@ interface Step {
 
 export function OnboardingPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [state, setState] = useState<OnboardingState | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -23,9 +25,9 @@ export function OnboardingPage() {
     try {
       setState(await apiRequest<OnboardingState>("/me/onboarding"));
     } catch {
-      setError("Seadistuse seisu laadimine ebaõnnestus.");
+      setError(d.onboarding.loadFailed);
     }
-  }, []);
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -52,45 +54,37 @@ export function OnboardingPage() {
   }
 
   if (error) return <div className="page">{error}</div>;
-  if (!state) return <div className="page-loading">Laadin...</div>;
+  if (!state) return <div className="page-loading">{d.common.loading}</div>;
 
   const steps: Step[] = [
     {
       done: state.hasObject,
-      title: "Lisa esimene objekt",
-      body:
-        "Objekt on ehitusplats koos asukoha ja raadiusega. Tööpäeva saab alustada ainult objekti raadiuses — " +
-        "see ongi kontroll, et tunnid oleksid tehtud õiges kohas.",
+      title: d.onboarding.stepObject.title,
+      body: d.onboarding.stepObject.body,
       to: "/admin/objects/new",
-      action: "Lisa objekt",
+      action: d.onboarding.stepObject.action,
     },
     {
       done: state.hasEmployee,
-      title: "Too töötajad süsteemi",
-      body:
-        "Kaks võimalust: lisa kasutaja ise, või anna töötajale ettevõtte kood — ta loob konto ja sina kinnitad " +
-        "taotluse. Kood üksi ligipääsu ei anna.",
+      title: d.onboarding.stepEmployee.title,
+      body: d.onboarding.stepEmployee.body,
       to: "/admin/users/new",
-      action: "Lisa kasutaja",
+      action: d.onboarding.stepEmployee.action,
     },
     {
       done: state.hasCostCode,
-      title: "Kulukoodid kliendiarvelduseks",
-      body:
-        "Kui tahad hiljem kliendile arve esitada, määra tööliigid ja nende tunnihinnad. Ilma nendeta on tunnid " +
-        "olemas, aga arveldusraportis ilma määrata.",
+      title: d.onboarding.stepCostCode.title,
+      body: d.onboarding.stepCostCode.body,
       to: "/admin/cost-codes",
-      action: "Lisa kulukood",
+      action: d.onboarding.stepCostCode.action,
       optional: true,
     },
     {
       done: state.hasTimeLog,
-      title: "Proovi tööpäeva alustamist",
-      body:
-        "Mine objektile ja alusta tööpäeva. Nii näed ise, mida töötaja näeb, ja saad kontrollida, et raadius on " +
-        "õige suurusega.",
+      title: d.onboarding.stepTimeLog.title,
+      body: d.onboarding.stepTimeLog.body,
       to: "/start-work",
-      action: "Alusta tööpäeva",
+      action: d.onboarding.stepTimeLog.action,
     },
   ];
 
@@ -99,24 +93,24 @@ export function OnboardingPage() {
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Alustame</h1>
+        <h1>{d.onboarding.title}</h1>
       </header>
 
       <p className="subtitle">
-        Tere tulemast, {state.organization.name}! Neli sammu ja süsteem on töövalmis.
-        {requiredLeft > 0 ? ` Veel ${requiredLeft} sammu.` : " Kõik olulised sammud on tehtud."}
+        {d.onboarding.welcome(state.organization.name)}
+        {requiredLeft > 0 ? d.onboarding.stepsLeft(requiredLeft) : d.onboarding.allDone}
       </p>
 
       <section className="card">
-        <h2>Ettevõtte kood</h2>
+        <h2>{d.onboarding.orgCode}</h2>
         <p>
           <strong style={{ fontSize: "1.25rem", letterSpacing: "0.05em" }}>{state.organization.slug}</strong>
         </p>
         <p className="subtitle">
-          Seda koodi vajab iga töötaja sisselogimisel ja liitumistaotluse tegemisel. Jaga see meeskonnaga.
+          {d.onboarding.orgCodeExplanation}
         </p>
         <button className="btn btn-secondary" onClick={copySlug}>
-          {copied ? "Kopeeritud" : "Kopeeri kood"}
+          {copied ? d.onboarding.copied : d.onboarding.copyCode}
         </button>
       </section>
 
@@ -125,7 +119,7 @@ export function OnboardingPage() {
           <li key={step.title} className={`card${step.done ? " onboarding-done" : ""}`}>
             <h2>
               <span aria-hidden="true">{step.done ? "✓" : "○"}</span> {step.title}
-              {step.optional && <span className="subtitle"> (valikuline)</span>}
+              {step.optional && <span className="subtitle"> ({d.common.optional})</span>}
             </h2>
             <p className="subtitle">{step.body}</p>
             {!step.done && (
@@ -139,10 +133,10 @@ export function OnboardingPage() {
 
       <nav className="button-stack">
         <Link className="btn btn-secondary" to="/dashboard">
-          Mine Dashboardile
+          {d.onboarding.goToDashboard}
         </Link>
         <button className="btn btn-link" onClick={dismiss}>
-          Ära näita seda enam
+          {d.onboarding.dismiss}
         </button>
       </nav>
     </div>

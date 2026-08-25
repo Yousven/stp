@@ -75,7 +75,7 @@ usersRouter.post(
     const pending = await prisma.user.findFirst({
       where: { id, organizationId: req.user!.organizationId, status: "pending" },
     });
-    if (!pending) throw new HttpError(404, "Ootel taotlust ei leitud.");
+    if (!pending) throw new HttpError(404, req.m.auth.pendingRequestNotFound);
 
     const user = await prisma.user.update({
       where: { id },
@@ -118,7 +118,7 @@ usersRouter.post(
     const pending = await prisma.user.findFirst({
       where: { id, organizationId: req.user!.organizationId, status: "pending" },
     });
-    if (!pending) throw new HttpError(404, "Ootel taotlust ei leitud.");
+    if (!pending) throw new HttpError(404, req.m.auth.pendingRequestNotFound);
 
     // Jätame kirje alles "rejected" olekus, mitte ei kustuta — muidu saaks
     // tagasi lükatud inimene kohe uue taotluse esitada ja adminit spämmida.
@@ -168,7 +168,7 @@ usersRouter.post(
       where: { id, organizationId: req.user!.organizationId },
       select: { id: true, username: true },
     });
-    if (!user) throw new HttpError(404, "Kasutajat ei leitud.");
+    if (!user) throw new HttpError(404, req.m.users.notFound);
 
     await revokeUserTokens(id, reason);
     await prisma.deviceToken.deleteMany({ where: { userId: id } });
@@ -201,7 +201,7 @@ usersRouter.post(
   "/",
   asyncHandler(async (req, res) => {
     const data = createUserSchema.parse(req.body);
-    const passwordError = validatePasswordPolicy(data.password);
+    const passwordError = validatePasswordPolicy(data.password, req.m);
     if (passwordError) throw new HttpError(400, passwordError);
 
     try {
@@ -213,7 +213,7 @@ usersRouter.post(
       res.status(201).json(user);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw new HttpError(409, "Kasutajanimi või e-mail on selles ettevõttes juba kasutusel.");
+        throw new HttpError(409, req.m.auth.usernameOrEmailTaken);
       }
       throw err;
     }
@@ -237,10 +237,10 @@ usersRouter.patch(
     const { password, ...data } = updateUserSchema.parse(req.body);
 
     const existing = await prisma.user.findFirst({ where: { id, organizationId: req.user!.organizationId } });
-    if (!existing) throw new HttpError(404, "Kasutajat ei leitud.");
+    if (!existing) throw new HttpError(404, req.m.users.notFound);
 
     if (password) {
-      const passwordError = validatePasswordPolicy(password);
+      const passwordError = validatePasswordPolicy(password, req.m);
       if (passwordError) throw new HttpError(400, passwordError);
     }
 
@@ -253,7 +253,7 @@ usersRouter.patch(
       res.json(user);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw new HttpError(409, "Kasutajanimi või e-mail on selles ettevõttes juba kasutusel.");
+        throw new HttpError(409, req.m.auth.usernameOrEmailTaken);
       }
       throw err;
     }
@@ -266,7 +266,7 @@ usersRouter.delete(
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
     const existing = await prisma.user.findFirst({ where: { id, organizationId: req.user!.organizationId } });
-    if (!existing) throw new HttpError(404, "Kasutajat ei leitud.");
+    if (!existing) throw new HttpError(404, req.m.users.notFound);
 
     try {
       await prisma.user.delete({ where: { id } });
@@ -274,7 +274,7 @@ usersRouter.delete(
       res.status(204).end();
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
-        throw new HttpError(409, "Kasutajat ei saa kustutada, kuna tal on seotud töölogisid.");
+        throw new HttpError(409, req.m.users.hasTimeLogs);
       }
       throw err;
     }

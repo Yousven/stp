@@ -92,12 +92,12 @@ passwordResetRouter.post(
   asyncHandler(async (req, res) => {
     const { token, password } = resetSchema.parse(req.body);
 
-    const passwordError = validatePasswordPolicy(password);
+    const passwordError = validatePasswordPolicy(password, req.m);
     if (passwordError) throw new HttpError(400, passwordError);
 
     const reset = await prisma.passwordReset.findUnique({ where: { token }, include: { user: true } });
     if (!reset || reset.usedAt || reset.expiresAt < new Date()) {
-      throw new HttpError(400, "Link on aegunud või juba kasutatud. Palun küsi uus taastamise link.");
+      throw new HttpError(400, req.m.auth.resetLinkExpired);
     }
 
     await prisma.$transaction([

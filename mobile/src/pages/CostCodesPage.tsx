@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import type { CostCode, WorkObject } from "../api/types";
+import { useT } from "../i18n";
 
 interface Draft {
   id: number | null;
@@ -14,6 +15,7 @@ interface Draft {
 const EMPTY: Draft = { id: null, code: "", name: "", objectId: "", billableRate: "" };
 
 export function CostCodesPage() {
+  const d = useT();
   const [codes, setCodes] = useState<CostCode[] | null>(null);
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [error, setError] = useState("");
@@ -25,9 +27,9 @@ export function CostCodesPage() {
     try {
       setCodes(await apiRequest<CostCode[]>("/cost-codes"));
     } catch {
-      setError("Kulukoodide laadimine ebaõnnestus.");
+      setError(d.costCodes.loadFailed);
     }
-  }, []);
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -60,49 +62,47 @@ export function CostCodesPage() {
       setDraft(null);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Salvestamine ebaõnnestus.");
+      setFormError(err instanceof ApiError ? err.message : d.common.saveFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleRemove(code: CostCode) {
-    if (!confirm(`Eemaldada kulukood ${code.code} kasutusest?`)) return;
+    if (!confirm(d.costCodes.confirmRemove(code.code))) return;
     try {
       await apiRequest(`/cost-codes/${code.id}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Eemaldamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.costCodes.removeFailed);
     }
   }
 
   function objectName(objectId: number | null): string {
-    if (objectId === null) return "Kõik objektid";
-    return objects.find((o) => o.id === objectId)?.name ?? `Objekt #${objectId}`;
+    if (objectId === null) return d.common.allObjects;
+    return objects.find((o) => o.id === objectId)?.name ?? `#${objectId}`;
   }
 
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Kulukoodid</h1>
+        <h1>{d.costCodes.title}</h1>
         <button className="btn btn-link" onClick={() => setDraft(draft ? null : { ...EMPTY })}>
-          {draft ? "Loobu" : "Lisa"}
+          {draft ? d.common.cancel : d.common.add}
         </button>
       </header>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       <p className="subtitle">
-        Kulukood ütleb, mille peale tunnid läksid (nt müüritööd, koristus). Arveldusmäär on kliendile
-        esitatav tunnihind — see võidab objekti oma. Ilma määrata jäävad tunnid arveldusraportis
-        arveldamata.
+        {d.costCodes.intro}
       </p>
 
       {draft && (
         <form className="card" onSubmit={handleSubmit}>
           {formError && <div className="alert alert-error">{formError}</div>}
           <label>
-            Kood
+            {d.costCodes.code}
             <input
               value={draft.code}
               onChange={(e) => setDraft({ ...draft, code: e.target.value })}
@@ -111,7 +111,7 @@ export function CostCodesPage() {
             />
           </label>
           <label>
-            Nimetus
+            {d.costCodes.name}
             <input
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -120,12 +120,12 @@ export function CostCodesPage() {
             />
           </label>
           <label>
-            Objekt
+            {d.common.object}
             <select
               value={draft.objectId}
               onChange={(e) => setDraft({ ...draft, objectId: e.target.value === "" ? "" : Number(e.target.value) })}
             >
-              <option value="">Kõik objektid</option>
+              <option value="">{d.common.allObjects}</option>
               {objects.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
@@ -134,27 +134,27 @@ export function CostCodesPage() {
             </select>
           </label>
           <label>
-            Arveldusmäär (€/h)
+            {d.costCodes.billableRate}
             <input
               type="number"
               step="0.01"
               min="0"
               value={draft.billableRate}
               onChange={(e) => setDraft({ ...draft, billableRate: e.target.value })}
-              placeholder="määramata"
+              placeholder={d.costCodes.ratePlaceholder}
             />
           </label>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Salvestan..." : draft.id === null ? "Lisa kulukood" : "Salvesta"}
+            {submitting ? d.common.saving : draft.id === null ? d.costCodes.submitNew : d.common.save}
           </button>
         </form>
       )}
 
-      {!codes && !error && <div className="page-loading">Laadin...</div>}
+      {!codes && !error && <div className="page-loading">{d.common.loading}</div>}
 
       {codes && codes.length === 0 && !draft && (
         <div className="card">
-          <p>Kulukoode pole veel lisatud. Ilma nendeta lähevad kõik tunnid ühte kotti.</p>
+          <p>{d.costCodes.none}</p>
         </div>
       )}
 
@@ -168,9 +168,9 @@ export function CostCodesPage() {
               <div className="subtitle">{objectName(c.objectId)}</div>
               <div>
                 {c.billableRate === null ? (
-                  <span className="text-warning">Arveldusmäär määramata</span>
+                  <span className="text-warning">{d.costCodes.rateUndefined}</span>
                 ) : (
-                  <>Arveldusmäär: €{Number(c.billableRate).toFixed(2)}/h</>
+                  <>{d.costCodes.rateValue(Number(c.billableRate).toFixed(2))}</>
                 )}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
@@ -186,10 +186,10 @@ export function CostCodesPage() {
                     })
                   }
                 >
-                  Muuda
+                  {d.common.edit}
                 </button>
                 <button className="btn btn-secondary" onClick={() => handleRemove(c)}>
-                  Eemalda
+                  {d.common.remove}
                 </button>
               </div>
             </li>
@@ -198,7 +198,7 @@ export function CostCodesPage() {
       )}
 
       <Link className="btn btn-link" to="/dashboard">
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </Link>
     </div>
   );

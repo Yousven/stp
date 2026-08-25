@@ -1,5 +1,18 @@
 import { clearSession, getAccessToken, getRefreshToken, setAccessToken } from "../auth/tokenStore";
 
+/**
+ * Kasutaja valitud keel serveri veateadete jaoks.
+ *
+ * Brauseri enda `Accept-Language` tuleb seadme keelest, mis ei pruugi olla
+ * see, mille kasutaja äpis valis — vene keelt kõnelev töötaja eestikeelse
+ * telefoniga saaks muidu serverilt ikka eestikeelse teate.
+ */
+let apiLanguage = "et";
+
+export function setApiLanguage(language: string): void {
+  apiLanguage = language;
+}
+
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
 
 export class ApiError extends Error {
@@ -43,7 +56,10 @@ async function doFetch(path: string, method: string, headers: Record<string, str
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, auth = true } = options;
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept-Language": apiLanguage,
+  };
 
   if (auth) {
     const token = await getAccessToken();

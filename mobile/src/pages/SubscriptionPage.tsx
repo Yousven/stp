@@ -3,36 +3,30 @@ import { Link } from "react-router-dom";
 import { Browser } from "@capacitor/browser";
 import { ApiError, apiRequest } from "../api/client";
 import type { SubscriptionState } from "../api/types";
-
-const STATUS_LABELS: Record<string, string> = {
-  trialing: "Prooviperiood",
-  active: "Aktiivne",
-  past_due: "Makse hilineb",
-  canceled: "Tühistatud",
-  unpaid: "Maksmata",
-};
-
-function statusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
-}
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("et-EE");
-}
+import { useLocale, useT } from "../i18n";
 
 export function SubscriptionPage() {
+  const d = useT();
+  const locale = useLocale();
   const [state, setState] = useState<SubscriptionState | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Tundmatu Stripe'i olek näidatakse toorena, mitte tõlkimata tühjusena —
+  // parem on näha "incomplete_expired" kui mitte midagi.
+  const statusLabel = (status: string): string =>
+    (d.subscription.statuses as Record<string, string | undefined>)[status] ?? status;
+
+  const formatDate = (value: string | null): string =>
+    value ? new Date(value).toLocaleDateString(locale) : "—";
 
   const load = useCallback(async () => {
     try {
       setState(await apiRequest<SubscriptionState>("/subscription"));
     } catch {
-      setError("Tellimuse andmete laadimine ebaõnnestus.");
+      setError(d.subscription.loadFailed);
     }
-  }, []);
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -50,18 +44,18 @@ export function SubscriptionPage() {
       const { url } = await apiRequest<{ url: string }>(`/subscription/${path}`, { method: "POST" });
       await Browser.open({ url });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Stripe'i avamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.subscription.openFailed);
     } finally {
       setBusy(false);
     }
   }
 
-  if (!state && !error) return <div className="page-loading">Laadin...</div>;
+  if (!state && !error) return <div className="page-loading">{d.common.loading}</div>;
 
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Tellimus</h1>
+        <h1>{d.subscription.title}</h1>
       </header>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -70,20 +64,19 @@ export function SubscriptionPage() {
         <>
           {state.trialDaysLeft !== null && (
             <div className="alert alert-info">
-              Prooviperiood lõpeb {formatDate(state.trialEndsAt)} — {state.trialDaysLeft} päeva jäänud.
+              {d.subscription.trialEnds(formatDate(state.trialEndsAt), state.trialDaysLeft)}
             </div>
           )}
 
           {state.status === "past_due" && (
             <div className="alert alert-error">
-              Viimane makse ebaõnnestus. Rakendus töötab edasi — töötajate tunnid ei tohi makse pärast
-              kaduma minna — aga uuenda palun makseviisi.
+              {d.subscription.pastDue}
             </div>
           )}
 
           {!state.active && (
             <div className="alert alert-error">
-              Tellimus ei ole aktiivne. Tööaja registreerimine on peatatud, kuni tellimus taastatakse.
+              {d.subscription.inactive}
             </div>
           )}
 
@@ -91,25 +84,24 @@ export function SubscriptionPage() {
             <h2>{statusLabel(state.status)}</h2>
             <dl className="stat-list">
               <div>
-                <dt>Istekohti</dt>
+                <dt>{d.subscription.seats}</dt>
                 <dd>{state.seats}</dd>
               </div>
               <div>
-                <dt>Hind / istekoht</dt>
+                <dt>{d.subscription.pricePerSeat}</dt>
                 <dd>€{state.pricePerSeat.toFixed(2)}</dd>
               </div>
               <div>
-                <dt>Kuutasu</dt>
+                <dt>{d.subscription.monthlyTotal}</dt>
                 <dd>€{state.monthlyTotal.toFixed(2)}</dd>
               </div>
               <div>
-                <dt>Periood lõpeb</dt>
+                <dt>{d.subscription.periodEnds}</dt>
                 <dd>{formatDate(state.currentPeriodEnd)}</dd>
               </div>
             </dl>
             <p className="subtitle">
-              Istekoht on iga aktiivne kasutaja, ka admin. Ootel ja tagasi lükatud liitumistaotlused ei
-              lähe arvesse. Kasutaja lisamisel või eemaldamisel muutub kuutasu automaatselt.
+              {d.subscription.seatsExplanation}
             </p>
           </section>
 
@@ -117,24 +109,24 @@ export function SubscriptionPage() {
             <nav className="button-stack">
               {state.status === "trialing" || state.status === "canceled" ? (
                 <button className="btn btn-primary" onClick={() => openStripe("checkout")} disabled={busy}>
-                  {busy ? "Avan..." : "Vormista tellimus"}
+                  {busy ? d.subscription.opening : d.subscription.checkout}
                 </button>
               ) : (
                 <button className="btn btn-secondary" onClick={() => openStripe("portal")} disabled={busy}>
-                  {busy ? "Avan..." : "Halda tellimust ja arveid"}
+                  {busy ? d.subscription.opening : d.subscription.portal}
                 </button>
               )}
             </nav>
           ) : (
             <div className="alert alert-info">
-              Maksete vastuvõtt pole veel seadistatud. Võta ühendust Nutisemud'iga.
+              {d.subscription.notConfigured}
             </div>
           )}
         </>
       )}
 
       <Link className="btn btn-link" to="/dashboard">
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </Link>
     </div>
   );

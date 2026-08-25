@@ -5,6 +5,7 @@ import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import type { Messages } from "../i18n/messages.js";
 
 export const objectsRouter = Router();
 objectsRouter.use(requireAuth);
@@ -58,9 +59,10 @@ objectsRouter.post(
   })
 );
 
-async function findOwnObjectOr404(id: number, organizationId: number) {
+/** Veateade tuleb päringu küljest, seega antakse `req` kaasa. */
+async function findOwnObjectOr404(id: number, organizationId: number, m: Messages) {
   const object = await prisma.workObject.findFirst({ where: { id, organizationId } });
-  if (!object) throw new HttpError(404, "Objekti ei leitud.");
+  if (!object) throw new HttpError(404, m.objects.notFound);
   return object;
 }
 
@@ -71,7 +73,7 @@ objectsRouter.patch(
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
     const data = createObjectSchema.parse(req.body);
-    await findOwnObjectOr404(id, req.user!.organizationId);
+    await findOwnObjectOr404(id, req.user!.organizationId, req.m);
     const object = await prisma.workObject.update({ where: { id }, data });
     res.json(object);
   })
@@ -83,7 +85,7 @@ objectsRouter.post(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    await findOwnObjectOr404(id, req.user!.organizationId);
+    await findOwnObjectOr404(id, req.user!.organizationId, req.m);
     const object = await prisma.workObject.update({ where: { id }, data: { deleted: false } });
     res.json(object);
   })
@@ -94,7 +96,7 @@ objectsRouter.post(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    await findOwnObjectOr404(id, req.user!.organizationId);
+    await findOwnObjectOr404(id, req.user!.organizationId, req.m);
     const object = await prisma.workObject.update({ where: { id }, data: { deleted: true } });
     res.json(object);
   })
@@ -106,13 +108,13 @@ objectsRouter.delete(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    await findOwnObjectOr404(id, req.user!.organizationId);
+    await findOwnObjectOr404(id, req.user!.organizationId, req.m);
     try {
       await prisma.workObject.delete({ where: { id } });
       res.status(204).end();
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
-        throw new HttpError(409, "Objekti ei saa kustutada, kuna sellel on seotud töölogisid.");
+        throw new HttpError(409, req.m.objects.hasTimeLogs);
       }
       throw err;
     }

@@ -55,7 +55,7 @@ costCodesRouter.post(
         where: { id: data.objectId, organizationId: req.user!.organizationId },
         select: { id: true },
       });
-      if (!object) throw new HttpError(404, "Objekti ei leitud.");
+      if (!object) throw new HttpError(404, req.m.objects.notFound);
     }
 
     try {
@@ -65,7 +65,7 @@ costCodesRouter.post(
       res.status(201).json(created);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw new HttpError(409, "Selline kulukood on juba olemas.");
+        throw new HttpError(409, req.m.costCodes.duplicate);
       }
       throw err;
     }
@@ -82,7 +82,7 @@ costCodesRouter.patch(
     const existing = await prisma.costCode.findFirst({
       where: { id, organizationId: req.user!.organizationId },
     });
-    if (!existing) throw new HttpError(404, "Kulukoodi ei leitud.");
+    if (!existing) throw new HttpError(404, req.m.costCodes.notFound);
 
     const updated = await prisma.costCode.update({ where: { id }, data });
     res.json(updated);
@@ -101,7 +101,7 @@ costCodesRouter.delete(
     const existing = await prisma.costCode.findFirst({
       where: { id, organizationId: req.user!.organizationId },
     });
-    if (!existing) throw new HttpError(404, "Kulukoodi ei leitud.");
+    if (!existing) throw new HttpError(404, req.m.costCodes.notFound);
 
     await prisma.costCode.update({ where: { id }, data: { deleted: true } });
     res.status(204).end();

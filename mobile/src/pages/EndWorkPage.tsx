@@ -4,9 +4,11 @@ import { ApiError, apiRequest } from "../api/client";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { clearActiveLog, readActiveLog, writeActiveLog } from "../api/offlineCache";
 import type { DashboardResponse } from "../api/types";
+import { useT } from "../i18n";
 
 export function EndWorkPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [activeLogId, setActiveLogId] = useState<number | null>(null);
   // Offline alustatud tööpäeval pole veel serveri ID-d, ainult viide
   // järjekorras ootavale alustamisele.
@@ -24,7 +26,7 @@ export function EndWorkPage() {
     apiRequest<DashboardResponse>("/me/dashboard")
       .then(async (data) => {
         if (!data.activeLog) {
-          setError("Aktiivset töölogi ei leitud. Tööpäev pole alustatud.");
+          setError(d.endWork.noActiveLog);
           await clearActiveLog();
         } else {
           setActiveLogId(data.activeLog.id);
@@ -41,13 +43,13 @@ export function EndWorkPage() {
         // Ilma selleta jääks levita objektil töötanud päev üldse sulgemata.
         const cached = isOfflineError(err) ? await readActiveLog() : null;
         if (!cached) {
-          setError("Andmete laadimine ebaõnnestus.");
+          setError(d.common.loadFailed);
           return;
         }
         setObjectName(cached.objectName);
         if (cached.logId !== undefined) setActiveLogId(cached.logId);
         else if (cached.pendingActionId) setPendingStartId(cached.pendingActionId);
-        else setError("Andmete laadimine ebaõnnestus.");
+        else setError(d.common.loadFailed);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -69,7 +71,7 @@ export function EndWorkPage() {
           method: "POST",
           body,
           occurredAt,
-          label: "Tööpäeva lõpetamine",
+          label: d.endWork.queueLabel,
           dependsOn: pendingStartId,
         });
         await clearActiveLog();
@@ -86,7 +88,7 @@ export function EndWorkPage() {
           method: "POST",
           body,
           occurredAt,
-          label: "Tööpäeva lõpetamine",
+          label: d.endWork.queueLabel,
         });
         await clearActiveLog();
         setOfflineNotice(true);
@@ -96,24 +98,23 @@ export function EndWorkPage() {
       await clearActiveLog();
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tööpäeva lõpetamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.endWork.failed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <div className="page-loading">Laadin...</div>;
+  if (loading) return <div className="page-loading">{d.common.loading}</div>;
 
   if (offlineNotice) {
     return (
       <div className="page">
-        <h1>Salvestatud offline</h1>
+        <h1>{d.endWork.savedOffline}</h1>
         <div className="alert alert-info">
-          Ühendust ei olnud, aga tööpäeva lõpp on telefoni salvestatud praeguse kellaajaga. See saadetakse
-          automaatselt, kui võrk taastub.
+          {d.endWork.savedOfflineBody}
         </div>
         <button className="btn btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
-          Selge
+          {d.common.ok}
         </button>
       </div>
     );
@@ -121,17 +122,21 @@ export function EndWorkPage() {
 
   return (
     <div className="page">
-      <h1>Lõpeta tööpäev</h1>
+      <h1>{d.endWork.title}</h1>
       {error && <div className="alert alert-error">{error}</div>}
-      {objectName && <p className="subtitle">Objekt: {objectName}</p>}
+      {objectName && (
+        <p className="subtitle">
+          {d.common.object}: {objectName}
+        </p>
+      )}
       {(activeLogId !== null || pendingStartId !== null) && (
         <form className="card" onSubmit={handleSubmit}>
           <label>
-            Kommentaar
+            {d.common.comment}
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
           </label>
           <label>
-            Sõidu kestus (tunnid)
+            {d.endWork.travelDuration}
             <input
               type="number"
               step="0.1"
@@ -141,16 +146,16 @@ export function EndWorkPage() {
             />
           </label>
           <label>
-            Lõuna kestus (tunnid)
+            {d.endWork.lunch}
             <input type="number" step="0.1" min="0" value={lunch} onChange={(e) => setLunch(e.target.value)} />
           </label>
           <button type="submit" className="btn btn-warning" disabled={submitting}>
-            {submitting ? "Palun oota..." : "Lõpeta tööpäev"}
+            {submitting ? d.common.pleaseWait : d.endWork.submit}
           </button>
         </form>
       )}
       <button className="btn btn-link" onClick={() => navigate(-1)}>
-        Tagasi
+        {d.common.back}
       </button>
     </div>
   );

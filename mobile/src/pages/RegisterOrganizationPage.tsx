@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError, apiRequest } from "../api/client";
+import { useT } from "../i18n";
 import type { LoginResponse } from "../api/types";
 
 // Eemaldab diakriitikud (nt "ä" -> "a") pärast Unicode NFD normaliseerimist.
@@ -22,6 +23,7 @@ function slugify(value: string): string {
 export function RegisterOrganizationPage() {
   const { applySession } = useAuth();
   const navigate = useNavigate();
+  const d = useT();
   const [orgName, setOrgName] = useState("");
   const [orgSlug, setOrgSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -41,7 +43,7 @@ export function RegisterOrganizationPage() {
     e.preventDefault();
     setError("");
     if (adminPassword !== confirmPassword) {
-      setError("Paroolid ei ühti.");
+      setError(d.passwordsDoNotMatch);
       return;
     }
     setSubmitting(true);
@@ -56,7 +58,7 @@ export function RegisterOrganizationPage() {
       // mida süsteem temalt ootab ja mis järjekorras.
       navigate("/onboarding", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Registreerimine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.registerOrg.failed);
     } finally {
       setSubmitting(false);
     }
@@ -65,15 +67,15 @@ export function RegisterOrganizationPage() {
   return (
     <div className="page page-center">
       <form className="card" onSubmit={handleSubmit}>
-        <h1>Registreeri ettevõte</h1>
-        <p className="subtitle">Loob uue ettevõtte ja esimese admin-kasutaja.</p>
+        <h1>{d.registerOrg.title}</h1>
+        <p className="subtitle">{d.registerOrg.intro}</p>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
-          Ettevõtte nimi
+          {d.registerOrg.orgName}
           <input value={orgName} onChange={(e) => handleOrgNameChange(e.target.value)} required autoFocus />
         </label>
         <label>
-          Ettevõtte kood
+          {d.login.orgCode}
           <input
             value={orgSlug}
             onChange={(e) => {
@@ -83,17 +85,17 @@ export function RegisterOrganizationPage() {
             required
           />
         </label>
-        <div className="form-hint">Kasutatakse sisselogimisel. Väiketähed, numbrid, sidekriipsud.</div>
+        <div className="form-hint">{d.registerOrg.orgSlugHint}</div>
         <label>
-          Admin kasutajanimi
+          {d.registerOrg.adminUsername}
           <input value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} required />
         </label>
         <label>
-          Admin e-mail
+          {d.registerOrg.adminEmail}
           <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required />
         </label>
         <label>
-          Parool
+          {d.login.password}
           <input
             type="password"
             value={adminPassword}
@@ -101,9 +103,9 @@ export function RegisterOrganizationPage() {
             required
           />
         </label>
-        <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
+        <div className="form-hint">{d.passwordPolicy}</div>
         <label>
-          Kinnita parool
+          {d.confirmPassword}
           <input
             type="password"
             value={confirmPassword}
@@ -112,11 +114,11 @@ export function RegisterOrganizationPage() {
           />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Palun oota..." : "Registreeri"}
+          {submitting ? d.common.pleaseWait : d.registerOrg.submit}
         </button>
       </form>
       <Link to="/login" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Tagasi sisselogimisse
+        {d.requestAccess.backToLogin}
       </Link>
     </div>
   );

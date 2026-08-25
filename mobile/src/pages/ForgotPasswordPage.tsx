@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
+import { useT } from "../i18n";
 
 export function ForgotPasswordPage() {
+  const d = useT();
   const [orgSlug, setOrgSlug] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export function ForgotPasswordPage() {
       });
       setSent(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Päringu saatmine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.forgotPassword.failed);
     } finally {
       setSubmitting(false);
     }
@@ -31,14 +33,14 @@ export function ForgotPasswordPage() {
     return (
       <div className="page page-center">
         <div className="card">
-          <h1>Kontrolli e-posti</h1>
+          <h1>{d.forgotPassword.checkEmailTitle}</h1>
           {/* Sama tekst ka siis, kui kontot pole — et mitte lekitada, kes
               ettevõttes töötab. */}
           <div className="alert alert-info">
-            Kui selline konto on olemas, saatsime taastamise juhised e-postile. Link kehtib ühe tunni.
+            {d.forgotPassword.checkEmailBody}
           </div>
           <Link to="/login" className="btn btn-primary">
-            Tagasi sisselogimisse
+            {d.requestAccess.backToLogin}
           </Link>
         </div>
       </div>
@@ -48,11 +50,11 @@ export function ForgotPasswordPage() {
   return (
     <div className="page page-center">
       <form className="card" onSubmit={handleSubmit}>
-        <h1>Unustasid parooli?</h1>
-        <p className="subtitle">Saadame taastamise lingi sinu e-postile.</p>
+        <h1>{d.forgotPassword.title}</h1>
+        <p className="subtitle">{d.forgotPassword.intro}</p>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
-          Ettevõtte kood
+          {d.login.orgCode}
           <input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} required autoFocus />
         </label>
         <label>
@@ -60,11 +62,11 @@ export function ForgotPasswordPage() {
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Saadan..." : "Saada taastamise link"}
+          {submitting ? d.forgotPassword.sending : d.forgotPassword.submit}
         </button>
       </form>
       <Link to="/login" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Tagasi sisselogimisse
+        {d.requestAccess.backToLogin}
       </Link>
     </div>
   );

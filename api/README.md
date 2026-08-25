@@ -130,6 +130,22 @@ selle ära äpi avamisel, `online` sündmusel ja taustalt naasmisel. Serveri
 sisuline keeldumine (nt "oled objektist liiga kaugel") **ei** lähe järjekorda
 — see näidatakse kasutajale kohe, sest kordamine annaks sama vastuse.
 
+## Keeled
+
+Kasutajale nähtavad veateated on eesti, inglise, vene ja ukraina keeles
+(`src/i18n/messages.ts`). Keel valitakse päringu `Accept-Language` päisest
+(`src/middleware/language.ts`), mille mobiiliäpp seab kasutaja valiku, mitte
+seadme keele järgi.
+
+Eesti keel on lähtekeel ja teised on typitud selle järgi (`Messages`), seega
+puuduv võti on kompileerimisviga. Testid kontrollivad lisaks, et ükski teade
+ei oleks tühi ja et kaugusteade sisaldaks igas keeles mõlemat arvu.
+
+**Teadlik erand**: Zodi väljavalideerimise teated (nt "Kuupäev peab olema
+kujul YYYY-MM-DD") jäävad eesti keelde. Need on skeemides staatilised ja neid
+näeb ainult vigase päringu korral, mida äpp ise ei tekita; ümbritsev teade on
+tõlgitud.
+
 ## Teadaolevad lihtsustused
 
 - `POST /auth/logout` ei tühista tokeneid serveri poolel (stateless JWT).

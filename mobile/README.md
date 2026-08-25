@@ -17,6 +17,27 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 Dashboard, objektide loend ja tööpäeva lõpetamine töötavad ka ilma levita —
 vt `src/api/offlineQueue.ts` ja API README peatükki "Töötamine ilma levita".
 
+## Keeled
+
+Eesti, inglise, vene ja ukraina keel. Vene keel ei ole siin "lisakeel" —
+Eesti ehitussektoris on see paljude töötajate emakeel.
+
+Keel valitakse esimesel avamisel seadme keele järgi ja kasutaja saab selle
+üle kirjutada juba sisselogimisekraanil (ilma selleta ei saaks keegi äppi
+oma keelde panna, kui ta sisse ei pääse) ning hiljem Seadetest.
+
+Sõnastikud on `src/i18n/`. Eesti keel on lähtekeel ja teised on typitud
+selle järgi (`Dictionary`), seega **puuduv või valesti nimetatud võti on
+kompileerimisviga**, mitte vaikselt puuduv tekst ekraanil. Muutujad
+antakse funktsioonidena (`greeting: (name) => ...`), et sõnajärg saaks
+keeleti erineda.
+
+Valitud keel saadetakse serverile `Accept-Language` päises (vt
+`setApiLanguage` failis `src/api/client.ts`). Ilma selleta tuleks päis
+brauseri/seadme keelest, mis ei pruugi olla see, mille kasutaja äpis
+valis — venekeelne töötaja eestikeelse telefoniga saaks serverilt ikka
+eestikeelse teate.
+
 ## Kohaloleku kontroll (petmisvastane tuum)
 
 Kaks kihti, mis peavad koos töötama:

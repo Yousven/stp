@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, buildDownloadUrl } from "../api/client";
 import type { AdminUser, WorkObject } from "../api/types";
+import { useT } from "../i18n";
 
 export function ReportsPage() {
   const navigate = useNavigate();
+  const d = useT();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [objectId, setObjectId] = useState("");
@@ -24,12 +26,12 @@ export function ReportsPage() {
 
   return (
     <div className="page">
-      <h1>Raportid</h1>
+      <h1>{d.reports.title}</h1>
       <div className="card">
         <label>
-          Objekt
+          {d.common.object}
           <select value={objectId} onChange={(e) => setObjectId(e.target.value)}>
-            <option value="">Kõik objektid</option>
+            <option value="">{d.common.allObjects}</option>
             {objects.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
@@ -38,9 +40,9 @@ export function ReportsPage() {
           </select>
         </label>
         <label>
-          Töötaja
+          {d.reports.worker}
           <select value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">Kõik töötajad</option>
+            <option value="">{d.reports.allWorkers}</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.username}
@@ -49,24 +51,24 @@ export function ReportsPage() {
           </select>
         </label>
         <label>
-          Kuupäev alates
+          {d.reports.dateFrom}
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </label>
         <label>
-          Kuupäev kuni
+          {d.reports.dateTo}
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </label>
         <div className="button-stack">
           <button className="btn btn-primary" onClick={() => download("excel")}>
-            Laadi alla Excel
+            {d.reports.downloadExcel}
           </button>
           <button className="btn btn-secondary" onClick={() => download("pdf")}>
-            Laadi alla PDF
+            {d.reports.downloadPdf}
           </button>
         </div>
       </div>
       <button className="btn btn-link" onClick={() => navigate("/dashboard")}>
-        Tagasi Dashboardile
+        {d.common.backToDashboard}
       </button>
     </div>
   );

@@ -2,9 +2,12 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
+import { useT } from "../i18n";
+import { LanguagePicker } from "../components/LanguagePicker";
 
 export function LoginPage() {
   const { login } = useAuth();
+  const d = useT();
   const navigate = useNavigate();
   const [orgSlug, setOrgSlug] = useState("");
   const [username, setUsername] = useState("");
@@ -20,7 +23,7 @@ export function LoginPage() {
       await login(orgSlug, username, password);
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sisselogimine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.login.failed);
     } finally {
       setSubmitting(false);
     }
@@ -29,33 +32,34 @@ export function LoginPage() {
   return (
     <div className="page page-center">
       <form className="card" onSubmit={handleSubmit}>
-        <h1>SmartTimePlanning</h1>
-        <p className="subtitle">Logi sisse</p>
+        <h1>{d.login.appName}</h1>
+        <p className="subtitle">{d.login.title}</p>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
-          Ettevõtte kood
+          {d.login.orgCode}
           <input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} required autoFocus />
         </label>
         <label>
-          Kasutajanimi
+          {d.login.username}
           <input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
-          Parool
+          {d.login.password}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
+        <LanguagePicker />
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Palun oota..." : "Logi sisse"}
+          {submitting ? d.common.pleaseWait : d.login.submit}
         </button>
       </form>
       <Link to="/forgot-password" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Unustasid parooli?
+        {d.login.forgotPassword}
       </Link>
       <Link to="/join" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Liitu ettevõttega
+        {d.login.joinCompany}
       </Link>
       <Link to="/register" className="btn btn-link" style={{ alignSelf: "center" }}>
-        Registreeri oma ettevõte
+        {d.login.registerCompany}
       </Link>
     </div>
   );

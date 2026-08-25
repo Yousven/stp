@@ -4,6 +4,7 @@ import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject } from "../api/types";
 import { AddressMapPicker } from "../components/AddressMapPicker";
 import { useAddressSearch } from "../hooks/useAddressSearch";
+import { useT } from "../i18n";
 
 // Objekti loomise/muutmise vorm — kui URL-is on :id, laeb olemasoleva
 // objekti ja teeb PATCH, muidu POST uue loomiseks.
@@ -11,6 +12,7 @@ export function ObjectFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEdit = id !== undefined;
   const navigate = useNavigate();
+  const d = useT();
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -31,7 +33,7 @@ export function ObjectFormPage() {
       .then((objects) => {
         const object = objects.find((o) => o.id === Number(id));
         if (!object) {
-          setError("Objekti ei leitud.");
+          setError(d.objectForm.notFound);
           return;
         }
         setName(object.name);
@@ -41,9 +43,9 @@ export function ObjectFormPage() {
         setLongitude(object.longitude);
         setRadius(String(object.radius));
       })
-      .catch(() => setError("Objekti laadimine ebaõnnestus."))
+      .catch(() => setError(d.objectForm.loadFailed))
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  }, [id, isEdit, d]);
 
   function selectSuggestion(displayName: string, lat: number, lon: number) {
     setAddress(displayName);
@@ -77,28 +79,28 @@ export function ObjectFormPage() {
       }
       navigate("/admin/objects", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Objekti salvestamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.objectForm.saveFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <div className="page-loading">Laadin...</div>;
+  if (loading) return <div className="page-loading">{d.common.loading}</div>;
 
   const parsedLat = latitude !== "" ? Number(latitude) : null;
   const parsedLon = longitude !== "" ? Number(longitude) : null;
 
   return (
     <div className="page">
-      <h1>{isEdit ? "Muuda objekti" : "Lisa objekt"}</h1>
+      <h1>{isEdit ? d.objectForm.titleEdit : d.objectForm.titleNew}</h1>
       {error && <div className="alert alert-error">{error}</div>}
       <form className="card" onSubmit={handleSubmit}>
         <label>
-          Objekti nimi
+          {d.objectForm.name}
           <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </label>
         <label className="address-field">
-          Aadress
+          {d.objectForm.address}
           <input
             value={address}
             onChange={(e) => {
@@ -106,7 +108,7 @@ export function ObjectFormPage() {
               setShowSuggestions(true);
             }}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            placeholder="Hakka kirjutama aadressi..."
+            placeholder={d.objectForm.addressPlaceholder}
             autoComplete="off"
           />
           {showSuggestions && suggestions.length > 0 && (
@@ -123,16 +125,16 @@ export function ObjectFormPage() {
             </div>
           )}
         </label>
-        <div className="form-hint">Vali aadress loendist või täpsusta asukohta kaardil.</div>
+        <div className="form-hint">{d.objectForm.addressHint}</div>
 
         <AddressMapPicker latitude={parsedLat} longitude={parsedLon} onChange={handleMapChange} />
 
         <label>
-          Latitude
+          {d.objectForm.latitude}
           <input type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} required />
         </label>
         <label>
-          Longitude
+          {d.objectForm.longitude}
           <input
             type="number"
             step="any"
@@ -142,19 +144,19 @@ export function ObjectFormPage() {
           />
         </label>
         <label>
-          Kirjeldus
+          {d.objectForm.description}
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
         </label>
         <label>
-          Lubatud raadius (m)
+          {d.objectForm.radius}
           <input type="number" min="1" value={radius} onChange={(e) => setRadius(e.target.value)} required />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Palun oota..." : isEdit ? "Salvesta" : "Lisa objekt"}
+          {submitting ? d.common.pleaseWait : isEdit ? d.common.save : d.objectForm.titleNew}
         </button>
       </form>
       <button className="btn btn-link" onClick={() => navigate(-1)}>
-        Tagasi
+        {d.common.back}
       </button>
     </div>
   );

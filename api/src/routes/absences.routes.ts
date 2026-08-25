@@ -66,7 +66,7 @@ absencesRouter.post(
       where: { id: data.userId, organizationId: req.user!.organizationId },
       select: { id: true },
     });
-    if (!user) throw new HttpError(404, "Kasutajat ei leitud.");
+    if (!user) throw new HttpError(404, req.m.users.notFound);
 
     // Kattuv puudumine on peaaegu alati eksitus (nt sama puhkus sisestatud
     // kaks korda) ja tekitaks normi arvutuses segadust.
@@ -78,10 +78,7 @@ absencesRouter.post(
       },
     });
     if (overlapping) {
-      throw new HttpError(
-        409,
-        `Sellel töötajal on juba puudumine perioodil ${overlapping.startDate} – ${overlapping.endDate}.`
-      );
+      throw new HttpError(409, req.m.absences.overlapping(overlapping.startDate, overlapping.endDate));
     }
 
     const absence = await prisma.absence.create({
@@ -115,7 +112,7 @@ absencesRouter.delete(
     const absence = await prisma.absence.findFirst({
       where: { id, organizationId: req.user!.organizationId },
     });
-    if (!absence) throw new HttpError(404, "Puudumist ei leitud.");
+    if (!absence) throw new HttpError(404, req.m.absences.notFound);
 
     await prisma.absence.delete({ where: { id } });
 

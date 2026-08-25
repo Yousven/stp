@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
+import { useT } from "../i18n";
 
 export function ResetPasswordPage() {
+  const d = useT();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
@@ -15,7 +17,7 @@ export function ResetPasswordPage() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("Paroolid ei ühti.");
+      setError(d.passwordsDoNotMatch);
       return;
     }
     setSubmitting(true);
@@ -27,7 +29,7 @@ export function ResetPasswordPage() {
       });
       setDone(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Parooli uuendamine ebaõnnestus.");
+      setError(err instanceof ApiError ? err.message : d.resetPassword.failed);
     } finally {
       setSubmitting(false);
     }
@@ -37,12 +39,12 @@ export function ResetPasswordPage() {
     return (
       <div className="page page-center">
         <div className="card">
-          <h1>Vigane link</h1>
+          <h1>{d.resetPassword.invalidTitle}</h1>
           <div className="alert alert-error">
-            Link ei sisalda taastamise koodi. Palun küsi uus link.
+            {d.resetPassword.invalidBody}
           </div>
           <Link to="/forgot-password" className="btn btn-primary">
-            Küsi uus link
+            {d.resetPassword.requestNewLink}
           </Link>
         </div>
       </div>
@@ -53,12 +55,12 @@ export function ResetPasswordPage() {
     return (
       <div className="page page-center">
         <div className="card">
-          <h1>Parool uuendatud</h1>
+          <h1>{d.resetPassword.doneTitle}</h1>
           <div className="alert alert-info">
-            Parool on muudetud ja kõik varasemad sessioonid lõpetatud. Logi uue parooliga sisse.
+            {d.resetPassword.doneBody}
           </div>
           <Link to="/login" className="btn btn-primary">
-            Logi sisse
+            {d.login.submit}
           </Link>
         </div>
       </div>
@@ -68,15 +70,15 @@ export function ResetPasswordPage() {
   return (
     <div className="page page-center">
       <form className="card" onSubmit={handleSubmit}>
-        <h1>Sea uus parool</h1>
+        <h1>{d.resetPassword.title}</h1>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
           Uus parool
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus />
         </label>
-        <div className="form-hint">Vähemalt 12 tähemärki, sisaldab numbrit ja sümbolit.</div>
+        <div className="form-hint">{d.passwordPolicy}</div>
         <label>
-          Kinnita parool
+          {d.confirmPassword}
           <input
             type="password"
             value={confirmPassword}
@@ -85,7 +87,7 @@ export function ResetPasswordPage() {
           />
         </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? "Salvestan..." : "Salvesta uus parool"}
+          {submitting ? d.common.saving : d.resetPassword.submit}
         </button>
       </form>
     </div>
