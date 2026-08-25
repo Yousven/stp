@@ -6,6 +6,8 @@ export interface AuthTokenPayload {
   organizationId: number;
   username: string;
   role: string;
+  /** Väljaandmise aeg sekundites (jsonwebtoken lisab automaatselt). */
+  iat?: number;
 }
 
 export function signAccessToken(payload: AuthTokenPayload): string {

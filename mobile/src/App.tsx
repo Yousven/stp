@@ -5,6 +5,8 @@ import { usePushNotifications } from "./hooks/usePushNotifications";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterOrganizationPage } from "./pages/RegisterOrganizationPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { StartWorkPage } from "./pages/StartWorkPage";
@@ -36,6 +38,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterOrganizationPage />} />
         <Route path="/join" element={<RequestAccessPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/dashboard"
           element={

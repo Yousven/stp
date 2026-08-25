@@ -8,6 +8,7 @@ import { HttpError } from "../middleware/errorHandler.js";
 import { hashPassword, validatePasswordPolicy } from "../utils/password.js";
 import { notifyRequestDecision } from "../notifications/notify.js";
 import { recordAudit } from "../utils/audit.js";
+import { revokeUserTokens } from "../utils/revocation.js";
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireAdmin);
@@ -141,6 +142,45 @@ usersRouter.post(
     notifyRequestDecision(id, false, organization.name);
 
     res.json(user);
+  })
+);
+
+const revokeSchema = z.object({ reason: z.string().max(255).optional() });
+
+/**
+ * Logib kasutaja välja kõigist seadmetest.
+ *
+ * Vajalik vallandamisel ja varastatud telefoni puhul: ilma selleta kehtiks
+ * refresh-token kuni 30 päeva ja endine töötaja saaks jätkuvalt tööpäevi
+ * registreerida. Eemaldab ka push-tokenid, et teavitused ei läheks enam
+ * sellesse seadmesse.
+ */
+usersRouter.post(
+  "/:id/revoke-sessions",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const { reason } = revokeSchema.parse(req.body);
+
+    const user = await prisma.user.findFirst({
+      where: { id, organizationId: req.user!.organizationId },
+      select: { id: true, username: true },
+    });
+    if (!user) throw new HttpError(404, "Kasutajat ei leitud.");
+
+    await revokeUserTokens(id, reason);
+    await prisma.deviceToken.deleteMany({ where: { userId: id } });
+
+    await recordAudit({
+      organizationId: req.user!.organizationId,
+      actorUserId: req.user!.sub,
+      entityType: "user",
+      entityId: id,
+      action: "revoke_sessions",
+      changes: { sessions: { from: "active", to: "revoked" } },
+      reason,
+    });
+
+    res.json({ message: `${user.username} on kõigist seadmetest välja logitud.` });
   })
 );
 

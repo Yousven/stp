@@ -42,6 +42,9 @@ export const env = {
   // Meeldetuletuste taustatöö saab välja lülitada (nt arenduses).
   remindersEnabled: (process.env.REMINDERS_ENABLED ?? "true") !== "false",
 
+  // Avalik aadress, mille peale ehitatakse parooli taastamise lingid.
+  appUrl: process.env.APP_URL ?? "http://localhost:5173",
+
   // Vigade jälgimine. Ilma DSN-ita on Sentry välja lülitatud.
   nodeEnv: process.env.NODE_ENV ?? "development",
   sentryDsn: process.env.SENTRY_DSN ?? "",

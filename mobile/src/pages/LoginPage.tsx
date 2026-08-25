@@ -48,6 +48,9 @@ export function LoginPage() {
           {submitting ? "Palun oota..." : "Logi sisse"}
         </button>
       </form>
+      <Link to="/forgot-password" className="btn btn-link" style={{ alignSelf: "center" }}>
+        Unustasid parooli?
+      </Link>
       <Link to="/join" className="btn btn-link" style={{ alignSelf: "center" }}>
         Liitu ettevõttega
       </Link>

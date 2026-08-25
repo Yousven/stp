@@ -39,9 +39,10 @@ model User {
   status         String          @default("active") @db.VarChar(20)
   requestedAt    DateTime?       @map("requested_at")
   organization   Organization    @relation(fields: [organizationId], references: [id])
-  timeLogs       TimeLog[]
-  passwordResets PasswordReset[]
-  deviceTokens   DeviceToken[]
+  timeLogs        TimeLog[]
+  passwordResets  PasswordReset[]
+  deviceTokens    DeviceToken[]
+  tokenRevocation TokenRevocation?
 
   @@unique([organizationId, username])
   @@unique([organizationId, email])
@@ -180,12 +181,35 @@ model Setting {
 }
 
 model PasswordReset {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  token     String   @unique @db.VarChar(64)
-  expiresAt DateTime @map("expires_at")
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  token     String    @unique @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  // Ühekordne kasutus: kasutatud tokenit ei saa uuesti ette näidata, ka
+  // siis kui link jääb kellegi postkasti või brauseri ajalukku seisma.
+  usedAt    DateTime? @map("used_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("password_resets")
+}
+
+/**
+ * Tokenite tühistamine.
+ *
+ * JWT on olemuselt stateless — kord välja antud, kehtib kuni aegumiseni
+ * (refresh-token 30 päeva). Vallandatud töötaja või varastatud telefoni
+ * puhul on see liiga pikk. Siia kirjutatakse hetk, millest varem välja
+ * antud tokenid enam ei kehti; `requireAuth` kontrollib seda.
+ */
+model TokenRevocation {
+  userId    Int      @id @map("user_id")
+  /** Enne seda hetke välja antud tokenid on kehtetud. */
+  revokedAt DateTime @map("revoked_at")
+  reason    String?  @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("token_revocations")
 }
