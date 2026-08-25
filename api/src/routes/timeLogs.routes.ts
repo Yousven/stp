@@ -2,10 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
+import { presenceLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { computeWorkedHours } from "../utils/timeStats.js";
 import { distanceMeters } from "../utils/geofence.js";
+import { recordAudit } from "../utils/audit.js";
 
 export const timeLogsRouter = Router();
 timeLogsRouter.use(requireAuth);
@@ -97,6 +99,7 @@ const presenceEventsSchema = z.object({
 // järgmine kord avatakse — seetõttu peab see olema idempotentne.
 timeLogsRouter.post(
   "/:id/presence-events",
+  presenceLimiter,
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
     const { events } = presenceEventsSchema.parse(req.body);
@@ -214,27 +217,106 @@ const adminUpdateSchema = z.object({
   workDuration: z.number().optional(),
   lunch: z.number().optional(),
   travelDuration: z.number().optional(),
+  /** Põhjendus on kohustuslik, kui tunde käsitsi üle kirjutatakse. */
+  reason: z.string().max(500).optional(),
 });
 
-// Port: public/update_work_log.php (admin muudab käsitsi päeva tunde/lõunat/sõiduaega)
+/**
+ * Port: public/update_work_log.php (admin muudab käsitsi päeva tunde).
+ *
+ * Iga muudatus kirjutatakse audit-logisse koos vana ja uue väärtusega.
+ * Tundide ülekirjutamine nõuab lisaks põhjendust: kohaloleku-tõendi
+ * tühistamine peab olema selgitatud, muidu poleks tõendist palgavaidluses
+ * mingit kasu.
+ */
 timeLogsRouter.patch(
   "/:id",
   requireAdmin,
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const { workDuration, lunch, travelDuration } = adminUpdateSchema.parse(req.body);
+    const { workDuration, lunch, travelDuration, reason } = adminUpdateSchema.parse(req.body);
 
     const log = await prisma.timeLog.findFirst({
       where: { id, user: { organizationId: req.user!.organizationId } },
+      include: { presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
     if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+
+    const overridingHours = workDuration !== undefined && Number(log.manualWorkDuration ?? NaN) !== workDuration;
+    if (overridingHours && !reason?.trim()) {
+      const computed = computeWorkedHours(log).net;
+      throw new HttpError(
+        400,
+        `Tundide käsitsi muutmiseks on vaja põhjendust. Kohaloleku järgi arvutatud tunnid: ${computed} h.`
+      );
+    }
 
     const updated = await prisma.timeLog.update({
       where: { id },
       data: { manualWorkDuration: workDuration, lunch, travelDuration },
       include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
+
+    // Logi AINULT need väljad, mis päringus tegelikult kaasas olid. Prisma
+    // jätab `undefined` väljad puutumata, seega nende logimine "muutunuks"
+    // tähendaks, et audit-jälg valetab.
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (workDuration !== undefined) {
+      changes.manualWorkDuration = { from: log.manualWorkDuration, to: workDuration };
+      // Mille peale käsitsi väärtus kirjutati — ilma selleta ei näe hiljem,
+      // kui palju see kohaloleku-tõendist erines.
+      changes.computedHoursAtEdit = { from: computeWorkedHours(log).net, to: workDuration };
+    }
+    if (lunch !== undefined) changes.lunch = { from: log.lunch, to: lunch };
+    if (travelDuration !== undefined) changes.travelDuration = { from: log.travelDuration, to: travelDuration };
+
+    await recordAudit({
+      organizationId: req.user!.organizationId,
+      actorUserId: req.user!.sub,
+      entityType: "time_log",
+      entityId: id,
+      action: "update",
+      changes,
+      reason,
+    });
+
     res.json(withHours(updated));
+  })
+);
+
+/** Töölogi muudatuste ajalugu (admin). */
+timeLogsRouter.get(
+  "/:id/audit",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const log = await prisma.timeLog.findFirst({
+      where: { id, user: { organizationId: req.user!.organizationId } },
+      select: { id: true },
+    });
+    if (!log) throw new HttpError(404, "Töölogi ei leitud.");
+
+    const entries = await prisma.auditLog.findMany({
+      where: { organizationId: req.user!.organizationId, entityType: "time_log", entityId: id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const actors = await prisma.user.findMany({
+      where: { id: { in: entries.map((e) => e.actorUserId) } },
+      select: { id: true, username: true },
+    });
+    const actorNames = new Map(actors.map((a) => [a.id, a.username]));
+
+    res.json(
+      entries.map((e) => ({
+        id: e.id,
+        action: e.action,
+        actor: actorNames.get(e.actorUserId) ?? `#${e.actorUserId}`,
+        changes: JSON.parse(e.changes),
+        reason: e.reason,
+        createdAt: e.createdAt,
+      }))
+    );
   })
 );
 

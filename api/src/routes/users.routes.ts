@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { hashPassword, validatePasswordPolicy } from "../utils/password.js";
 import { notifyRequestDecision } from "../notifications/notify.js";
+import { recordAudit } from "../utils/audit.js";
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireAdmin);
@@ -84,6 +85,22 @@ usersRouter.post(
       where: { id: req.user!.organizationId },
       select: { name: true },
     });
+
+    // Kes kellele ligipääsu andis ja mis tunnihinnaga — vajalik hilisemaks
+    // vaidluseks sama moodi nagu tundide muutmine.
+    await recordAudit({
+      organizationId: req.user!.organizationId,
+      actorUserId: req.user!.sub,
+      entityType: "user",
+      entityId: id,
+      action: "approve",
+      changes: {
+        status: { from: "pending", to: "active" },
+        hourlyRate: { from: pending.hourlyRate, to: hourlyRate },
+        role: { from: pending.role, to: role },
+      },
+    });
+
     notifyRequestDecision(id, true, organization.name);
 
     res.json(user);
@@ -111,6 +128,16 @@ usersRouter.post(
       where: { id: req.user!.organizationId },
       select: { name: true },
     });
+
+    await recordAudit({
+      organizationId: req.user!.organizationId,
+      actorUserId: req.user!.sub,
+      entityType: "user",
+      entityId: id,
+      action: "reject",
+      changes: { status: { from: "pending", to: "rejected" } },
+    });
+
     notifyRequestDecision(id, false, organization.name);
 
     res.json(user);

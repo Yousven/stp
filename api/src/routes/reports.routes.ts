@@ -7,11 +7,13 @@ import type { TDocumentDefinitions } from "pdfmake/interfaces.js";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
+import { reportLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { computeWorkedHours } from "../utils/timeStats.js";
 
 export const reportsRouter = Router();
-reportsRouter.use(requireAuth, requireAdmin);
+// Raportid on kallid (käivad läbi kõik töölogid) — kitsam limiit.
+reportsRouter.use(requireAuth, requireAdmin, reportLimiter);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FONTS_DIR = path.join(__dirname, "..", "..", "assets", "fonts");

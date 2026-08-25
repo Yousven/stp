@@ -1,22 +1,14 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { hashPassword, validatePasswordPolicy, verifyPassword } from "../utils/password.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/tokens.js";
 import { HttpError } from "../middleware/errorHandler.js";
+import { authLimiter } from "../middleware/rateLimit.js";
 import { notifyJoinRequest } from "../notifications/notify.js";
 
 export const authRouter = Router();
-
-// Kaitse jõhkra jõu rünnete eest sisselogimisel/registreerumisel.
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Registreerimisel kehtiv, range vorming (kanooniline slug on alati väiketäht).
 // Suurtähtede sisestus normaliseeritakse enne regex-kontrolli, mitte ei
@@ -48,7 +40,7 @@ const loginSchema = z.object({
 // Port: public/authenticate.php (+ ettevõtte-skoop multi-tenant arhitektuuris)
 authRouter.post(
   "/login",
-  loginLimiter,
+  authLimiter,
   asyncHandler(async (req, res) => {
     const { orgSlug, username, password } = loginSchema.parse(req.body);
 
@@ -102,7 +94,7 @@ const registerOrgSchema = z.object({
 // Isetenindus-registreerumine: loob uue ettevõtte + esimese admin-kasutaja.
 authRouter.post(
   "/register-organization",
-  loginLimiter,
+  authLimiter,
   asyncHandler(async (req, res) => {
     const { orgName, orgSlug, adminUsername, adminEmail, adminPassword } = registerOrgSchema.parse(req.body);
 
@@ -159,7 +151,7 @@ const requestAccessSchema = z.object({
  */
 authRouter.post(
   "/request-access",
-  loginLimiter,
+  authLimiter,
   asyncHandler(async (req, res) => {
     const { orgSlug, username, email, password } = requestAccessSchema.parse(req.body);
 

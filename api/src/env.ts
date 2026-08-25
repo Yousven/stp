@@ -41,6 +41,11 @@ export const env = {
 
   // Meeldetuletuste taustatöö saab välja lülitada (nt arenduses).
   remindersEnabled: (process.env.REMINDERS_ENABLED ?? "true") !== "false",
+
+  // Vigade jälgimine. Ilma DSN-ita on Sentry välja lülitatud.
+  nodeEnv: process.env.NODE_ENV ?? "development",
+  sentryDsn: process.env.SENTRY_DSN ?? "",
+  sentryTracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1),
 };
 
 export const isPushConfigured = () =>

@@ -68,6 +68,33 @@ model DeviceToken {
 }
 
 /**
+ * Muudatuste audit-jälg.
+ *
+ * Kogu süsteemi mõte on tõestada, palju keegi objektil tegelikult oli. Kui
+ * admin saab selle tulemuse vaikselt üle kirjutada, on tõend väärtusetu —
+ * seega iga käsitsi muudatus salvestub siia: kes, millal, mis väli, vana ja
+ * uus väärtus ning põhjendus. Kirjeid ei muudeta ega kustutata kunagi.
+ */
+model AuditLog {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  /** Kes muutis. */
+  actorUserId    Int      @map("actor_user_id")
+  /** Mida muudeti, nt "time_log". */
+  entityType     String   @map("entity_type") @db.VarChar(40)
+  entityId       Int      @map("entity_id")
+  action         String   @db.VarChar(40) // "update" | "approve" | "reject" | ...
+  /** JSON: { field: { from, to } } */
+  changes        String   @db.Text
+  reason         String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+/**
  * Takistab sama meeldetuletuse mitmekordset saatmist. Meeldetuletuste job
  * käib iga 15 min tagant (kuna tähtajad on ettevõtete kaupa seadistatavad),
  * seega peab olema kirje selle kohta, mis on juba täna saadetud.

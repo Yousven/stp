@@ -1,3 +1,8 @@
+// Sentry peab initsialiseeruma ENNE ülejäänud rakenduse importi, et jõuaks
+// instrumentatsiooni paigaldada.
+import { initObservability, isObservabilityEnabled } from "./observability.js";
+initObservability();
+
 import { createApp } from "./app.js";
 import { env, isEmailConfigured, isPushConfigured } from "./env.js";
 import { startReminderJob } from "./jobs/reminders.js";
@@ -10,5 +15,14 @@ app.listen(env.port, () => {
   // muidu paistab seadistamata push täpselt samamoodi nagu töötav.
   console.log(`  push-teavitused: ${isPushConfigured() ? "seadistatud" : "SEADISTAMATA (ainult logitakse)"}`);
   console.log(`  e-post: ${isEmailConfigured() ? "seadistatud" : "SEADISTAMATA (ainult logitakse)"}`);
+  console.log(`  vigade jälgimine: ${isObservabilityEnabled() ? "Sentry aktiivne" : "SEADISTAMATA (ainult konsool)"}`);
   startReminderJob();
+});
+
+// Ilma nendeta lõpetaks protsess vaikselt töö ja keegi ei teaks põhjust.
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] Käsitlemata promise rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] Käsitlemata erind:", err);
 });
