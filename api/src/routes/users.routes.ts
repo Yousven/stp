@@ -9,6 +9,7 @@ import { hashPassword, validatePasswordPolicy } from "../utils/password.js";
 import { notifyRequestDecision } from "../notifications/notify.js";
 import { recordAudit } from "../utils/audit.js";
 import { revokeUserTokens } from "../utils/revocation.js";
+import { syncSeatQuantity } from "../billing/stripe.js";
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireAdmin);
@@ -103,6 +104,8 @@ usersRouter.post(
     });
 
     notifyRequestDecision(id, true, organization.name);
+    // Uus aktiivne kasutaja = uus istekoht.
+    void syncSeatQuantity(req.user!.organizationId);
 
     res.json(user);
   })
@@ -206,6 +209,7 @@ usersRouter.post(
         data: { ...data, password: await hashPassword(data.password), organizationId: req.user!.organizationId },
         select: userSelect,
       });
+      void syncSeatQuantity(req.user!.organizationId);
       res.status(201).json(user);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -266,6 +270,7 @@ usersRouter.delete(
 
     try {
       await prisma.user.delete({ where: { id } });
+      void syncSeatQuantity(req.user!.organizationId);
       res.status(204).end();
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {

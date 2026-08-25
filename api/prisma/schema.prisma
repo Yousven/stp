@@ -21,8 +21,38 @@ model Organization {
   objects   WorkObject[]
   settings  Setting[]
   holidays  Holiday[]
+  subscription Subscription?
 
   @@map("organizations")
+}
+
+/**
+ * Tellimus: 5 € kuus iga aktiivse kasutaja (istekoha) kohta, admin kaasa
+ * arvatud. Ootel ja tagasi lükatud liitumistaotlused ei loe.
+ *
+ * Istekohti EI hoita siin salvestatuna, vaid loetakse alati `users`
+ * tabelist — muidu läheks arve tegelikust kasutusest lahku niipea, kui
+ * keegi lisatakse või eemaldatakse ilma Stripe'i sünkroonita.
+ */
+model Subscription {
+  organizationId Int       @id @map("organization_id")
+  /** "trialing" | "active" | "past_due" | "canceled" */
+  status         String    @default("trialing") @db.VarChar(20)
+  /** Prooviperioodi lõpp; selle möödudes on vaja kehtivat tellimust. */
+  trialEndsAt    DateTime? @map("trial_ends_at")
+  /** Stripe'i identifikaatorid; tühjad kui makse pole veel seadistatud. */
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id") @db.VarChar(255)
+  /** Kehtiva arveldusperioodi lõpp Stripe'i järgi. */
+  currentPeriodEnd DateTime? @map("current_period_end")
+  /** Arvega maksja (suuremad firmad eelistavad ülekannet) — Stripe't ei kasutata. */
+  billingMode    String    @default("stripe") @map("billing_mode") @db.VarChar(20)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
 }
 
 model User {

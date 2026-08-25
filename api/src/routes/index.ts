@@ -12,6 +12,7 @@ import { passwordResetRouter } from "./passwordReset.routes.js";
 import { absencesRouter } from "./absences.routes.js";
 import { costCodesRouter } from "./costCodes.routes.js";
 import { billingRouter } from "./billing.routes.js";
+import { subscriptionRouter } from "./subscription.routes.js";
 
 export const apiRouter = Router();
 
@@ -29,5 +30,6 @@ apiRouter.use("/team-performance", teamPerformanceRouter);
 apiRouter.use("/absences", absencesRouter);
 apiRouter.use("/cost-codes", costCodesRouter);
 apiRouter.use("/billing", billingRouter);
+apiRouter.use("/subscription", subscriptionRouter);
 apiRouter.use("/settings", settingsRouter);
 apiRouter.use("/reports", reportsRouter);

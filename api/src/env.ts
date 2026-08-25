@@ -45,6 +45,15 @@ export const env = {
   // Avalik aadress, mille peale ehitatakse parooli taastamise lingid.
   appUrl: process.env.APP_URL ?? "http://localhost:5173",
 
+  // Tellimused (Stripe). Ilma võtmeteta töötab rakendus prooviperioodi
+  // loogikaga, aga makset vastu võtta ei saa.
+  pricePerSeatEur: Number(process.env.PRICE_PER_SEAT_EUR ?? 5),
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY ?? "",
+    priceId: process.env.STRIPE_PRICE_ID ?? "",
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  },
+
   // Vigade jälgimine. Ilma DSN-ita on Sentry välja lülitatud.
   nodeEnv: process.env.NODE_ENV ?? "development",
   sentryDsn: process.env.SENTRY_DSN ?? "",
@@ -55,3 +64,5 @@ export const isPushConfigured = () =>
   Boolean(env.fcm.projectId && env.fcm.clientEmail && env.fcm.privateKey);
 
 export const isEmailConfigured = () => Boolean(env.smtp.host && env.smtp.user);
+
+export const isStripeConfigured = () => Boolean(env.stripe.secretKey && env.stripe.priceId);

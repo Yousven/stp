@@ -6,6 +6,7 @@ import { env } from "./env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { apiRouter } from "./routes/index.js";
+import { stripeWebhookRouter } from "./routes/stripeWebhook.routes.js";
 
 export function createApp() {
   const app = express();
@@ -20,6 +21,10 @@ export function createApp() {
       origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
     })
   );
+  // Stripe'i webhook vajab töötlemata keha allkirja kontrolliks, seega
+  // peab olema ENNE express.json()-i.
+  app.use("/api/stripe/webhook", stripeWebhookRouter);
+
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan("tiny"));
 
