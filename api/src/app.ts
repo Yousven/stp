@@ -75,10 +75,14 @@ export function createApp() {
     // jääks brauserisse vana versioon pärast deploy'd.
     app.use(express.static(webRoot, { index: false, maxAge: "1y" }));
 
-    app.get(/^(?!\/api\/).*/, (req, res, next) => {
+    app.all(/^(?!\/api\/).*/, (req, res, next) => {
       // Ainult lehepäringud saavad SPA-vastuse; puuduv fail peab jääma
       // 404-ks, et vigane varaviide ei paistaks töötava lehena.
-      if (req.method !== "GET" || path.extname(req.path) !== "") return next();
+      //
+      // HEAD käib GET-iga kaasa, sest sellega kontrollivad saidi elusolekut
+      // seireteenused ja proksid — HEAD-i peale 404 jätaks mulje, et leht
+      // on maas.
+      if ((req.method !== "GET" && req.method !== "HEAD") || path.extname(req.path) !== "") return next();
       res.sendFile(path.join(webRoot, "index.html"));
     });
   }
