@@ -5,6 +5,7 @@ import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { clearActiveLog, readActiveLog, writeActiveLog } from "../api/offlineCache";
 import type { DashboardResponse } from "../api/types";
 import { useT } from "../i18n";
+import { Icon } from "../components/Icon";
 
 export function EndWorkPage() {
   const navigate = useNavigate();
@@ -110,10 +111,11 @@ export function EndWorkPage() {
     return (
       <div className="page">
         <h1>{d.endWork.savedOffline}</h1>
-        <div className="alert alert-info">
-          {d.endWork.savedOfflineBody}
+        <div className="alert alert-success">
+          <Icon name="check" size={20} />
+          <span className="alert-strong">{d.endWork.savedOfflineBody}</span>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
+        <button className="btn btn-hero btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
           {d.common.ok}
         </button>
       </div>
@@ -123,11 +125,19 @@ export function EndWorkPage() {
   return (
     <div className="page">
       <h1>{d.endWork.title}</h1>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="alert alert-error">
+          <Icon name="alert" size={20} />
+          <span className="alert-strong">{error}</span>
+        </div>
+      )}
       {objectName && (
-        <p className="subtitle">
-          {d.common.object}: {objectName}
-        </p>
+        <section className="status-card">
+          <div className="status-head">
+            <Icon name="pin" size={22} />
+            {objectName}
+          </div>
+        </section>
       )}
       {(activeLogId !== null || pendingStartId !== null) && (
         <form className="card" onSubmit={handleSubmit}>
@@ -135,6 +145,7 @@ export function EndWorkPage() {
             {d.common.comment}
             <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
           </label>
+          <div className="form-hint">{d.endWork.commentHint}</div>
           <label>
             {d.endWork.travelDuration}
             <input
@@ -149,7 +160,11 @@ export function EndWorkPage() {
             {d.endWork.lunch}
             <input type="number" step="0.1" min="0" value={lunch} onChange={(e) => setLunch(e.target.value)} />
           </label>
-          <button type="submit" className="btn btn-warning" disabled={submitting}>
+          {/* Kümnendtundide selgitus: "0.5" ei ole ilmne inimesele, kes
+              mõtleb pooltes tundides ja minutites. */}
+          <div className="form-hint">{d.endWork.hoursHint}</div>
+          <button type="submit" className="btn btn-hero btn-warning" disabled={submitting}>
+            {!submitting && <Icon name="stop" size={26} filled />}
             {submitting ? d.common.pleaseWait : d.endWork.submit}
           </button>
         </form>

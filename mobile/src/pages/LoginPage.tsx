@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 import { useT } from "../i18n";
 import { LanguagePicker } from "../components/LanguagePicker";
+import { Icon } from "../components/Icon";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -34,7 +35,15 @@ export function LoginPage() {
       <form className="card" onSubmit={handleSubmit}>
         <h1>{d.login.appName}</h1>
         <p className="subtitle">{d.login.title}</p>
-        {error && <div className="alert alert-error">{error}</div>}
+        {/* Keelevalik on kõige ülal: kes eesti keelt ei loe, peab saama
+            ekraani enda keelde panna enne, kui ta midagi muud proovib. */}
+        <LanguagePicker variant="chips" />
+        {error && (
+          <div className="alert alert-error">
+            <Icon name="alert" size={20} />
+            <span className="alert-strong">{error}</span>
+          </div>
+        )}
         <label>
           {d.login.orgCode}
           <input value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} required autoFocus />
@@ -47,15 +56,16 @@ export function LoginPage() {
           {d.login.password}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        <LanguagePicker />
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
+        <button type="submit" className="btn btn-hero btn-primary" disabled={submitting}>
           {submitting ? d.common.pleaseWait : d.login.submit}
         </button>
       </form>
       <Link to="/forgot-password" className="btn btn-link" style={{ alignSelf: "center" }}>
         {d.login.forgotPassword}
       </Link>
-      <Link to="/join" className="btn btn-link" style={{ alignSelf: "center" }}>
+      {/* Uue töötaja tee ettevõttesse on nupp, mitte üks link kolme seas. */}
+      <Link to="/join" className="btn btn-secondary">
+        <Icon name="userPlus" size={22} />
         {d.login.joinCompany}
       </Link>
       <Link to="/register" className="btn btn-link" style={{ alignSelf: "center" }}>

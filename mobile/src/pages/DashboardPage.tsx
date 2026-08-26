@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Icon } from "../components/Icon";
 import { apiRequest } from "../api/client";
 import type { DashboardResponse, OnboardingState } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
@@ -90,6 +91,22 @@ export function DashboardPage() {
       .catch(() => setOnboarding(null));
   }, [user?.role, data?.activeLog?.id]);
 
+  /**
+   * Kulunud aja näit peab jooksma ka lahtise ekraani peal. Ilma selleta
+   * näitaks see avamise hetke ja jääks vaikselt valeks — töötaja, kes
+   * kontrollib "kaua ma juba teinud olen", saaks vale vastuse.
+   */
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  function elapsedSince(startTime: string): string {
+    const minutes = Math.max(Math.floor((nowTick - new Date(startTime).getTime()) / 60_000), 0);
+    return d.dashboard.duration(Math.floor(minutes / 60), minutes % 60);
+  }
+
   async function enableBackgroundTracking() {
     const result = await requestBackgroundPermission();
     setBackgroundPermission(result);
@@ -107,29 +124,42 @@ export function DashboardPage() {
           <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
         </header>
         <div className="alert alert-info">
-          {d.dashboard.offlineNotice}
+          <Icon name="info" size={20} />
+          <span className="alert-strong">{d.dashboard.offlineNotice}</span>
         </div>
-        <section className="card">
-          {offlineLog ? (
-            <>
-              <h2>{d.dashboard.workdayOpen}</h2>
-              <p>
-                <strong>{d.common.object}:</strong> {offlineLog.objectName}
-                <br />
-                <strong>{d.dashboard.since}:</strong> {new Date(offlineLog.startTime).toLocaleString(locale)}
-              </p>
-            </>
-          ) : (
-            <h2>{d.dashboard.noActiveWorkday}</h2>
-          )}
-        </section>
+        {offlineLog ? (
+          <section className="status-card status-card--active">
+            <div className="status-head">
+              <span className="pulse-dot" />
+              {d.dashboard.workdayRunning}
+            </div>
+            <div className="big-timer">{elapsedSince(offlineLog.startTime)}</div>
+            <div className="status-meta">
+              <span>
+                <strong>{offlineLog.objectName}</strong>
+              </span>
+              <span>
+                {d.dashboard.since} {new Date(offlineLog.startTime).toLocaleTimeString(locale, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          </section>
+        ) : (
+          <section className="status-card">
+            <div className="status-head">{d.dashboard.noActiveWorkday}</div>
+          </section>
+        )}
         <nav className="button-stack">
           {offlineLog ? (
-            <Link className="btn btn-warning" to="/end-work">
+            <Link className="btn btn-hero btn-warning" to="/end-work">
+              <Icon name="stop" size={26} filled />
               {d.dashboard.endWork}
             </Link>
           ) : (
-            <Link className="btn btn-primary" to="/start-work">
+            <Link className="btn btn-hero btn-primary" to="/start-work">
+              <Icon name="play" size={26} filled />
               {d.dashboard.startWork}
             </Link>
           )}
@@ -146,20 +176,22 @@ export function DashboardPage() {
     <div className="page">
       <header className="topbar">
         <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
-        <button className="btn btn-link" onClick={() => logout()}>
-          {d.login.logout}
+        <button className="btn btn-link" onClick={() => logout()} aria-label={d.login.logout}>
+          <Icon name="logout" size={22} />
         </button>
       </header>
 
       {activeLog && presence && !presence.inside && (
         <div className="alert alert-error">
-          {d.dashboard.awayFromSite(presence.distanceMeters)}
+          <Icon name="pin" size={20} />
+          <span className="alert-strong">{d.dashboard.awayFromSite(presence.distanceMeters)}</span>
         </div>
       )}
 
       {offlinePending > 0 && (
         <div className="alert alert-info">
-          {d.dashboard.offlinePending(offlinePending)}
+          <Icon name="info" size={20} />
+          <span className="alert-strong">{d.dashboard.offlinePending(offlinePending)}</span>
         </div>
       )}
 
@@ -207,35 +239,68 @@ export function DashboardPage() {
         </div>
       )}
 
-      <section className="card">
+      {/* Olek on ekraani kõige olulisem asi: kas kell käib või mitte. Värv
+          ja suur number annavad selle edasi ka teksti lugemata. */}
+      {activeLog ? (
+        <section
+          className={`status-card ${presence && !presence.inside ? "status-card--away" : "status-card--active"}`}
+        >
+          <div className="status-head">
+            {presence && !presence.inside ? <Icon name="pin" size={22} /> : <span className="pulse-dot" />}
+            {presence && !presence.inside ? d.dashboard.awayShort : d.dashboard.workdayRunning}
+          </div>
+          <div className="big-timer">{elapsedSince(activeLog.startTime)}</div>
+          <div className="status-meta">
+            <span>
+              <strong>{activeLog.object.name}</strong>
+            </span>
+            <span>
+              {d.dashboard.since}{" "}
+              {new Date(activeLog.startTime).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
+        </section>
+      ) : (
+        <section className="status-card">
+          <div className="status-head">
+            <Icon name="clock" size={22} />
+            {d.dashboard.noActiveWorkday}
+          </div>
+          {lastFinished && (
+            <div className="status-meta">
+              <span>{d.dashboard.lastFinished}</span>
+              <span>
+                <strong>{lastFinished.object.name}</strong>
+              </span>
+              <span>
+                {new Date(lastFinished.startTime).toLocaleDateString(locale)}{" "}
+                {new Date(lastFinished.startTime).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
+                {lastFinished.endTime &&
+                  ` – ${new Date(lastFinished.endTime).toLocaleTimeString(locale, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Põhitegevus tuleb kohe oleku järel, mitte kuu kokkuvõtte taga:
+          äpp avatakse selleks, et kella käima panna või kinni panna. */}
+      <nav className="button-stack">
         {activeLog ? (
-          <>
-            <h2 className={presence && !presence.inside ? "" : "text-success"}>
-              {presence && !presence.inside ? d.dashboard.workdayOpenAway : d.dashboard.clockedIn}
-            </h2>
-            <p>
-              <strong>{d.common.object}:</strong> {activeLog.object.name}
-              <br />
-              <strong>{d.dashboard.since}:</strong> {new Date(activeLog.startTime).toLocaleString(locale)}
-            </p>
-          </>
+          <Link className="btn btn-hero btn-warning" to="/end-work">
+            <Icon name="stop" size={26} filled />
+            {d.dashboard.endWork}
+          </Link>
         ) : (
-          <>
-            <h2>{d.dashboard.noActiveWorkday}</h2>
-            {lastFinished && (
-              <p>
-                <strong>{d.dashboard.lastFinished}</strong>
-                <br />
-                {d.common.object}: {lastFinished.object.name}
-                <br />
-                {d.dashboard.started}: {new Date(lastFinished.startTime).toLocaleString(locale)}
-                <br />
-                {d.dashboard.ended}: {lastFinished.endTime && new Date(lastFinished.endTime).toLocaleString(locale)}
-              </p>
-            )}
-          </>
+          <Link className="btn btn-hero btn-primary" to="/start-work">
+            <Icon name="play" size={26} filled />
+            {d.dashboard.startWork}
+          </Link>
         )}
-      </section>
+      </nav>
 
       <section className="card">
         <h2>{d.dashboard.monthSummary}</h2>
@@ -265,61 +330,82 @@ export function DashboardPage() {
         </p>
       </section>
 
-      <nav className="button-stack">
-        {activeLog ? (
-          <Link className="btn btn-warning" to="/end-work">
-            {d.dashboard.endWork}
-          </Link>
-        ) : (
-          <Link className="btn btn-primary" to="/start-work">
-            {d.dashboard.startWork}
-          </Link>
-        )}
-        <Link className="btn btn-secondary" to="/history">
+      {/* Igapäevased asjad paanidena: ikoon + lühike nimi loeb kiiremini
+          kui ühesuguste nuppude virn. */}
+      <p className="section-label">{d.dashboard.everydaySection}</p>
+      <nav className="tile-grid">
+        <Link className="tile" to="/history">
+          <Icon name="history" size={26} className="tile-icon" />
           {d.dashboard.history}
         </Link>
-        <Link className="btn btn-secondary" to="/absences">
+        <Link className="tile" to="/absences">
+          <Icon name="calendar" size={26} className="tile-icon" />
           {d.dashboard.absences}
         </Link>
-        {user?.role === "admin" && (
-          <>
-            <Link className="btn btn-secondary" to="/admin/objects">
+      </nav>
+
+      {/*
+        Haldus on eraldi rühmas ja allpool. Objektil olev töötaja ei pea
+        kunagi siia jõudma; admin leiab selle ühest kohast, mitte laiali
+        pillutatuna igapäevaste nuppude vahelt.
+      */}
+      {user?.role === "admin" && (
+        <>
+          <p className="section-label">{d.dashboard.adminSection}</p>
+          <nav className="tile-grid">
+            <Link className="tile" to="/admin/objects">
+              <Icon name="building" size={26} className="tile-icon" />
               {d.dashboard.manageObjects}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/users">
+            <Link className="tile" to="/admin/users">
+              <Icon name="users" size={26} className="tile-icon" />
               {d.dashboard.manageUsers}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/requests">
-              {d.dashboard.joinRequests}
-              {(data.pendingRequests ?? 0) > 0 ? ` (${data.pendingRequests})` : ""}
+            <Link
+              className={`tile ${(data.pendingRequests ?? 0) > 0 ? "tile--attention" : ""}`}
+              to="/admin/requests"
+            >
+              <Icon name="userPlus" size={26} className="tile-icon" />
+              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                {d.dashboard.joinRequests}
+                {(data.pendingRequests ?? 0) > 0 && <span className="badge">{data.pendingRequests}</span>}
+              </span>
             </Link>
-            <Link className="btn btn-secondary" to="/admin/team-performance">
+            <Link className="tile" to="/admin/team-performance">
+              <Icon name="chart" size={26} className="tile-icon" />
               {d.dashboard.teamOverview}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/settings">
-              {d.dashboard.settings}
-            </Link>
-            <Link className="btn btn-secondary" to="/admin/work-types">
+            <Link className="tile" to="/admin/work-types">
+              <Icon name="tag" size={26} className="tile-icon" />
               {d.dashboard.workTypes}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/clients">
+            <Link className="tile" to="/admin/clients">
+              <Icon name="briefcase" size={26} className="tile-icon" />
               {d.dashboard.clients}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/reports">
-              {d.dashboard.reports}
-            </Link>
-            <Link className="btn btn-secondary" to="/admin/billing">
+            <Link className="tile" to="/admin/billing">
+              <Icon name="euro" size={26} className="tile-icon" />
               {d.dashboard.billing}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/invoices">
+            <Link className="tile" to="/admin/invoices">
+              <Icon name="invoice" size={26} className="tile-icon" />
               {d.dashboard.invoices}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/subscription">
+            <Link className="tile" to="/admin/reports">
+              <Icon name="report" size={26} className="tile-icon" />
+              {d.dashboard.reports}
+            </Link>
+            <Link className="tile" to="/admin/settings">
+              <Icon name="settings" size={26} className="tile-icon" />
+              {d.dashboard.settings}
+            </Link>
+            <Link className="tile" to="/admin/subscription">
+              <Icon name="card" size={26} className="tile-icon" />
               {d.dashboard.subscription}
             </Link>
-          </>
-        )}
-      </nav>
+          </nav>
+        </>
+      )}
     </div>
   );
 }

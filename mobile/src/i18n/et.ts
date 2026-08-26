@@ -78,14 +78,9 @@ export const et = {
       "Luba asukoht ka taustal, siis märgitakse objektilt lahkumine ja naasmine automaatselt ka suletud rakenduse " +
       "korral. Asukohta ei jälgita pidevalt — ainult objekti piiri ületamisel, seega akut see praktiliselt ei kuluta.",
     enableBackground: "Luba taustal",
-    workdayOpen: "Tööpäev avatud",
-    workdayOpenAway: "Tööpäev avatud (objektilt eemal)",
-    clockedIn: "Tööle registreeritud",
     noActiveWorkday: "Aktiivset tööpäeva pole registreeritud",
     since: "Alates",
     lastFinished: "Viimane lõpetatud tööpäev:",
-    started: "Algas",
-    ended: "Lõppes",
     monthSummary: "Kuu kokkuvõte",
     hoursWorked: "Töötunde",
     hourlyRate: "Tunnihind",
@@ -107,6 +102,12 @@ export const et = {
     billing: "Arveldus",
     invoices: "Arved",
     subscription: "Tellimus",
+    workdayRunning: "Tööpäev käib",
+    awayShort: "Objektilt eemal",
+    elapsedLabel: "Tänane tööaeg",
+    duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
+    adminSection: "Haldus",
+    everydaySection: "Minu asjad",
   },
 
   startWork: {
@@ -142,6 +143,8 @@ export const et = {
       "Ühendust ei olnud, aga tööpäeva lõpp on telefoni salvestatud praeguse kellaajaga. See saadetakse " +
       "automaatselt, kui võrk taastub.",
     queueLabel: "Tööpäeva lõpetamine",
+    hoursHint: "Sisesta tundides. Näiteks 0.5 tähendab pool tundi.",
+    commentHint: "Valikuline — kirjuta lühidalt, mis sai tehtud.",
   },
 
   absences: {

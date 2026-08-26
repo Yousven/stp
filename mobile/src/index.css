@@ -1,15 +1,77 @@
+/**
+ * Kujundus on tehtud ehitusobjekti, mitte kontorilaua jaoks.
+ *
+ * Kasutaja on tihti kindaga, päikese käes, kiirustab ja ei ole IT-inimene —
+ * osa ei loe ka eesti keelt. Sellest tulenevad põhimõtted:
+ *
+ * - üks ilmselge põhitegevus ekraani kohta, ülejäänu tagaplaanil
+ * - suured puutealad (vähemalt 52 px, põhinupp 76 px)
+ * - suur kirjasuurus ja tugev kontrast, mitte peen hall peenkiri
+ * - värv kannab tähendust (roheline = tööpäev käib, punane = objektilt väljas)
+ * - ikoon iga teksti kõrval, et äppi saaks kasutada ka teksti lugemata
+ */
+
 :root {
-  --primary: #4e73df;
-  --primary-dark: #375ac2;
-  --warning: #f6a94a;
-  --danger: #e0526b;
-  --text: #2b2d33;
-  --muted: #6b7280;
-  --bg: #f4f6f9;
+  /* Sinine on tumedam kui tavaline UI-sinine, et valge tekst nupul jääks
+     ka otsese päikese käes loetavaks (kontrast ~5:1, WCAG AA). */
+  --primary: #2d5bd0;
+  --primary-dark: #1f429d;
+  --primary-soft: #e8effc;
+  --success: #1f8a4c;
+  --success-soft: #e4f5ea;
+  --warning: #b4690e;
+  --warning-soft: #fdf0dd;
+  --danger: #c62b45;
+  --danger-soft: #fdeaee;
+
+  --text: #1c1f26;
+  --text-strong: #0f1115;
+  --muted: #5b6471;
+  --bg: #f2f4f8;
   --card-bg: #ffffff;
-  --border: #e3e6ec;
+  --card-bg-soft: #f8fafc;
+  --border: #dde2ea;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --shadow-lifted: 0 2px 4px rgba(16, 24, 40, 0.06), 0 12px 28px rgba(16, 24, 40, 0.1);
+
+  --radius: 1rem;
+  --radius-sm: 0.65rem;
+  --tap: 3.25rem; /* vähim puuteala */
+
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Baas on 17px, mitte 16px: väiksem kiri ei ole objektil loetav. */
+  font-size: 17px;
+}
+
+/**
+ * Tume režiim järgib telefoni seadet. Ehitusel vaadatakse ekraani ka
+ * hämaras konteineris ja varahommikul — hele ekraan pimestab siis.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #7ea6ff;
+    --primary-dark: #a8c4ff;
+    --primary-soft: #1b2740;
+    --success: #5ed08c;
+    --success-soft: #12271b;
+    --warning: #f0b45f;
+    --warning-soft: #2c2110;
+    --danger: #ff8098;
+    --danger-soft: #331520;
+
+    --text: #e6e9ef;
+    --text-strong: #f7f9fc;
+    --muted: #a0a9b8;
+    --bg: #12141a;
+    --card-bg: #1b1e26;
+    --card-bg-soft: #21252e;
+    --border: #2e333f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-lifted: 0 12px 28px rgba(0, 0, 0, 0.5);
+
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -26,10 +88,13 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  /* Kogemata tehtud tekstivalik pika vajutuse peale on objektil ainult tüli. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .page {
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto;
   padding: calc(1rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
     calc(3rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
@@ -45,8 +110,15 @@ body {
   justify-content: center;
 }
 
+/* Ilma selleta tõmbuvad nupud keskjoondatud lehel sisu laiuseks ja
+   jäävad kaardist kitsamaks — puuteala väheneb just seal, kus see on
+   kõige olulisem. */
+.page-center > * {
+  width: 100%;
+}
+
 .page-loading {
-  padding: 2rem;
+  padding: 3rem 2rem;
   text-align: center;
   color: var(--muted);
 }
@@ -55,51 +127,162 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .topbar h1 {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   margin: 0;
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  line-height: 1.25;
   margin: 0 0 0.25rem;
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  margin: 0 0 0.4rem;
+  color: var(--text-strong);
+}
+
+p {
+  line-height: 1.5;
   margin: 0 0 0.5rem;
 }
 
 .subtitle {
   color: var(--muted);
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .form-hint {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--muted);
   font-weight: 400;
+  line-height: 1.45;
+  margin-top: -0.25rem;
+}
+
+/** Rühma pealkiri nupumassiivi kohal, et haldus ei seguneks igapäevaga. */
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0.75rem 0 -0.25rem;
 }
 
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius);
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
+}
+
+/**
+ * Tööpäeva olekukaart. Värv on siin info, mitte kaunistus: rohelise pealt
+ * saab üle õue aru, et kell käib, ilma teksti lugemata.
+ */
+.status-card {
+  border-radius: var(--radius);
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+}
+
+.status-card--active {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.status-card--away {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.status-card--active .status-head {
+  color: var(--success);
+}
+
+.status-card--away .status-head {
+  color: var(--danger);
+}
+
+/** Kulunud aeg on ekraani suurim number — see on see, mida tullakse vaatama. */
+.big-timer {
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.status-meta strong {
+  color: var(--text);
+}
+
+/** Elav punkt: näitab, et tööpäev käib praegu, mitte ei ole lihtsalt kirjas. */
+.pulse-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-  color: var(--muted);
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .address-field {
@@ -115,15 +298,15 @@ label {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-top: none;
-  border-radius: 0 0 0.5rem 0.5rem;
-  max-height: 220px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  max-height: 240px;
   overflow-y: auto;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lifted);
 }
 
 .suggestion-item {
-  padding: 0.6rem 0.75rem;
-  font-size: 0.9rem;
+  padding: 0.85rem 0.9rem;
+  font-size: 0.95rem;
   color: var(--text);
   cursor: pointer;
   border-bottom: 1px solid var(--border);
@@ -134,18 +317,41 @@ label {
 }
 
 .suggestion-item:hover {
-  background: var(--bg);
+  background: var(--card-bg-soft);
 }
 
 input,
 select,
 textarea {
-  font-size: 1rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
+  /* Vähemalt 16px hoiab ära selle, et iOS lehe fookusel sisse suumib. */
+  font-size: 1.05rem;
+  min-height: var(--tap);
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
   color: var(--text);
   font-family: inherit;
+}
+
+textarea {
+  min-height: 4.5rem;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible,
+.tile:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+input[type="checkbox"] {
+  min-height: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--primary);
 }
 
 button {
@@ -156,14 +362,16 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.85rem 1rem;
-  border-radius: 0.6rem;
+  gap: 0.55rem;
+  min-height: var(--tap);
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-sm);
   border: none;
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.1s ease, opacity 0.1s ease;
+  transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease;
 }
 
 .btn:active {
@@ -171,30 +379,70 @@ button {
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
+}
+
+/**
+ * Põhitegevus — tööpäeva alustamine või lõpetamine. Tahtlikult palju suurem
+ * kui kõik muu: kindaga pihta saamiseks ja selleks, et keegi ei peaks
+ * otsima, mida vajutada.
+ */
+.btn-hero {
+  min-height: 4.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lifted);
 }
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: #fff;
 }
 
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+
+/**
+ * Tööpäeva lõpetamine on tavaline tegevus, mitte ohtlik — seega selge
+ * merevaigukollane tumeda tekstiga, mitte punane hoiatus. Sinisest erinev
+ * värv on tahtlik: alustamise ja lõpetamise nupp ei tohi käeliigutuses
+ * segamini minna.
+ */
 .btn-warning {
-  background: var(--warning);
-  color: #3a2a00;
+  background: #f0a02a;
+  color: #3a2200;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Tumedas režiimis on aktsentvärvid heledad, seega tekst peab olema tume. */
+  .btn-primary,
+  .btn-success,
+  .btn-warning,
+  .btn-danger {
+    color: #10131a;
+  }
 }
 
 .btn-secondary {
-  background: white;
+  background: var(--card-bg);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
 }
 
 .btn-link {
   background: none;
   color: var(--primary);
-  padding: 0.5rem;
+  padding: 0.6rem;
+  min-height: 2.75rem;
 }
 
 .button-stack {
@@ -203,56 +451,175 @@ button {
   gap: 0.75rem;
 }
 
+/**
+ * Ikoonipaanid. Kaks veergu on telefoniekraanil parim kompromiss: paan jääb
+ * piisavalt suureks, aga nimekirja ei pea lõputult kerima.
+ */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 5.25rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+
+.tile:active {
+  transform: scale(0.98);
+}
+
+.tile-icon {
+  color: var(--primary);
+}
+
+/** Tähelepanu vajav paan (nt ootel liitumistaotlused). */
+.tile--attention {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/**
+ * Keelevaliku nupud sisselogimise ekraanil. Need on tahtlikult tekstina,
+ * mitte lipukestena: lipp tähistab riiki, mitte keelt, ja vene keelt
+ * kõnelev ukrainlane ei pea valima Venemaa lippu.
+ */
+.lang-chips {
+  /* Kaks veergu, mitte rippuv rida: neli keelt jagunevad ühtlaselt ja iga
+     nupp jääb piisavalt suureks, et sellele kindaga pihta saada. */
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.chip {
+  min-height: 3rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip--active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
 .alert {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.98rem;
+  line-height: 1.45;
+  border-left: 4px solid currentColor;
+}
+
+.alert svg {
+  flex: none;
+  margin-top: 0.1rem;
 }
 
 .alert-error {
-  background: #fdecef;
+  background: var(--danger-soft);
   color: var(--danger);
 }
 
 .alert-info {
-  background: #eaf1ff;
+  background: var(--primary-soft);
   color: var(--primary-dark);
 }
 
+.alert-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.alert-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* Hoiatuse sees olev tekst peab jääma loetavaks, mitte kandma aktsentvärvi. */
+.alert-strong {
+  color: var(--text);
+  font-weight: 400;
+}
+
 .text-success {
-  color: #2e9e5b;
+  color: var(--success);
 }
 
 .text-error {
   color: var(--danger);
 }
 
-/* Puuduv seadistus (nt määramata arveldusmäär) — ei ole viga, aga jätta ei tohi. */
+/* Puuduv seadistus (nt määramata tunnihind) — ei ole viga, aga jätta ei tohi. */
 .text-warning {
-  color: #b26a00;
+  color: var(--warning);
 }
 
 .stat-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem 1rem;
+  gap: 0.9rem 1rem;
   margin: 0;
 }
 
 .stat-list dt {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--muted);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.15rem;
 }
 
 .stat-list dd {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-bar {
-  height: 0.6rem;
+  height: 0.75rem;
   background: var(--border);
   border-radius: 999px;
   overflow: hidden;
@@ -261,6 +628,8 @@ button {
 .progress-bar-fill {
   height: 100%;
   background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.4s ease;
 }
 
 .log-list {
@@ -273,8 +642,27 @@ button {
 }
 
 .log-item {
-  gap: 0.25rem;
-  font-size: 0.9rem;
+  gap: 0.3rem;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+/** Kirje ülemine rida: vasakul mis ja millal, paremal tundide arv. */
+.log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+/* Tundide arv on see, mida ajaloos otsitakse — seega suur ja paremas ääres
+   ühel joonel, et lehte saaks silmadega mööda serva skannida. */
+.log-hours {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .log-comment {
@@ -297,5 +685,30 @@ button {
 }
 
 .onboarding-done h2 {
-  color: #2e9e5b;
+  color: var(--success);
+}
+
+/** Tühi nimekiri: selgitus ise, mitte tühi ekraan. */
+.empty-state {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.empty-state svg {
+  color: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

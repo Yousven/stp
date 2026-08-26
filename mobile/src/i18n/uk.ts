@@ -74,14 +74,9 @@ export const uk: Dictionary = {
       "закритому застосунку. Місцезнаходження не відстежується постійно, лише при перетині межі об'єкта, тож " +
       "батарея майже не витрачається.",
     enableBackground: "Дозволити у фоні",
-    workdayOpen: "Робочий день відкрито",
-    workdayOpenAway: "Робочий день відкрито (поза об'єктом)",
-    clockedIn: "Ви відмітилися на роботі",
     noActiveWorkday: "Активний робочий день не розпочато",
     since: "З",
     lastFinished: "Останній завершений робочий день:",
-    started: "Початок",
-    ended: "Кінець",
     monthSummary: "Підсумок місяця",
     hoursWorked: "Годин",
     hourlyRate: "Ставка",
@@ -103,6 +98,12 @@ export const uk: Dictionary = {
     billing: "Розрахунки з клієнтом",
     invoices: "Рахунки",
     subscription: "Підписка",
+    workdayRunning: "Робочий день триває",
+    awayShort: "Поза об'єктом",
+    elapsedLabel: "Відпрацьовано сьогодні",
+    duration: (hours: number, minutes: number) => `${hours} год ${minutes} хв`,
+    adminSection: "Управління",
+    everydaySection: "Мої дані",
   },
 
   startWork: {
@@ -138,6 +139,8 @@ export const uk: Dictionary = {
       "Зв'язку не було, але кінець робочого дня збережено в телефоні з поточним часом. Його буде надіслано " +
       "автоматично, щойно з'явиться мережа.",
     queueLabel: "Завершення робочого дня",
+    hoursHint: "Вкажіть у годинах. Наприклад, 0.5 — це півгодини.",
+    commentHint: "Необов'язково — коротко, що було зроблено.",
   },
 
   absences: {

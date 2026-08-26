@@ -78,14 +78,9 @@ export const ru: Dictionary = {
       "приложении. Местоположение не отслеживается постоянно, только при пересечении границы объекта, поэтому " +
       "батарея практически не расходуется.",
     enableBackground: "Разрешить в фоне",
-    workdayOpen: "Рабочий день открыт",
-    workdayOpenAway: "Рабочий день открыт (вне объекта)",
-    clockedIn: "Вы отметились на работе",
     noActiveWorkday: "Активный рабочий день не начат",
     since: "С",
     lastFinished: "Последний завершённый рабочий день:",
-    started: "Начало",
-    ended: "Конец",
     monthSummary: "Итоги месяца",
     hoursWorked: "Часов",
     hourlyRate: "Ставка",
@@ -107,6 +102,12 @@ export const ru: Dictionary = {
     billing: "Расчёты с клиентом",
     invoices: "Счета",
     subscription: "Подписка",
+    workdayRunning: "Рабочий день идёт",
+    awayShort: "Вне объекта",
+    elapsedLabel: "Отработано сегодня",
+    duration: (hours: number, minutes: number) => `${hours} ч ${minutes} мин`,
+    adminSection: "Управление",
+    everydaySection: "Мои данные",
   },
 
   startWork: {
@@ -142,6 +143,8 @@ export const ru: Dictionary = {
       "Связи не было, но конец рабочего дня сохранён в телефоне с текущим временем. Он будет отправлен " +
       "автоматически, когда появится связь.",
     queueLabel: "Завершение рабочего дня",
+    hoursHint: "Укажите в часах. Например, 0.5 — это полчаса.",
+    commentHint: "Необязательно — коротко, что было сделано.",
   },
 
   absences: {

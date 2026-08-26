@@ -74,14 +74,9 @@ export const en: Dictionary = {
       "closed. Your location is not tracked continuously — only when you cross the site boundary — so it uses " +
       "almost no battery.",
     enableBackground: "Allow in background",
-    workdayOpen: "Workday open",
-    workdayOpenAway: "Workday open (away from site)",
-    clockedIn: "Clocked in",
     noActiveWorkday: "No workday in progress",
     since: "Since",
     lastFinished: "Last completed workday:",
-    started: "Started",
-    ended: "Ended",
     monthSummary: "This month",
     hoursWorked: "Hours",
     hourlyRate: "Hourly rate",
@@ -103,6 +98,12 @@ export const en: Dictionary = {
     billing: "Billing",
     invoices: "Invoices",
     subscription: "Subscription",
+    workdayRunning: "Workday running",
+    awayShort: "Away from site",
+    elapsedLabel: "Today's working time",
+    duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
+    adminSection: "Administration",
+    everydaySection: "My things",
   },
 
   startWork: {
@@ -138,6 +139,8 @@ export const en: Dictionary = {
       "There was no connection, but the end of your workday is saved on this phone with the current time. It will " +
       "be sent automatically once you are back online.",
     queueLabel: "End of workday",
+    hoursHint: "Enter in hours. For example 0.5 means half an hour.",
+    commentHint: "Optional — a short note on what got done.",
   },
 
   absences: {

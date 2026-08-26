@@ -6,6 +6,7 @@ import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject, WorkType } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
 import { useT } from "../i18n";
+import { Icon } from "../components/Icon";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/offlineCache";
 
@@ -180,10 +181,11 @@ export function StartWorkPage() {
     return (
       <div className="page">
         <h1>{d.startWork.savedOffline}</h1>
-        <div className="alert alert-info">
-          {d.startWork.savedOfflineBody}
+        <div className="alert alert-success">
+          <Icon name="check" size={20} />
+          <span className="alert-strong">{d.startWork.savedOfflineBody}</span>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
+        <button className="btn btn-hero btn-primary" onClick={() => navigate("/dashboard", { replace: true })}>
           {d.common.ok}
         </button>
       </div>
@@ -193,7 +195,18 @@ export function StartWorkPage() {
   return (
     <div className="page">
       <h1>{d.startWork.title}</h1>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="alert alert-error">
+          <Icon name="alert" size={20} />
+          <span className="alert-strong">{error}</span>
+        </div>
+      )}
+      {/* Miks asukohta küsitakse, seisab enne vormi, mitte peenes kirjas
+          nupu kohal — võõras inimene peab aru saama, mida ta lubab. */}
+      <div className="alert alert-info">
+        <Icon name="pin" size={20} />
+        <span className="alert-strong">{d.startWork.hint}</span>
+      </div>
       <form className="card" onSubmit={handleSubmit}>
         <label>
           {d.common.object}
@@ -221,8 +234,8 @@ export function StartWorkPage() {
             </select>
           </label>
         )}
-        <div className="form-hint">{d.startWork.hint}</div>
-        <button type="submit" className="btn btn-primary" disabled={submitting || objectId === ""}>
+        <button type="submit" className="btn btn-hero btn-primary" disabled={submitting || objectId === ""}>
+          {!submitting && <Icon name="play" size={26} filled />}
           {submitting ? status || d.common.pleaseWait : d.startWork.title}
         </button>
       </form>
