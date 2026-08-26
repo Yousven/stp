@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -17,7 +20,25 @@ export function createApp() {
   // Caddy või ka Cloudflare — vt env.trustProxyHops.
   app.set("trust proxy", env.trustProxyHops);
 
-  app.use(helmet());
+  /**
+   * Sisu turvapoliitika.
+   *
+   * Vaikimisi helmet lubaks pildid ja päringud ainult omalt domeenilt, mis
+   * lõhuks objekti kaardi (OpenStreetMapi kaardiruudud) ja aadressiotsingu
+   * (Nominatim) — mõlemad on desktop-liidese objektivormi osa. Lubame
+   * täpselt need kaks hosti, mitte kogu internetti.
+   */
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          "img-src": ["'self'", "data:", "https://*.tile.openstreetmap.org"],
+          "connect-src": ["'self'", "https://nominatim.openstreetmap.org"],
+        },
+      },
+    })
+  );
   app.use(
     cors({
       origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
@@ -36,6 +57,31 @@ export function createApp() {
   // Üldine limiit kogu API peale. Rangemad limiidid (login, raportid)
   // rakenduvad lisaks marsruutide sees.
   app.use("/api", apiLimiter, apiRouter);
+
+  /**
+   * Desktop-liides.
+   *
+   * Sama React-rakendus, mis läheb Capacitoriga telefoni, serveeritakse
+   * siit ka brauserile — juhataja ja raamatupidaja teevad tööd arvutist.
+   * Eraldi hostimist ei ole: tunnel osutab niikuinii siia konteinerisse ja
+   * sama päritolu tähendab, et CORS-i pole vaja.
+   *
+   * Kaust puudub kohalikus arenduses (seal jookseb Vite eraldi pordil),
+   * seega serveerime ainult siis, kui build on olemas.
+   */
+  const webRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web");
+  if (existsSync(webRoot)) {
+    // Hashitud varad võivad kaua vahemälus olla; index.html mitte, muidu
+    // jääks brauserisse vana versioon pärast deploy'd.
+    app.use(express.static(webRoot, { index: false, maxAge: "1y" }));
+
+    app.get(/^(?!\/api\/).*/, (req, res, next) => {
+      // Ainult lehepäringud saavad SPA-vastuse; puuduv fail peab jääma
+      // 404-ks, et vigane varaviide ei paistaks töötava lehena.
+      if (req.method !== "GET" || path.extname(req.path) !== "") return next();
+      res.sendFile(path.join(webRoot, "index.html"));
+    });
+  }
 
   app.use(errorHandler);
 

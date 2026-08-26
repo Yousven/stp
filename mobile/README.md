@@ -17,6 +17,32 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 Dashboard, objektide loend ja tööpäeva lõpetamine töötavad ka ilma levita —
 vt `src/api/offlineQueue.ts` ja API README peatükki "Töötamine ilma levita".
 
+## Kaks liidest ühest koodibaasist
+
+Sama rakendus teenindab kahte päris erinevat kasutajat:
+
+- **telefon** — objektil olev töötaja, kes tahab ühte nuppu
+- **arvuti** — juhataja või raamatupidaja, kes haldab andmeid
+
+`src/hooks/useLayout.ts` otsustab, kumb liides käib. Natiivne äpp on **alati**
+telefoniliides, ka iPadil: seal on tööpäeva alustamine mõttekas ja asukoht
+olemas. Brauseris otsustab akna laius (≥ 900 px = arvuti), sest kitsas
+brauseriaken telefonis peab andma sama liidese, mida sama inimene äpist ootab.
+
+Erinevus on kahes kohas ja sisulehed ise ei tea, kummas nad on:
+
+- `ProtectedRoute` paneb arvutiliideses lehe ümber `DesktopShell`-i
+  (püsiv külgmenüü); telefonis on navigeerimine paanidena dashboardil.
+- `DashboardPage` renderdab arvutis hoopis `DesktopOverview` — see ei ole
+  sama vaade laiemalt, vaid teine sisu: "kes on praegu objektil" on juhataja
+  esimene küsimus, töötaja oma on "kaua ma juba teinud olen".
+
+**Tööpäeva alustamine ja lõpetamine on arvutis välja lülitatud.** Asukohta ei
+ole millegagi tõendada ja server keelduks niikuinii, seega vormi asemel
+näidatakse selgitust — muidu tundub see puuduva funktsioonina.
+
+Brauseriversiooni serveerib API konteiner ise, vt `../api/README.md`.
+
 ## Keeled
 
 Eesti, inglise, vene ja ukraina keel. Vene keel ei ole siin "lisakeel" —

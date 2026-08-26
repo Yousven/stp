@@ -17,7 +17,11 @@ Kaks osa ühes repos:
 | Kaust | Mis | Peamised tehnoloogiad |
 |---|---|---|
 | `api/` | REST API + MySQL | Node 22, TypeScript, Express, Prisma, Zod |
-| `mobile/` | Töötaja ja admini äpp | React 19, Vite, Capacitor 8 (iOS + Android) |
+| `mobile/` | Töötaja äpp JA arvutiliides | React 19, Vite, Capacitor 8 (iOS + Android) |
+
+`mobile/` ei ole ainult telefoniäpp: sama build serveeritakse brauserile
+arvutiliidesena (`api/Dockerfile` ehitab selle API image'i sisse). Vt
+"Kaks liidest ühest koodibaasist" allpool.
 
 Mõlemas kaustas on oma README, kus on rohkem sisulist tausta kui siin failis.
 `SECURITY.md` juurkaustas kirjeldab ühte lahtist turvaküsimust (vana PHP
@@ -142,6 +146,30 @@ See on kogu süsteemi mõte ja seda ei tohi vaikselt lahjendada.
    muudatuse korral täiendada.
 4. **Admini käsitsi muudatus** nõuab põhjendust ja läheb `audit_logs` tabelisse
    koos vana ja uue väärtusega. Ilma selleta oleks tõend väärtusetu.
+
+### Kaks liidest ühest koodibaasist
+
+`mobile/src/hooks/useLayout.ts` otsustab, kumb liides käib. Natiivne äpp on
+**alati** telefoniliides, ka iPadil. Brauseris otsustab akna laius (≥ 900 px
+= arvuti).
+
+Erinevus on täpselt kahes kohas — sisulehed ise ei tea, kummas nad on:
+
+- `ProtectedRoute` mähib arvutiliideses lehe `DesktopShell`-i (püsiv
+  külgmenüü). Telefonis on navigeerimine dashboardi paanidena.
+- `DashboardPage` renderdab arvutis `DesktopOverview` — teine sisu, mitte
+  sama vaade laiemalt: juhataja küsimus on "kes on praegu objektil"
+  (`GET /me/org-status`), töötaja oma "kaua ma juba teinud olen".
+
+**Tööpäeva alustamine ja lõpetamine on arvutis välja lülitatud** — asukohta
+ei ole millegagi tõendada. Uut lehte lisades: kui see puudutab tööaja
+registreerimist, kontrolli `useLayout()`; kui see on haldusleht, lisa link
+`DesktopShell`-i menüüsse.
+
+Brauseriversiooni serveerib API konteiner (`api/src/app.ts` lõpp). Seetõttu
+on **Docker-buildi kontekst repo juur, mitte `api/`**, ja image'i sees
+kirjutatakse `VITE_API_BASE_URL="/api"` üle, et brauseriklient räägiks sama
+päritoluga.
 
 ### Aku: mida MITTE teha
 

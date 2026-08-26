@@ -735,6 +735,116 @@ button {
   color: var(--border);
 }
 
+/* ------------------------------------------------------------------ */
+/* Arvutiliides                                                        */
+/*                                                                     */
+/* Sama rakendus, teine raamistik: telefonis on navigeerimine paanidena */
+/* dashboardil, arvutis püsiv külgmenü. Sisulehed ise ei tea, kummas    */
+/* nad on — erinevus on ainult siin ja `useLayout` hookis.              */
+/* ------------------------------------------------------------------ */
+
+.desktop-shell {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar-brand {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  padding: 0.25rem 0.5rem 0.5rem;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-nav .section-label {
+  margin: 1rem 0 0.35rem 0.5rem;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.sidebar-link:hover {
+  background: var(--card-bg-soft);
+}
+
+.sidebar-link--active {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.desktop-content {
+  min-width: 0;
+  padding: 1.5rem 2rem 3rem;
+}
+
+/* Arvutis on ruumi: leht laieneb ja telefoni ohutusalade tagavara kaob. */
+.desktop-content .page {
+  max-width: 1080px;
+  padding: 0;
+  margin: 0;
+}
+
+/* Neli numbrit kõrvuti loeb arvutiekraanil paremini kui kaks korda kaks. */
+.desktop-content .stat-list {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.desktop-content .tile-grid {
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+}
+
+/* Hero-nupp ei tohi arvutis üle terve ekraani venida. */
+.desktop-content .btn-hero {
+  align-self: flex-start;
+  min-width: 18rem;
+}
+
+/* Kaardid kõrvuti seal, kus sisu on lühike. */
+.card-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

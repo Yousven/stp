@@ -409,6 +409,20 @@ export const et = {
     loadFailed: "Seadete laadimine ebaõnnestus.",
   },
 
+  desktop: {
+    overview: "Ülevaade",
+    welcome: (name: string) => `Tere, ${name}`,
+    orgSummary: "Ettevõtte seis",
+    activeNow: "Praegu tööl",
+    activeNowNone: "Hetkel ei ole keegi tööpäeva alustanud.",
+    peopleWorking: (count: number) => `${count} töötajat objektil`,
+    phoneOnly: "Tööpäeva saab alustada ja lõpetada ainult telefonis",
+    phoneOnlyBody:
+      "Tööaja arvestus tugineb asukohale: server kontrollib, et oled päriselt objektil. Arvutis seda kontrollida " +
+      "ei saa, seega registreeri tööpäev telefoni rakendusest. Siit saad vaadata ja hallata kõike ülejäänut.",
+    quickActions: "Kiirteed",
+  },
+
   reports: {
     title: "Raportid",
     worker: "Töötaja",

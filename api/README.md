@@ -129,6 +129,31 @@ Skript ei tõlgenda andmeid ümber: kui vanas kirjes olid "kood" ja "nimi"
 segamini, jäävad need samaks ja tuleb käsitsi parandada. Vaikne
 ümbertõlgendamine oleks halvem kui üks käsitsi muudatus.
 
+## Desktop-liides
+
+Sama React-rakendus, mis läheb Capacitoriga telefoni, serveeritakse
+brauserile ka siit konteinerist (`src/app.ts` lõpp, staatiline kaust `web/`).
+Eraldi hostimist ei ole: Cloudflare'i tunnel osutab niikuinii siia, ja sama
+päritolu tähendab, et brauserikliendil ei ole CORS-i vaja.
+
+`api/Dockerfile` ehitab selle eraldi etapis (`FROM ... AS web`), seega
+**build-kontekst on repo juur, mitte `api/`** — vt `deploy/docker-compose.*.yml`.
+Image'i sees kirjutatakse `mobile/.env.production` üle väärtusega
+`VITE_API_BASE_URL="/api"`, et brauseriversioon räägiks sama päritoluga;
+natiivne äpp saab absoluutse aadressi repos olevast failist.
+
+SPA-tagavara annab `index.html` ainult laiendita GET-päringutele. Puuduv
+vara (`/assets/olematu.js`) peab jääma 404-ks — vastasel juhul paistaks
+katkine varaviide töötava lehena ja viga avastataks alles kasutaja juurest.
+
+Helmeti vaikimisi CSP lubaks pilte ja päringuid ainult omalt domeenilt, mis
+lõhuks objektivormi kaardi (OpenStreetMapi ruudud) ja aadressiotsingu
+(Nominatim). Need kaks hosti on eraldi lubatud, mitte kogu internet.
+
+Kui liides peaks käima ilusama nime alt (nt `app.nutisemud.ee`), piisab
+Cloudflare'i tunnelisse teise hostinime lisamisest sama konteineri peale —
+koodis ei ole vaja midagi muuta.
+
 ## Raportid
 
 `GET /reports/excel` ja `/reports/pdf` annavad faili, `GET /reports/preview`

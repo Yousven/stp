@@ -405,6 +405,20 @@ export const en: Dictionary = {
     loadFailed: "Could not load settings.",
   },
 
+  desktop: {
+    overview: "Overview",
+    welcome: (name: string) => `Hello, ${name}`,
+    orgSummary: "Company status",
+    activeNow: "Working now",
+    activeNowNone: "Nobody has started a workday right now.",
+    peopleWorking: (count: number) => `${count} people on site`,
+    phoneOnly: "A workday can only be started and ended on the phone",
+    phoneOnlyBody:
+      "Time tracking relies on location: the server checks that you are actually on the site. That cannot be " +
+      "verified on a computer, so register the workday in the phone app. Everything else you can view and manage here.",
+    quickActions: "Shortcuts",
+  },
+
   reports: {
     title: "Reports",
     worker: "Worker",

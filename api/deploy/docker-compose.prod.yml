@@ -12,8 +12,9 @@
 services:
   api:
     build:
-      context: ..
-      dockerfile: Dockerfile
+      # Juurkaust, sest image sisaldab ka desktop-liidest (mobile/).
+      context: ../..
+      dockerfile: api/Dockerfile
     restart: unless-stopped
     env_file:
       - .env

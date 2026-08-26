@@ -1,15 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { clearActiveLog, readActiveLog, writeActiveLog } from "../api/offlineCache";
 import type { DashboardResponse } from "../api/types";
 import { useT } from "../i18n";
+import { useLayout } from "../hooks/useLayout";
 import { Icon } from "../components/Icon";
 
 export function EndWorkPage() {
   const navigate = useNavigate();
   const d = useT();
+  const layout = useLayout();
   const [activeLogId, setActiveLogId] = useState<number | null>(null);
   // Offline alustatud tööpäeval pole veel serveri ID-d, ainult viide
   // järjekorras ootavale alustamisele.
@@ -106,6 +108,27 @@ export function EndWorkPage() {
   }
 
   if (loading) return <div className="page-loading">{d.common.loading}</div>;
+
+  /**
+   * Arvutis ei saa tööpäeva registreerida: asukohta ei ole millegagi
+   * tõendada ja server keelduks niikuinii. Selgitame selle ära, mitte ei
+   * lase kasutajal vormi täita ja siis veateadet saada.
+   */
+  if (layout === "desktop") {
+    return (
+      <div className="page">
+        <h1>{d.desktop.phoneOnly}</h1>
+        <div className="card">
+          <p className="subtitle" style={{ margin: 0 }}>
+            {d.desktop.phoneOnlyBody}
+          </p>
+        </div>
+        <Link className="btn btn-secondary" to="/dashboard" style={{ alignSelf: "flex-start" }}>
+          {d.common.backToDashboard}
+        </Link>
+      </div>
+    );
+  }
 
   if (offlineNotice) {
     return (

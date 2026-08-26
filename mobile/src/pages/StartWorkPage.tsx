@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { acquirePosition, hasFreshFix, PERMISSION_DENIED, warmUpLocation } from "../api/location";
@@ -7,6 +7,7 @@ import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject, WorkType } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
 import { useT } from "../i18n";
+import { useLayout } from "../hooks/useLayout";
 import { Icon } from "../components/Icon";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/offlineCache";
@@ -14,6 +15,7 @@ import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/of
 export function StartWorkPage() {
   const navigate = useNavigate();
   const d = useT();
+  const layout = useLayout();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
@@ -172,6 +174,27 @@ export function StartWorkPage() {
       setStatus("");
       setSubmitting(false);
     }
+  }
+
+  /**
+   * Arvutis ei saa tööpäeva registreerida: asukohta ei ole millegagi
+   * tõendada ja server keelduks niikuinii. Selgitame selle ära, mitte ei
+   * lase kasutajal vormi täita ja siis veateadet saada.
+   */
+  if (layout === "desktop") {
+    return (
+      <div className="page">
+        <h1>{d.desktop.phoneOnly}</h1>
+        <div className="card">
+          <p className="subtitle" style={{ margin: 0 }}>
+            {d.desktop.phoneOnlyBody}
+          </p>
+        </div>
+        <Link className="btn btn-secondary" to="/dashboard" style={{ alignSelf: "flex-start" }}>
+          {d.common.backToDashboard}
+        </Link>
+      </div>
+    );
   }
 
   if (offlineNotice) {

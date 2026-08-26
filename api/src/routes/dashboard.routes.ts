@@ -83,6 +83,52 @@ dashboardRouter.get(
 const ONBOARDING_DISMISSED_KEY = "onboarding_dismissed";
 
 /**
+ * Kes on praegu tööl.
+ *
+ * Arvutiliidese avaleht: juhataja esimene küsimus hommikul on "kes on
+ * objektil", mitte "mitu tundi ma ise sel kuul tegin". Telefonis seda vaadet
+ * ei ole — seal on kasutaja ise see, kes tööd teeb.
+ */
+dashboardRouter.get(
+  "/org-status",
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const organizationId = req.user!.organizationId;
+
+    const [active, pendingRequests] = await Promise.all([
+      prisma.timeLog.findMany({
+        where: { endTime: null, user: { organizationId } },
+        include: {
+          user: { select: { id: true, username: true } },
+          object: { select: { id: true, name: true } },
+          workType: { select: { id: true, name: true } },
+        },
+        orderBy: { startTime: "asc" },
+      }),
+      prisma.user.count({ where: { organizationId, status: "pending" } }),
+    ]);
+
+    res.json({
+      pendingRequests,
+      active: active.map((log) => ({
+        logId: log.id,
+        userId: log.user.id,
+        username: log.user.username,
+        objectId: log.object.id,
+        objectName: log.object.name,
+        workTypeName: log.workType?.name ?? null,
+        startTime: log.startTime,
+        // Offline järelsaadetud kirjed on adminile märgiline info: neid
+        // ei kinnitanud server tegevuse hetkel.
+        createdOffline: log.createdOffline,
+        locationMocked: log.locationMocked,
+      })),
+    });
+  })
+);
+
+/**
  * Uue ettevõtte seadistamise seis.
  *
  * Värskelt registreerunud admin ei tea, mida esimesena teha — ilma

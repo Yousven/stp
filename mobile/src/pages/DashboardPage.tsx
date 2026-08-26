@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { useElapsedMinutes } from "../hooks/useElapsed";
+import { useLayout } from "../hooks/useLayout";
+import { DesktopOverview } from "./DesktopOverview";
 import { apiRequest } from "../api/client";
 import type { DashboardResponse, OnboardingState } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
@@ -31,6 +33,7 @@ export function DashboardPage() {
   const [offlineLog, setOfflineLog] = useState<{ objectName: string; startTime: string } | null>(null);
   const [offline, setOffline] = useState(false);
   const [onboarding, setOnboarding] = useState<OnboardingState | null>(null);
+  const layout = useLayout();
 
   const load = useCallback(async () => {
     try {
@@ -168,6 +171,8 @@ export function DashboardPage() {
   }
 
   if (!data) return <div className="page-loading">{d.common.loading}</div>;
+
+  if (layout === "desktop") return <DesktopOverview data={data} />;
 
   const { activeLog, lastFinished, monthSummary } = data;
 

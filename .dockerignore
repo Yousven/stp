@@ -1,0 +1,21 @@
+# Docker-buildi kontekst on nüüd repo juur (image sisaldab nii API-t kui
+# desktop-liidest), seega siit peavad välja jääma asjad, mis teevad buildi
+# aeglaseks või katkiseks.
+
+# Sõltuvused paigaldatakse image'i sees. Kohalikud node_modules sisaldavad
+# masinapõhiseid natiivseid binaare, mis Alpine'i sees ei tööta.
+**/node_modules
+**/dist
+**/build
+
+# Saladused ei kuulu image'isse.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Natiivsed projektid ja nende ehitusväljundid — neid kokku ei pakita.
+mobile/ios
+mobile/android
+
+.git
+**/.DS_Store

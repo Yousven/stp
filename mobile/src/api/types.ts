@@ -301,3 +301,20 @@ export interface ReportPreview {
   overtime: ReportOvertimeRow[];
   overtimeRules: { dailyThreshold: number; weeklyThreshold: number; multiplier: number };
 }
+
+export interface ActiveWorker {
+  logId: number;
+  userId: number;
+  username: string;
+  objectId: number;
+  objectName: string;
+  workTypeName: string | null;
+  startTime: string;
+  createdOffline: boolean;
+  locationMocked: boolean;
+}
+
+export interface OrgStatus {
+  pendingRequests: number;
+  active: ActiveWorker[];
+}
