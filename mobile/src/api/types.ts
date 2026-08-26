@@ -7,6 +7,12 @@ export interface WorkObject {
   longitude: string;
   radius: number;
   deleted: boolean;
+  /** Tellija, kellele objekti tunnid arveldatakse. */
+  clientId: number | null;
+  client?: { id: number; name: string } | null;
+  /** Objekti üldine kliendihind, kui tööliigil oma hinda pole. */
+  billableRate: string | null;
+  budgetHours: string | null;
 }
 
 export interface PresenceEvent {
@@ -105,42 +111,135 @@ export interface Absence {
   user: { id: number; username: string };
 }
 
-export interface CostCode {
+export interface WorkType {
   id: number;
-  objectId: number | null;
-  code: string;
   name: string;
-  /** Kliendile esitatav tunnihind; null = arveldusmäär määramata. */
-  billableRate: string | null;
+  /** Vabatahtlik raamatupidamise kood. */
+  code: string | null;
+  /** Vaikimisi kliendihind; null = määramata. */
+  defaultRate: string | null;
   deleted: boolean;
+  /** Objekti päringu puhul seal kehtiv hind. */
+  rate?: string | null;
+  objectRate?: string | null;
+}
+
+/** Üks rida objekti tööliikide seadistamise ekraanil. */
+export interface ObjectWorkType {
+  workTypeId: number;
+  name: string;
+  code: string | null;
+  defaultRate: string | null;
+  enabled: boolean;
+  /** Objektipõhine hind; null = kehtib tööliigi vaikehind. */
+  rate: string | null;
+}
+
+export interface Client {
+  id: number;
+  name: string;
+  registryCode: string | null;
+  vatNumber: string | null;
+  email: string | null;
+  address: string | null;
+  paymentTermDays: number;
+  vatRate: string;
+  notes: string | null;
+  _count?: { objects: number; invoices: number };
+}
+
+export interface CompanyDetails {
+  name: string;
+  registryCode: string | null;
+  vatNumber: string | null;
+  address: string | null;
+  email: string | null;
+  phone: string | null;
+  iban: string | null;
+  defaultVatRate: string;
 }
 
 export interface BillingLine {
-  costCode: string;
+  objectId: number;
+  objectName: string;
+  workTypeId: number | null;
+  workTypeName: string | null;
   hours: number;
   rate: number | null;
   billable: number;
+  cost: number;
 }
 
 export interface BillingObject {
   objectId: number;
   objectName: string;
-  clientName: string | null;
   budgetHours: number | null;
-  hours: number;
   /** Eelarvet ületavad tunnid; null kui eelarvet pole määratud. */
   overBudgetHours: number | null;
+  hours: number;
   cost: number;
   billable: number;
-  margin: number;
-  /** Tunnid ilma arveldusmäärata — need EI ole arvel. */
+  /** Tunnid ilma tunnihinnata — need EI lähe arvele. */
   unbilledHours: number;
   lines: BillingLine[];
 }
 
-export interface BillingResponse {
+export interface BillingClient {
+  clientId: number | null;
+  clientName: string | null;
+  hours: number;
+  cost: number;
+  billable: number;
+  margin: number;
+  unbilledHours: number;
   objects: BillingObject[];
+}
+
+export interface BillingResponse {
+  clients: BillingClient[];
   totals: { hours: number; cost: number; billable: number; margin: number; unbilledHours: number };
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export interface InvoiceLine {
+  id: number;
+  objectId: number | null;
+  workTypeId: number | null;
+  description: string;
+  hours: string;
+  rate: string;
+  amount: string;
+}
+
+export interface InvoiceParty {
+  name: string;
+  registryCode?: string | null;
+  vatNumber?: string | null;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  iban?: string | null;
+}
+
+export interface Invoice {
+  id: number;
+  clientId: number;
+  number: string;
+  status: InvoiceStatus;
+  issueDate: string;
+  dueDate: string;
+  periodFrom: string;
+  periodTo: string;
+  vatRate: string;
+  subtotal: string;
+  vatAmount: string;
+  total: string;
+  note: string | null;
+  client?: { id: number; name: string };
+  lines?: InvoiceLine[];
+  seller?: InvoiceParty;
+  clientDetails?: InvoiceParty;
 }
 
 export interface SubscriptionState {
@@ -161,9 +260,9 @@ export interface OnboardingState {
   organization: { name: string; slug: string };
   hasObject: boolean;
   hasEmployee: boolean;
-  hasCostCode: boolean;
+  hasWorkType: boolean;
   hasTimeLog: boolean;
-  /** Kõik alustamiseks vajalikud sammud tehtud (kulukoodid ei loe). */
+  /** Kõik alustamiseks vajalikud sammud tehtud (tööliigid ei loe). */
   complete: boolean;
   dismissed: boolean;
 }

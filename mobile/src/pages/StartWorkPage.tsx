@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { ApiError, apiRequest } from "../api/client";
-import type { CostCode, WorkObject } from "../api/types";
+import type { WorkObject, WorkType } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
 import { useT } from "../i18n";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
@@ -45,8 +45,8 @@ export function StartWorkPage() {
   const d = useT();
   const [objects, setObjects] = useState<WorkObject[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
-  const [costCodes, setCostCodes] = useState<CostCode[]>([]);
-  const [costCodeId, setCostCodeId] = useState<number | "">("");
+  const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+  const [workTypeId, setWorkTypeId] = useState<number | "">("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -72,22 +72,23 @@ export function StartWorkPage() {
       });
   }, []);
 
-  // Kulukoodid sõltuvad objektist: server tagastab nii objekti omad kui
-  // üldised. Ilma valikuta läheksid kõik tunnid arveldusraportis
-  // "määramata" alla ja kliendile jääks arve esitamata.
+  // Tööliigid sõltuvad objektist: server tagastab ainult need, mis sellel
+  // objektil käivad. Ilma valikuta läheksid tunnid arvelduses "määramata"
+  // alla ja tellijale jääks see töö arvele panemata.
   useEffect(() => {
     if (objectId === "") return;
     let cancelled = false;
-    apiRequest<CostCode[]>(`/cost-codes?objectId=${objectId}`)
+    apiRequest<WorkType[]>(`/work-types?objectId=${objectId}`)
       .then((list) => {
         if (cancelled) return;
-        setCostCodes(list);
-        setCostCodeId("");
+        setWorkTypes(list);
+        // Kui objektil on täpselt üks tööliik, ei ole mõtet valikut nõuda.
+        setWorkTypeId(list.length === 1 ? list[0].id : "");
       })
       .catch(() => {
-        // Levita või seadistamata kulukoodide korral peab alustamine ikka
+        // Levita või seadistamata tööliikide korral peab alustamine ikka
         // toimima — see väli on valikuline.
-        if (!cancelled) setCostCodes([]);
+        if (!cancelled) setWorkTypes([]);
       });
     return () => {
       cancelled = true;
@@ -134,7 +135,7 @@ export function StartWorkPage() {
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
         mocked,
-        ...(costCodeId === "" ? {} : { costCodeId }),
+        ...(workTypeId === "" ? {} : { workTypeId }),
       };
       const occurredAt = new Date().toISOString();
 
@@ -204,17 +205,17 @@ export function StartWorkPage() {
             ))}
           </select>
         </label>
-        {costCodes.length > 0 && (
+        {workTypes.length > 0 && (
           <label>
             {d.startWork.workType}
             <select
-              value={costCodeId}
-              onChange={(e) => setCostCodeId(e.target.value === "" ? "" : Number(e.target.value))}
+              value={workTypeId}
+              onChange={(e) => setWorkTypeId(e.target.value === "" ? "" : Number(e.target.value))}
             >
               <option value="">{d.common.undefinedValue}</option>
-              {costCodes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} — {c.name}
+              {workTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </select>

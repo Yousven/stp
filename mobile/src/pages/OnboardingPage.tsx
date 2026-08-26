@@ -72,11 +72,11 @@ export function OnboardingPage() {
       action: d.onboarding.stepEmployee.action,
     },
     {
-      done: state.hasCostCode,
-      title: d.onboarding.stepCostCode.title,
-      body: d.onboarding.stepCostCode.body,
-      to: "/admin/cost-codes",
-      action: d.onboarding.stepCostCode.action,
+      done: state.hasWorkType,
+      title: d.onboarding.stepWorkType.title,
+      body: d.onboarding.stepWorkType.body,
+      to: "/admin/work-types",
+      action: d.onboarding.stepWorkType.action,
       optional: true,
     },
     {

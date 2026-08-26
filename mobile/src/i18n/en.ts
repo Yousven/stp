@@ -97,9 +97,11 @@ export const en: Dictionary = {
     joinRequests: "Join requests",
     teamOverview: "Team overview",
     settings: "Settings",
-    costCodes: "Cost codes",
+    workTypes: "Work types",
+    clients: "Clients",
     reports: "Reports",
     billing: "Billing",
+    invoices: "Invoices",
     subscription: "Subscription",
   },
 
@@ -161,48 +163,149 @@ export const en: Dictionary = {
     },
   },
 
-  costCodes: {
-    title: "Cost codes",
+  workTypes: {
+    title: "Work types",
     intro:
-      "A cost code says what the hours went into (masonry, cleaning, and so on). The billable rate is the hourly " +
-      "price charged to the client and it overrides the site rate. Without a rate, the hours stay unbilled in the " +
-      "billing report.",
-    code: "Code",
+      "A work type says WHAT was done — demolition, painting, cleaning. The list is shared across the company; " +
+      "which types apply on a given site, and at what rate, is set on the site itself.",
     name: "Name",
-    billableRate: "Billable rate (€/h)",
+    namePlaceholder: "e.g. Demolition",
+    code: "Code",
+    codeHint: "Optional accounting code. Leave empty if you do not need one.",
+    defaultRate: "Default client rate (€/h)",
     ratePlaceholder: "not set",
-    rateUndefined: "Billable rate not set",
-    rateValue: (rate: string) => `Billable rate: €${rate}/h`,
-    submitNew: "Add cost code",
-    none: "No cost codes yet. Without them, every hour lands in the same bucket.",
-    loadFailed: "Could not load cost codes.",
+    rateUndefined: "No default rate",
+    rateValue: (rate: string) => `Default rate: €${rate}/h`,
+    submitNew: "Add work type",
+    none: "No work types yet. Without them an invoice cannot say what the money is being charged for.",
+    loadFailed: "Could not load work types.",
     removeFailed: "Could not remove.",
-    confirmRemove: (code: string) => `Retire cost code ${code}?`,
+    confirmRemove: (name: string) => `Retire the work type "${name}"?`,
+  },
+
+  clients: {
+    title: "Clients",
+    intro:
+      "A client is the company the site's hours are billed to. These details go onto the invoice, so fill in the " +
+      "registry code and address right away.",
+    name: "Name",
+    registryCode: "Registry code",
+    vatNumber: "VAT number",
+    email: "Email",
+    emailHint: "The invoice is sent to this address.",
+    address: "Address",
+    paymentTermDays: "Payment term (days)",
+    vatRate: "VAT (%)",
+    notes: "Notes",
+    submitNew: "Add client",
+    none: "No clients added yet.",
+    objectCount: (count: number) => `${count} sites`,
+    invoiceCount: (count: number) => `${count} invoices`,
+    loadFailed: "Could not load clients.",
+    removeFailed: "Could not remove.",
+    confirmRemove: (name: string) => `Remove the client "${name}"?`,
+  },
+
+  objectWorkTypes: {
+    title: "Site work types",
+    intro:
+      "Tick which work types happen on this site and the rate each is billed to the client at. Several types can " +
+      "run at once on the same site — three people demolishing, one painting, one cleaning — and each goes onto " +
+      "the invoice at its own rate.",
+    enabled: "In use",
+    rate: "Rate (€/h)",
+    inherit: (rate: string) => `default €${rate}`,
+    noDefault: "no default rate",
+    none: "The company has no work types yet. Add them before setting site rates.",
+    manageWorkTypes: "Manage work types",
+    saved: "Saved.",
+    loadFailed: "Could not load work types.",
+    saveFailed: "Could not save.",
+  },
+
+  companyDetails: {
+    title: "Company details",
+    intro: "These are printed on every client invoice. Without a registry code an invoice cannot be issued.",
+    name: "Name",
+    registryCode: "Registry code",
+    vatNumber: "VAT number",
+    address: "Address",
+    email: "Email",
+    phone: "Phone",
+    iban: "Bank account (IBAN)",
+    defaultVatRate: "Default VAT (%)",
+    saved: "Company details saved.",
+    loadFailed: "Could not load company details.",
+    saveFailed: "Could not save.",
   },
 
   billing: {
     title: "Billing",
     intro:
-      "The same hours as payroll, seen from the other end: what the site cost you and what you can charge the " +
-      "client. The difference is your margin.",
+      "The same hours that drive payroll, seen from the other end: what the site cost and what can be charged to " +
+      "the client. The difference is your margin. Only hours not yet invoiced are shown.",
     calculating: "Calculating...",
     total: "Total",
     hours: "Hours",
     cost: "Cost",
     billable: "Billable",
     margin: "Margin",
-    client: (name: string) => `Client: ${name}`,
+    noClient: "Sites without a client",
     budget: (hours: number) => `Budget: ${hours} h`,
-    overBudget: (hours: number) => ` — over by ${hours} h`,
+    overBudget: (hours: number) => ` — ${hours} h over`,
     unbilledWarning: (hours: number) =>
-      `${hours} hours have no billable rate and are NOT included above. Set a rate on the site or the cost code, ` +
-      `or that money goes uninvoiced.`,
-    unbilledShort: (hours: number) => `${hours} h with no billable rate`,
-    noData: "No completed workdays in the selected period.",
-    showLines: "Show by cost code",
-    hideLines: "Hide cost codes",
+      `${hours} hours have no rate, are NOT included above and will not go onto an invoice. Set a rate for the ` +
+      `site's work type or that money stays unclaimed.`,
+    unbilledShort: (hours: number) => `${hours} h without a rate`,
+    noData: "No uninvoiced hours in the selected period.",
+    showLines: "Show by work type",
+    hideLines: "Hide work types",
     rateUndefined: "not set",
+    createInvoice: "Create invoice",
+    creating: "Creating invoice...",
+    createFailed: "Could not create the invoice.",
+    needsClient: "An invoice can only cover sites that have a client. Assign a client to the site first.",
     loadFailed: "Could not load billing data.",
+  },
+
+  invoices: {
+    title: "Invoices",
+    intro:
+      "Issued invoices. Hours on an invoice are locked and cannot be billed twice — voiding an invoice releases " +
+      "them again.",
+    none: "No invoices issued yet. Create the first one from the billing view.",
+    number: "Invoice",
+    period: "Period",
+    issued: "Date",
+    due: "Due",
+    total: "Total",
+    subtotal: "Excluding VAT",
+    vat: (rate: string) => `VAT ${rate}%`,
+    totalDue: "Amount due",
+    lines: "Lines",
+    hoursColumn: "Hours",
+    rateColumn: "Rate",
+    amountColumn: "Amount",
+    status: {
+      draft: "Draft",
+      sent: "Sent",
+      paid: "Paid",
+      void: "Voided",
+    },
+    open: "Open print view",
+    markSent: "Mark as sent",
+    markPaid: "Mark as paid",
+    send: "Send by email",
+    sending: "Sending...",
+    sentToEmail: (email: string) => `Invoice sent to ${email}.`,
+    sentNoEmail: "The client has no email address — the invoice was marked sent, but no mail went out.",
+    sentNotConfigured: "The mail server is not configured — the invoice was marked sent, but no mail went out.",
+    voidLabel: "Void invoice",
+    confirmVoid: (number: string) =>
+      `Void invoice ${number}? The number stays used and the hours become billable again.`,
+    voidFailed: "Could not void the invoice.",
+    statusFailed: "Could not change the status.",
+    loadFailed: "Could not load invoices.",
   },
 
   subscription: {
@@ -261,12 +364,12 @@ export const en: Dictionary = {
         "approve the request. The code alone grants no access.",
       action: "Add user",
     },
-    stepCostCode: {
-      title: "Cost codes for client billing",
+    stepWorkType: {
+      title: "Work types for client billing",
       body:
-        "If you want to invoice clients later, define the types of work and their hourly prices. Without them the " +
-        "hours are still recorded, just without a rate in the billing report.",
-      action: "Add cost code",
+        "If you want to invoice clients, add your work types (demolition, painting, cleaning) and set their hourly " +
+        "rates on each site. Without them the hours are still recorded, but an invoice cannot say what is charged for.",
+      action: "Add work type",
     },
     stepTimeLog: {
       title: "Try starting a workday",
@@ -355,6 +458,14 @@ export const en: Dictionary = {
     notFound: "Site not found.",
     loadFailed: "Could not load the site.",
     saveFailed: "Could not save the site.",
+    billingSection: "Billing",
+    client: "Client",
+    clientNone: "Not set",
+    clientHint: "The client is the company this site's hours are billed to. Without one, no invoice can be created.",
+    billableRate: "Site default rate (€/h)",
+    billableRateHint: "Applies when a work type has no rate of its own. Empty = not set.",
+    budgetHours: "Budget (hours)",
+    manageWorkTypes: "Work types and rates",
   },
 
   userForm: {

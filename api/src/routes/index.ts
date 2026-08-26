@@ -10,7 +10,9 @@ import { reportsRouter } from "./reports.routes.js";
 import { deviceTokensRouter } from "./deviceTokens.routes.js";
 import { passwordResetRouter } from "./passwordReset.routes.js";
 import { absencesRouter } from "./absences.routes.js";
-import { costCodesRouter } from "./costCodes.routes.js";
+import { workTypesRouter } from "./workTypes.routes.js";
+import { clientsRouter } from "./clients.routes.js";
+import { invoicePrintRouter, invoicesRouter } from "./invoices.routes.js";
 import { billingRouter } from "./billing.routes.js";
 import { subscriptionRouter } from "./subscription.routes.js";
 
@@ -39,7 +41,11 @@ apiRouter.use("/objects", objectsRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/team-performance", teamPerformanceRouter);
 apiRouter.use("/absences", absencesRouter);
-apiRouter.use("/cost-codes", costCodesRouter);
+apiRouter.use("/work-types", workTypesRouter);
+apiRouter.use("/clients", clientsRouter);
+// Trükivaade allkirjastatud lingiga peab jõudma enne autentimist nõudvat routerit.
+apiRouter.use("/invoices", invoicePrintRouter);
+apiRouter.use("/invoices", invoicesRouter);
 apiRouter.use("/billing", billingRouter);
 apiRouter.use("/subscription", subscriptionRouter);
 apiRouter.use("/settings", settingsRouter);

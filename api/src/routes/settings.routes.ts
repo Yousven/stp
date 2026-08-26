@@ -66,3 +66,73 @@ settingsRouter.put(
     res.json(data);
   })
 );
+
+/**
+ * Arve väljastaja rekvisiidid.
+ *
+ * Hoitakse `organizations` tabelis, mitte võti-väärtus seadetes: need on
+ * kindla kujuga väljad, mis trükitakse igale arvele, ja neid loeb ka
+ * arve koostamine. Vabatekstiline seadete tabel laseks siia sattuda
+ * kirjavigadega võtmeid, mida keegi ei märkaks enne, kui arve on väljas.
+ */
+settingsRouter.get(
+  "/company",
+  asyncHandler(async (req, res) => {
+    const org = await prisma.organization.findUniqueOrThrow({
+      where: { id: req.user!.organizationId },
+      select: {
+        name: true,
+        registryCode: true,
+        vatNumber: true,
+        address: true,
+        email: true,
+        phone: true,
+        iban: true,
+        defaultVatRate: true,
+      },
+    });
+    res.json(org);
+  })
+);
+
+const companySchema = z.object({
+  name: z.string().min(1).max(255),
+  registryCode: z.string().max(40).nullable().optional(),
+  vatNumber: z.string().max(40).nullable().optional(),
+  address: z.string().max(255).nullable().optional(),
+  email: z.string().email().nullable().optional().or(z.literal("")),
+  phone: z.string().max(40).nullable().optional(),
+  iban: z.string().max(64).nullable().optional(),
+  defaultVatRate: z.number().min(0).max(100).optional(),
+});
+
+settingsRouter.put(
+  "/company",
+  asyncHandler(async (req, res) => {
+    const data = companySchema.parse(req.body);
+    const updated = await prisma.organization.update({
+      where: { id: req.user!.organizationId },
+      data: {
+        name: data.name,
+        registryCode: data.registryCode || null,
+        vatNumber: data.vatNumber || null,
+        address: data.address || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        iban: data.iban || null,
+        ...(data.defaultVatRate === undefined ? {} : { defaultVatRate: data.defaultVatRate }),
+      },
+      select: {
+        name: true,
+        registryCode: true,
+        vatNumber: true,
+        address: true,
+        email: true,
+        phone: true,
+        iban: true,
+        defaultVatRate: true,
+      },
+    });
+    res.json(updated);
+  })
+);

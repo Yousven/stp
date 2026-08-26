@@ -18,6 +18,7 @@ objectsRouter.get(
     const objects = await prisma.workObject.findMany({
       where: { organizationId: req.user!.organizationId, deleted: false },
       orderBy: { name: "asc" },
+      include: { client: { select: { id: true, name: true } } },
     });
     res.json(objects);
   })
@@ -32,6 +33,7 @@ objectsRouter.get(
     const objects = await prisma.workObject.findMany({
       where: { organizationId: req.user!.organizationId },
       orderBy: { name: "asc" },
+      include: { client: { select: { id: true, name: true } } },
     });
     res.json(objects);
   })
@@ -44,7 +46,23 @@ const createObjectSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
   radius: z.number().int().positive(),
+  // --- Arvelduse väljad ---
+  // Kuni need olid ainult andmebaasis, aga mitte siin skeemis, ei saanud
+  // kliendihinda üldse sisestada ja arveldusraport näitas alati nulli.
+  clientId: z.number().int().positive().nullable().optional(),
+  billableRate: z.number().nonnegative().nullable().optional(),
+  budgetHours: z.number().nonnegative().nullable().optional(),
 });
+
+/** Tellija peab kuuluma samale ettevõttele — muidu saaks võõra siduda. */
+async function assertOwnClient(clientId: number | null | undefined, organizationId: number, m: Messages) {
+  if (!clientId) return;
+  const client = await prisma.client.findFirst({
+    where: { id: clientId, organizationId },
+    select: { id: true },
+  });
+  if (!client) throw new HttpError(404, m.clients.notFound);
+}
 
 // Port: public/admin_add_object.php
 objectsRouter.post(
@@ -52,6 +70,7 @@ objectsRouter.post(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const data = createObjectSchema.parse(req.body);
+    await assertOwnClient(data.clientId, req.user!.organizationId, req.m);
     const object = await prisma.workObject.create({
       data: { ...data, organizationId: req.user!.organizationId },
     });
@@ -74,6 +93,7 @@ objectsRouter.patch(
     const id = Number(req.params.id);
     const data = createObjectSchema.parse(req.body);
     await findOwnObjectOr404(id, req.user!.organizationId, req.m);
+    await assertOwnClient(data.clientId, req.user!.organizationId, req.m);
     const object = await prisma.workObject.update({ where: { id }, data });
     res.json(object);
   })
@@ -118,5 +138,85 @@ objectsRouter.delete(
       }
       throw err;
     }
+  })
+);
+
+/**
+ * Objektil kasutatavad tööliigid koos seal kehtiva hinnaga.
+ *
+ * Tagastatakse kogu ettevõtte nimekiri, iga rea juures märge, kas see on
+ * sellel objektil kasutusel — nii saab admin ühelt ekraanilt linnukesi
+ * panna, ilma kahte nimekirja kõrvutamata.
+ */
+objectsRouter.get(
+  "/:id/work-types",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const organizationId = req.user!.organizationId;
+    await findOwnObjectOr404(id, organizationId, req.m);
+
+    const [all, assigned] = await Promise.all([
+      prisma.workType.findMany({ where: { organizationId, deleted: false }, orderBy: { name: "asc" } }),
+      prisma.objectWorkType.findMany({ where: { objectId: id } }),
+    ]);
+    const byId = new Map(assigned.map((row) => [row.workTypeId, row]));
+
+    res.json(
+      all.map((type) => ({
+        workTypeId: type.id,
+        name: type.name,
+        code: type.code,
+        defaultRate: type.defaultRate,
+        enabled: byId.has(type.id),
+        rate: byId.get(type.id)?.rate ?? null,
+      }))
+    );
+  })
+);
+
+const assignSchema = z.object({
+  workTypes: z.array(
+    z.object({
+      workTypeId: z.number().int().positive(),
+      rate: z.number().nonnegative().nullable().optional(),
+    })
+  ),
+});
+
+/**
+ * Objekti tööliikide nimekirja asendamine.
+ *
+ * Eemaldamine ei puuduta juba tehtud töölogisid — need viitavad tööliigile
+ * otse ja jäävad ajaloos ning juba esitatud arvetel alles. Nimekiri ütleb
+ * ainult, mida saab EDASPIDI valida.
+ */
+objectsRouter.put(
+  "/:id/work-types",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const organizationId = req.user!.organizationId;
+    await findOwnObjectOr404(id, organizationId, req.m);
+    const { workTypes } = assignSchema.parse(req.body);
+
+    const owned = await prisma.workType.findMany({
+      where: { organizationId, id: { in: workTypes.map((w) => w.workTypeId) } },
+      select: { id: true },
+    });
+    if (owned.length !== workTypes.length) throw new HttpError(404, req.m.workTypes.notFound);
+
+    await prisma.$transaction([
+      prisma.objectWorkType.deleteMany({ where: { objectId: id } }),
+      prisma.objectWorkType.createMany({
+        data: workTypes.map((w) => ({ objectId: id, workTypeId: w.workTypeId, rate: w.rate ?? null })),
+      }),
+    ]);
+
+    const rows = await prisma.objectWorkType.findMany({
+      where: { objectId: id },
+      include: { workType: true },
+    });
+    res.json(rows);
   })
 );

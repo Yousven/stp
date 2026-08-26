@@ -23,7 +23,7 @@ const startSchema = z.object({
   longitude: z.number().min(-180).max(180),
   accuracy: z.number().nonnegative().optional(),
   /** Mis tööd tehakse — vajalik kliendiarvelduseks. Valikuline. */
-  costCodeId: z.number().int().positive().optional(),
+  workTypeId: z.number().int().positive().optional(),
   /** Seade teatas võltsitud asukohast (mock location). */
   mocked: z.boolean().optional().default(false),
   /**
@@ -44,7 +44,7 @@ const SUSPICIOUS_DRIFT_SECONDS = 300;
 timeLogsRouter.post(
   "/start",
   asyncHandler(async (req, res) => {
-    const { objectId, latitude, longitude, accuracy, costCodeId, mocked, occurredAt } = startSchema.parse(req.body);
+    const { objectId, latitude, longitude, accuracy, workTypeId, mocked, occurredAt } = startSchema.parse(req.body);
     const userId = req.user!.sub;
 
     // Erinevalt originaalist kontrollime ka, et objekt poleks deaktiveeritud
@@ -91,14 +91,21 @@ timeLogsRouter.post(
       });
     }
 
-    // Kulukood peab kuuluma samale ettevõttele; vale ID vaikiv ignoreerimine
-    // annaks arvele valed read.
-    if (costCodeId) {
-      const code = await prisma.costCode.findFirst({
-        where: { id: costCodeId, organizationId: req.user!.organizationId, deleted: false },
-        select: { id: true },
+    // Vale tööliigi vaikiv ignoreerimine annaks arvele valed read, seega
+    // kontrollime enne salvestamist.
+    if (workTypeId) {
+      // Tööliik peab olema sellel objektil kasutusel, mitte ainult
+      // ettevõttes olemas — muidu saaks koristaja tunnid lammutuse hinnaga
+      // arvele minna.
+      const code = await prisma.objectWorkType.findFirst({
+        where: {
+          objectId,
+          workTypeId,
+          workType: { organizationId: req.user!.organizationId, deleted: false },
+        },
+        select: { objectId: true },
       });
-      if (!code) throw new HttpError(404, req.m.costCodes.selectedNotFound);
+      if (!code) throw new HttpError(404, req.m.workTypes.notOnObject);
     }
 
     /**
@@ -132,7 +139,7 @@ timeLogsRouter.post(
       data: {
         userId,
         objectId,
-        costCodeId,
+        workTypeId,
         startTime,
         createdOffline,
         clockDriftSeconds,

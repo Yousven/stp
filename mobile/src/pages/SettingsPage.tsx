@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
 import { useT } from "../i18n";
 import { LanguagePicker } from "../components/LanguagePicker";
@@ -50,6 +50,11 @@ export function SettingsPage() {
       {success && <div className="alert alert-info">{d.settings.saved}</div>}
       <div className="card">
         <LanguagePicker />
+      </div>
+      <div className="card">
+        <Link className="btn btn-secondary" to="/admin/company">
+          {d.companyDetails.title}
+        </Link>
       </div>
       {settings && (
         <form className="card" onSubmit={handleSubmit}>

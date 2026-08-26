@@ -13,15 +13,32 @@ datasource db {
 }
 
 model Organization {
-  id        Int          @id @default(autoincrement())
-  name      String       @db.VarChar(255)
-  slug      String       @unique @db.VarChar(100)
-  createdAt DateTime     @default(now()) @map("created_at")
-  users     User[]
-  objects   WorkObject[]
-  settings  Setting[]
-  holidays  Holiday[]
-  subscription Subscription?
+  id             Int           @id @default(autoincrement())
+  name           String        @db.VarChar(255)
+  slug           String        @unique @db.VarChar(100)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  // --- Arve väljastaja rekvisiidid ---
+  // Need trükitakse igale kliendiarvele. Ilma registrikoodita ei ole
+  // väljastatud dokument Eestis nõuetekohane arve, seega on need siin
+  // ettevõtte küljes, mitte vabatekstina seadetes.
+  registryCode   String?       @map("registry_code") @db.VarChar(40)
+  vatNumber      String?       @map("vat_number") @db.VarChar(40)
+  address        String?       @db.VarChar(255)
+  email          String?       @db.VarChar(255)
+  phone          String?       @db.VarChar(40)
+  iban           String?       @db.VarChar(64)
+  /**
+   * Vaikimisi käibemaksumäär uuele kliendile, protsentides.
+   */
+  defaultVatRate Decimal       @default(24) @map("default_vat_rate") @db.Decimal(5, 2)
+  users          User[]
+  objects        WorkObject[]
+  settings       Setting[]
+  holidays       Holiday[]
+  clients        Client[]
+  workTypes      WorkType[]
+  invoices       Invoice[]
+  subscription   Subscription?
 
   @@map("organizations")
 }
@@ -29,26 +46,35 @@ model Organization {
 /**
  * Tellimus: 5 € kuus iga aktiivse kasutaja (istekoha) kohta, admin kaasa
  * arvatud. Ootel ja tagasi lükatud liitumistaotlused ei loe.
- *
  * Istekohti EI hoita siin salvestatuna, vaid loetakse alati `users`
  * tabelist — muidu läheks arve tegelikust kasutusest lahku niipea, kui
  * keegi lisatakse või eemaldatakse ilma Stripe'i sünkroonita.
  */
 model Subscription {
-  organizationId Int       @id @map("organization_id")
-  /** "trialing" | "active" | "past_due" | "canceled" */
-  status         String    @default("trialing") @db.VarChar(20)
-  /** Prooviperioodi lõpp; selle möödudes on vaja kehtivat tellimust. */
-  trialEndsAt    DateTime? @map("trial_ends_at")
-  /** Stripe'i identifikaatorid; tühjad kui makse pole veel seadistatud. */
-  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(255)
-  stripeSubscriptionId String? @unique @map("stripe_subscription_id") @db.VarChar(255)
-  /** Kehtiva arveldusperioodi lõpp Stripe'i järgi. */
-  currentPeriodEnd DateTime? @map("current_period_end")
-  /** Arvega maksja (suuremad firmad eelistavad ülekannet) — Stripe't ei kasutata. */
-  billingMode    String    @default("stripe") @map("billing_mode") @db.VarChar(20)
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  organizationId       Int       @id @map("organization_id")
+  /**
+   * "trialing" | "active" | "past_due" | "canceled"
+   */
+  status               String    @default("trialing") @db.VarChar(20)
+  /**
+   * Prooviperioodi lõpp; selle möödudes on vaja kehtivat tellimust.
+   */
+  trialEndsAt          DateTime? @map("trial_ends_at")
+  /**
+   * Stripe'i identifikaatorid; tühjad kui makse pole veel seadistatud.
+   */
+  stripeCustomerId     String?   @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id") @db.VarChar(255)
+  /**
+   * Kehtiva arveldusperioodi lõpp Stripe'i järgi.
+   */
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  /**
+   * Arvega maksja (suuremad firmad eelistavad ülekannet) — Stripe't ei kasutata.
+   */
+  billingMode          String    @default("stripe") @map("billing_mode") @db.VarChar(20)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -56,20 +82,20 @@ model Subscription {
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
-  organizationId Int             @map("organization_id")
-  username       String          @db.VarChar(255)
-  password       String          @db.VarChar(255)
-  email          String          @db.VarChar(255)
-  hourlyRate     Decimal         @map("hourly_rate") @db.Decimal(10, 2)
-  advance        Decimal         @db.Decimal(10, 2)
-  role           String          @db.VarChar(20) // "admin" | "employee"
+  id              Int              @id @default(autoincrement())
+  organizationId  Int              @map("organization_id")
+  username        String           @db.VarChar(255)
+  password        String           @db.VarChar(255)
+  email           String           @db.VarChar(255)
+  hourlyRate      Decimal          @map("hourly_rate") @db.Decimal(10, 2)
+  advance         Decimal          @db.Decimal(10, 2)
+  role            String           @db.VarChar(20) // "admin" | "employee"
   // "active" | "pending" | "rejected". Vaikimisi "active", et olemasolevad
   // kasutajad (ja admini enda loodud kontod) töötaksid muutmata kujul —
   // "pending" tekib ainult isetenindus-liitumistaotlusest.
-  status         String          @default("active") @db.VarChar(20)
-  requestedAt    DateTime?       @map("requested_at")
-  organization   Organization    @relation(fields: [organizationId], references: [id])
+  status          String           @default("active") @db.VarChar(20)
+  requestedAt     DateTime?        @map("requested_at")
+  organization    Organization     @relation(fields: [organizationId], references: [id])
   timeLogs        TimeLog[]
   passwordResets  PasswordReset[]
   deviceTokens    DeviceToken[]
@@ -105,17 +131,20 @@ model DeviceToken {
  * Eestis süstemaatiliselt vale — 12 riigipüha aastas tähendab, et norm
  * oli mõnel kuul terve tööpäeva võrra liiga kõrge ja töötaja "täitmine %"
  * seetõttu põhjendamatult madal.
- *
  * `organizationId` on nullitav: NULL tähendab riiklikku püha (kehtib
  * kõigile), täidetud väärtus ettevõtte enda vaba päeva.
  */
 model Holiday {
   id             Int           @id @default(autoincrement())
   organizationId Int?          @map("organization_id")
-  /** YYYY-MM-DD kohalikus ajavööndis. */
+  /**
+   * YYYY-MM-DD kohalikus ajavööndis.
+   */
   date           String        @db.VarChar(10)
   name           String        @db.VarChar(120)
-  /** Lühendatud tööpäev (nt jõululaupäev): mitu tundi normist maha. */
+  /**
+   * Lühendatud tööpäev (nt jõululaupäev): mitu tundi normist maha.
+   */
   shortenedHours Decimal?      @map("shortened_hours") @db.Decimal(4, 2)
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -133,9 +162,13 @@ model Absence {
   id             Int      @id @default(autoincrement())
   organizationId Int      @map("organization_id")
   userId         Int      @map("user_id")
-  /** "vacation" | "sick" | "unpaid" | "other" */
+  /**
+   * "vacation" | "sick" | "unpaid" | "other"
+   */
   type           String   @db.VarChar(20)
-  /** Kaasa arvatud, YYYY-MM-DD. */
+  /**
+   * Kaasa arvatud, YYYY-MM-DD.
+   */
   startDate      String   @map("start_date") @db.VarChar(10)
   endDate        String   @map("end_date") @db.VarChar(10)
   comment        String?  @db.Text
@@ -151,7 +184,6 @@ model Absence {
 
 /**
  * Muudatuste audit-jälg.
- *
  * Kogu süsteemi mõte on tõestada, palju keegi objektil tegelikult oli. Kui
  * admin saab selle tulemuse vaikselt üle kirjutada, on tõend väärtusetu —
  * seega iga käsitsi muudatus salvestub siia: kes, millal, mis väli, vana ja
@@ -160,13 +192,19 @@ model Absence {
 model AuditLog {
   id             Int      @id @default(autoincrement())
   organizationId Int      @map("organization_id")
-  /** Kes muutis. */
+  /**
+   * Kes muutis.
+   */
   actorUserId    Int      @map("actor_user_id")
-  /** Mida muudeti, nt "time_log". */
+  /**
+   * Mida muudeti, nt "time_log".
+   */
   entityType     String   @map("entity_type") @db.VarChar(40)
   entityId       Int      @map("entity_id")
   action         String   @db.VarChar(40) // "update" | "approve" | "reject" | ...
-  /** JSON: { field: { from, to } } */
+  /**
+   * JSON: { field: { from, to } }
+   */
   changes        String   @db.Text
   reason         String?  @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
@@ -193,92 +231,267 @@ model ReminderLog {
 }
 
 model WorkObject {
-  id             Int          @id @default(autoincrement())
-  organizationId Int          @map("organization_id")
-  name           String       @db.VarChar(255)
-  description    String?      @db.Text
-  address        String?      @db.VarChar(255)
-  latitude       Decimal      @db.Decimal(10, 7)
-  longitude      Decimal      @db.Decimal(10, 7)
+  id             Int              @id @default(autoincrement())
+  organizationId Int              @map("organization_id")
+  name           String           @db.VarChar(255)
+  description    String?          @db.Text
+  address        String?          @db.VarChar(255)
+  latitude       Decimal          @db.Decimal(10, 7)
+  longitude      Decimal          @db.Decimal(10, 7)
   radius         Int
-  deleted        Boolean      @default(false)
+  deleted        Boolean          @default(false)
   // --- Kliendiarvelduse väljad ---
-  /** Kliendi nimi, kellele objekti tunde arveldatakse. */
-  clientName     String?      @map("client_name") @db.VarChar(255)
-  /** Kliendile esitatav tunnihind. Erineb töötaja palgamäärast — vahe on kate. */
-  billableRate   Decimal?     @map("billable_rate") @db.Decimal(10, 2)
-  /** Kokkulepitud eelarve tundides, et näha ületamist. */
-  budgetHours    Decimal?     @map("budget_hours") @db.Decimal(10, 2)
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  /**
+   * /**
+   * Tellija, kellele selle objekti tunnid arveldatakse. Varem oli siin
+   * ainult nimi tekstiväljana; arve jaoks on vaja registrikoodi ja
+   * aadressi, seega on tellija nüüd omaette kirje.
+   */
+  clientId       Int?             @map("client_id")
+  /**
+   * Objekti üldine kliendihind, kui tööliigil oma hinda pole.
+   */
+  billableRate   Decimal?         @map("billable_rate") @db.Decimal(10, 2)
+  /**
+   * Kokkulepitud eelarve tundides, et näha ületamist.
+   */
+  budgetHours    Decimal?         @map("budget_hours") @db.Decimal(10, 2)
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  client         Client?          @relation(fields: [clientId], references: [id])
   timeLogs       TimeLog[]
-  costCodes      CostCode[]
+  workTypes      ObjectWorkType[]
+  invoiceLines   InvoiceLine[]
 
+  @@index([organizationId, clientId])
   @@map("objects")
 }
 
 /**
- * Kulukood ehk tööliik (müüritöö, elektritöö, koristus).
- *
- * Ilma selleta salvestub ainult "kus tööd tehti", mitte "mida tehti" —
- * kliendile arve koostamiseks ja projekti kalkulatsiooniks on vaja teist.
- * `objectId` on nullitav: NULL tähendab kogu ettevõttes kasutatavat koodi,
- * täidetud väärtus ainult ühe objekti oma.
+ * Tellija ehk klientettevõte, kellele objekti tunnid arveldatakse.
+ * Varem oli see objekti küljes lihtsalt tekstiväli `client_name`, millega
+ * sai raportit grupeerida, aga arvet mitte teha — nõuetekohane arve vajab
+ * registrikoodi, aadressi ja e-posti. Üks tellija tellib tavaliselt mitu
+ * objekti, seega on ta omaette kirje, mitte objekti väli.
  */
-model CostCode {
-  id             Int         @id @default(autoincrement())
-  organizationId Int         @map("organization_id")
-  objectId       Int?        @map("object_id")
-  code           String      @db.VarChar(40)
-  name           String      @db.VarChar(255)
-  /** Kliendile esitatav tunnihind selle tööliigi eest (võidab objekti oma). */
-  billableRate   Decimal?    @map("billable_rate") @db.Decimal(10, 2)
-  deleted        Boolean     @default(false)
-  object         WorkObject? @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  timeLogs       TimeLog[]
+model Client {
+  id              Int      @id @default(autoincrement())
+  organizationId  Int      @map("organization_id")
+  name            String   @db.VarChar(255)
+  /**
+   * Registrikood — ettevõttele esitatava arve kohustuslik rekvisiit.
+   */
+  registryCode    String?  @map("registry_code") @db.VarChar(40)
+  /**
+   * KMKR number; tühi, kui tellija ei ole käibemaksukohustuslane.
+   */
+  vatNumber       String?  @map("vat_number") @db.VarChar(40)
+  email           String?  @db.VarChar(255)
+  address         String?  @db.VarChar(255)
+  /**
+   * Maksetähtaeg päevades arve kuupäevast.
+   */
+  paymentTermDays Int      @default(14) @map("payment_term_days")
+  /**
+   * Käibemaksumäär protsentides. Eestis 24% (alates 01.07.2025).
+   */
+  vatRate         Decimal  @default(24) @map("vat_rate") @db.Decimal(5, 2)
+  notes           String?  @db.Text
+  deleted         Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  @@unique([organizationId, code])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  objects      WorkObject[]
+  invoices     Invoice[]
+
+  @@unique([organizationId, name])
   @@index([organizationId, deleted])
-  @@map("cost_codes")
+  @@map("clients")
+}
+
+/**
+ * Tööliik: lammutus, maalritöö, koristus.
+ * Ettevõtte ühine nimekiri, mitte objekti oma — sama tööliik kordub
+ * objektilt objektile ja seda ei ole mõtet iga kord uuesti sisestada.
+ * Objektipõhine hind tuleb `ObjectWorkType` kirjest, sest sama töö maksab
+ * eri tellijale erinevalt.
+ * Asendab varasemat `CostCode` mudelit, kus olid kõrvuti väljad "kood" ja
+ * "nimi". Praktikas läksid need segamini (esimesse kirjutati tööliik ja
+ * teise tellija nimi), seega on nimi nüüd ainus kohustuslik väli ja kood
+ * vabatahtlik lisand raamatupidamisele.
+ */
+model WorkType {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  name           String   @db.VarChar(255)
+  /**
+   * Vabatahtlik raamatupidamise kood, nt "LAMM".
+   */
+  code           String?  @db.VarChar(40)
+  /**
+   * Vaikimisi kliendihind; objektipõhine hind võidab selle.
+   */
+  defaultRate    Decimal? @map("default_rate") @db.Decimal(10, 2)
+  deleted        Boolean  @default(false)
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  objects      ObjectWorkType[]
+  timeLogs     TimeLog[]
+  invoiceLines InvoiceLine[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, deleted])
+  @@map("work_types")
+}
+
+/**
+ * Millised tööliigid ühel objektil käivad ja mis hinnaga.
+ * Just see tabel teeb võimalikuks olukorra, kus samal objektil lammutab
+ * kolm meest, maalib üks ja koristab üks: iga töötaja valib tööpäeva
+ * alustades oma tööliigi ja arvele lähevad need eraldi ridadena, igaüks
+ * oma tunnihinnaga.
+ */
+model ObjectWorkType {
+  objectId   Int      @map("object_id")
+  workTypeId Int      @map("work_type_id")
+  /**
+   * Selle objekti hind; NULL = kehtib tööliigi vaikehind.
+   */
+  rate       Decimal? @db.Decimal(10, 2)
+
+  object   WorkObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  workType WorkType   @relation(fields: [workTypeId], references: [id], onDelete: Cascade)
+
+  @@id([objectId, workTypeId])
+  @@index([workTypeId])
+  @@map("object_work_types")
+}
+
+/**
+ * Kliendile esitatud arve.
+ * Arve ei ole raport. Raporti võib iga kord uuesti arvutada, aga arve peab
+ * jääma täpselt selliseks, nagu see välja saadeti — hilisem hinnamuutus ei
+ * tohi juba esitatud arvet tagantjärele muuta. Seetõttu salvestatakse read,
+ * summad ja mõlema poole rekvisiidid arve tegemise hetke seisuga.
+ * Arvele läinud töölogid märgitakse `time_logs.invoice_id` väljaga. See on
+ * ainus asi, mis hoiab ära sama tunni teistkordse arveldamise.
+ */
+model Invoice {
+  id             Int       @id @default(autoincrement())
+  organizationId Int       @map("organization_id")
+  clientId       Int       @map("client_id")
+  /**
+   * Ettevõttesiseselt jooksev number, nt "2026-0007".
+   */
+  number         String    @db.VarChar(40)
+  /**
+   * "draft" | "sent" | "paid" | "void"
+   */
+  status         String    @default("draft") @db.VarChar(20)
+  issueDate      String    @map("issue_date") @db.VarChar(10)
+  dueDate        String    @map("due_date") @db.VarChar(10)
+  /**
+   * Arveldatud periood, kaasa arvatud, YYYY-MM-DD.
+   */
+  periodFrom     String    @map("period_from") @db.VarChar(10)
+  periodTo       String    @map("period_to") @db.VarChar(10)
+  /**
+   * JSON-hetktõmmis mõlema poole rekvisiitidest arve tegemise ajal.
+   */
+  clientSnapshot String    @map("client_snapshot") @db.Text
+  sellerSnapshot String    @map("seller_snapshot") @db.Text
+  vatRate        Decimal   @map("vat_rate") @db.Decimal(5, 2)
+  subtotal       Decimal   @db.Decimal(12, 2)
+  vatAmount      Decimal   @map("vat_amount") @db.Decimal(12, 2)
+  total          Decimal   @db.Decimal(12, 2)
+  note           String?   @db.Text
+  createdById    Int       @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  sentAt         DateTime? @map("sent_at")
+  paidAt         DateTime? @map("paid_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  client       Client        @relation(fields: [clientId], references: [id])
+  lines        InvoiceLine[]
+  timeLogs     TimeLog[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([clientId])
+  @@map("invoices")
+}
+
+/**
+ * Arve rida: üks objekti ja tööliigi kombinatsioon kokku liidetuna.
+ * `description` on teksti-hetktõmmis ("Kase 12 — Lammutus"), et arve jääks
+ * loetavaks ka siis, kui objekt või tööliik hiljem ümber nimetatakse või
+ * kustutatakse.
+ */
+model InvoiceLine {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int     @map("invoice_id")
+  objectId    Int?    @map("object_id")
+  workTypeId  Int?    @map("work_type_id")
+  description String  @db.VarChar(255)
+  hours       Decimal @db.Decimal(10, 2)
+  rate        Decimal @db.Decimal(10, 2)
+  amount      Decimal @db.Decimal(12, 2)
+
+  invoice  Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  object   WorkObject? @relation(fields: [objectId], references: [id])
+  workType WorkType?   @relation(fields: [workTypeId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_lines")
 }
 
 model TimeLog {
-  id             Int         @id @default(autoincrement())
-  userId         Int         @map("user_id")
-  objectId       Int         @map("object_id")
-  startTime      DateTime    @map("start_time")
-  endTime        DateTime?   @map("end_time")
-  startLatitude  Decimal?    @map("start_latitude") @db.Decimal(10, 7)
-  startLongitude Decimal?    @map("start_longitude") @db.Decimal(10, 7)
-  comment        String?     @db.Text
-  travelDuration Decimal?    @map("travel_duration") @db.Decimal(5, 2)
-  lunch          Decimal?    @db.Decimal(5, 2)
-  manualWorkDuration Decimal? @map("manual_work_duration") @db.Decimal(5, 2)
-  /** Mis tööd tehti — vajalik kliendiarvelduseks ja projektikalkulatsiooniks. */
-  costCodeId     Int?        @map("cost_code_id")
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @map("user_id")
+  objectId           Int       @map("object_id")
+  startTime          DateTime  @map("start_time")
+  endTime            DateTime? @map("end_time")
+  startLatitude      Decimal?  @map("start_latitude") @db.Decimal(10, 7)
+  startLongitude     Decimal?  @map("start_longitude") @db.Decimal(10, 7)
+  comment            String?   @db.Text
+  travelDuration     Decimal?  @map("travel_duration") @db.Decimal(5, 2)
+  lunch              Decimal?  @db.Decimal(5, 2)
+  manualWorkDuration Decimal?  @map("manual_work_duration") @db.Decimal(5, 2)
+  /**
+   * Mis tööd tehti — vajalik kliendiarvelduseks ja projektikalkulatsiooniks.
+   */
+  workTypeId         Int?      @map("work_type_id")
+  /**
+   * Arve, millele see tund juba läks. Täidetud väli tähendab, et tundi ei
+   * tohi teist korda arveldada — arvelduse eelvaade jätab need vaikimisi
+   * välja. Arve tühistamine (`void`) nullib välja ja vabastab tunnid.
+   */
+  invoiceId          Int?      @map("invoice_id")
   /**
    * Sisseregistreerimisel tuvastati võltsitud asukoht. Tööpäeva EI
    * blokeerita (viga võib olla ka seadmes), aga admin näeb raportis
    * märget ja saab kontrollida.
    */
-  locationMocked Boolean     @default(false) @map("location_mocked")
+  locationMocked     Boolean   @default(false) @map("location_mocked")
   /**
    * Offline-režiimis loodud kirje: telefon salvestas selle ilma
    * ühenduseta ja saatis hiljem. `startTime` tuleb siis seadme kellast,
    * mitte serverilt.
    */
-  createdOffline Boolean     @default(false) @map("created_offline")
+  createdOffline     Boolean   @default(false) @map("created_offline")
   /**
    * Seadme ja serveri kella erinevus sekundites saatmise hetkel.
    * Suur väärtus tähendab, et kella on nihutatud — võimalik pettus,
    * mille admin peab üle vaatama.
    */
-  clockDriftSeconds Int?     @map("clock_drift_seconds")
+  clockDriftSeconds  Int?      @map("clock_drift_seconds")
 
-  costCode       CostCode?       @relation(fields: [costCodeId], references: [id])
+  workType       WorkType?       @relation(fields: [workTypeId], references: [id])
+  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
   object         WorkObject      @relation(fields: [objectId], references: [id])
   presenceEvents PresenceEvent[]
 
+  @@index([invoiceId])
   @@map("time_logs")
 }
 
@@ -295,7 +508,9 @@ model PresenceEvent {
   longitude  Decimal? @db.Decimal(10, 7)
   accuracy   Decimal? @db.Decimal(10, 2)
   source     String   @db.VarChar(20) // "manual" | "foreground" | "native"
-  /** Kas seade teatas, et asukoht on võltsitud (mock location app). */
+  /**
+   * Kas seade teatas, et asukoht on võltsitud (mock location app).
+   */
   mocked     Boolean  @default(false)
 
   timeLog TimeLog @relation(fields: [timeLogId], references: [id], onDelete: Cascade)
@@ -334,7 +549,6 @@ model PasswordReset {
 
 /**
  * Tokenite tühistamine.
- *
  * JWT on olemuselt stateless — kord välja antud, kehtib kuni aegumiseni
  * (refresh-token 30 päeva). Vallandatud töötaja või varastatud telefoni
  * puhul on see liiga pikk. Siia kirjutatakse hetk, millest varem välja
@@ -342,7 +556,9 @@ model PasswordReset {
  */
 model TokenRevocation {
   userId    Int      @id @map("user_id")
-  /** Enne seda hetke välja antud tokenid on kehtetud. */
+  /**
+   * Enne seda hetke välja antud tokenid on kehtetud.
+   */
   revokedAt DateTime @map("revoked_at")
   reason    String?  @db.VarChar(255)
 

@@ -56,6 +56,79 @@ inimene ei saaks kohe uut taotlust esitada ja adminit spämmida.
 `GET /me/dashboard` sisaldab adminile `pendingRequests` loendurit —
 muidu jääks taotlus märkamatult seisma.
 
+## Tööliigid, tellijad ja arved
+
+Tööajaarvestusest üksi ei piisa, kui ettevõte tahab tehtud tundide eest
+tellijale arve esitada. Selleks on kolm omavahel seotud osa:
+
+- **Tööliik** (`work_types`) — MIS tööd tehti: lammutus, maalritöö,
+  koristus. Nimekiri on ettevõtte ühine.
+- **Objekti tööliigid** (`object_work_types`) — millised tööliigid ühel
+  objektil käivad ja mis tunnihinnaga. Just see lubab olukorra, kus samal
+  objektil lammutab kolm meest, maalib üks ja koristab üks, ja kõik kolm
+  lähevad arvele eri hinnaga.
+- **Tellija** (`clients`) — ettevõte, kellele arve esitatakse, koos
+  registrikoodi, aadressi ja maksetähtajaga. Objekt viitab tellijale.
+
+Varem oli see üks tabel `cost_codes` väljadega "kood" ja "nimi", kus
+objektipõhine hind oli koodi enda küljes. See ei võimaldanud sama tööliiki
+kahel objektil eri hinnaga kasutada (kood oli ettevõttes unikaalne) ja
+praktikas läksid "kood" ja "nimi" segamini. Uues struktuuris on tööliigil
+ainult nimi; kood on vabatahtlik lisand raamatupidamisele.
+
+### Tunnihinna valik
+
+Kui töötaja tunnid arvele lähevad, valitakse hind tugevamast nõrgemani:
+
+1. objekti selle tööliigi hind (`object_work_types.rate`)
+2. tööliigi vaikehind (`work_types.default_rate`)
+3. objekti üldhind (`objects.billable_rate`)
+4. puudumisel jäävad tunnid **arveldamata** ja arvele ei lähe
+
+Neljas juhtum ei ole null eurot. Hinnata tunnid loetakse eraldi
+(`unbilledHours`) ja jäävad ootama, sest puuduv seadistus ei tohi vaikselt
+muutuda tasuta tehtud tööks. Loogika on `src/utils/billing.ts`, ühikutestid
+`billing.test.ts`.
+
+### Arve
+
+`POST /invoices` koostab perioodi tundidest arve: read objekti ja tööliigi
+kaupa, käibemaks tellija määra järgi, jooksev number kujul `2026-0007`.
+
+Arve **ei ole raport**. Read, summad ja mõlema poole rekvisiidid
+salvestatakse hetktõmmisena, seega hilisem hinnamuutus ei muuda juba
+esitatud arvet. Arvele läinud töölogid märgitakse `time_logs.invoice_id`
+väljaga — see on ainus asi, mis hoiab ära sama tunni teistkordse
+arveldamise. Arve tühistamine (`POST /invoices/:id/void`) vabastab tunnid
+tagasi, aga number jääb kasutusele, et nummerdusse ei tekiks seletamatut
+auku.
+
+Trükivaade (`GET /invoices/:id/html`) on iseseisev HTML, mille saab
+brauseris salvestada PDF-ina. Ligipääs käib `GET /invoices/:id/print-token`
+kaudu saadud 15-minutilise allkirjastatud lingiga, mitte sisselogimise
+tokeniga — süsteemi brauserisse Bearer-päis kaasa ei lähe ja sessiooni
+tokenit URL-i panna ei tohi.
+
+Arve väljastaja rekvisiidid (registrikood, KMKR, IBAN) on `organizations`
+tabelis ja neid hallatakse `/settings/company` kaudu. Ilma registrikoodita
+keeldub server arvet vormistamast.
+
+### Üleminek vanalt `cost_codes` tabelilt
+
+`prisma db push` ei tunne ümbernimetamist ära — ta kustutab vana tabeli ja
+loob uue tühja. Olemasolevate ridade jaoks on
+`scripts/migrate-cost-codes-to-work-types.ts`:
+
+```bash
+npx tsx scripts/migrate-cost-codes-to-work-types.ts backup
+npx prisma db push
+npx tsx scripts/migrate-cost-codes-to-work-types.ts restore
+```
+
+Skript ei tõlgenda andmeid ümber: kui vanas kirjes olid "kood" ja "nimi"
+segamini, jäävad need samaks ja tuleb käsitsi parandada. Vaikne
+ümbertõlgendamine oleks halvem kui üks käsitsi muudatus.
+
 ## Teavitused (push + e-post)
 
 Millal midagi saadetakse:

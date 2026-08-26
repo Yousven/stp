@@ -299,14 +299,20 @@ export function DashboardPage() {
             <Link className="btn btn-secondary" to="/admin/settings">
               {d.dashboard.settings}
             </Link>
-            <Link className="btn btn-secondary" to="/admin/cost-codes">
-              {d.dashboard.costCodes}
+            <Link className="btn btn-secondary" to="/admin/work-types">
+              {d.dashboard.workTypes}
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/clients">
+              {d.dashboard.clients}
             </Link>
             <Link className="btn btn-secondary" to="/admin/reports">
               {d.dashboard.reports}
             </Link>
             <Link className="btn btn-secondary" to="/admin/billing">
               {d.dashboard.billing}
+            </Link>
+            <Link className="btn btn-secondary" to="/admin/invoices">
+              {d.dashboard.invoices}
             </Link>
             <Link className="btn btn-secondary" to="/admin/subscription">
               {d.dashboard.subscription}

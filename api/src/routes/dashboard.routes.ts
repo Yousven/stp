@@ -97,13 +97,13 @@ dashboardRouter.get(
   asyncHandler(async (req, res) => {
     const organizationId = req.user!.organizationId;
 
-    const [organization, objectCount, employeeCount, costCodeCount, timeLogCount, dismissedRow] = await Promise.all([
+    const [organization, objectCount, employeeCount, workTypeCount, timeLogCount, dismissedRow] = await Promise.all([
       prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { name: true, slug: true } }),
       prisma.workObject.count({ where: { organizationId, deleted: false } }),
       // Admin ise ei ole "kutsutud töötaja" — muidu näiks samm tehtuna
       // kohe registreerumise järel.
       prisma.user.count({ where: { organizationId, status: "active", id: { not: req.user!.sub } } }),
-      prisma.costCode.count({ where: { organizationId, deleted: false } }),
+      prisma.workType.count({ where: { organizationId, deleted: false } }),
       prisma.timeLog.count({ where: { user: { organizationId } } }),
       prisma.setting.findUnique({
         where: { organizationId_key: { organizationId, key: ONBOARDING_DISMISSED_KEY } },
@@ -113,7 +113,7 @@ dashboardRouter.get(
     const steps = {
       hasObject: objectCount > 0,
       hasEmployee: employeeCount > 0,
-      hasCostCode: costCodeCount > 0,
+      hasWorkType: workTypeCount > 0,
       hasTimeLog: timeLogCount > 0,
     };
 

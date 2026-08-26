@@ -44,11 +44,11 @@ public class BackgroundGeofencePlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
 
     // CAPPlugin defineerib need juba — seetõttu override + public.
     @objc override public func checkPermissions(_ call: CAPPluginCall) {
-        call.resolve(["location": authorizationString(CLLocationManager.authorizationStatus())])
+        call.resolve(["location": authorizationString(locationManager.authorizationStatus)])
     }
 
     @objc override public func requestPermissions(_ call: CAPPluginCall) {
-        let status = CLLocationManager.authorizationStatus()
+        let status = locationManager.authorizationStatus
         if status == .authorizedAlways {
             call.resolve(["location": "granted"])
             return

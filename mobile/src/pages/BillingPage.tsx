@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { apiRequest } from "../api/client";
-import type { BillingResponse, WorkObject } from "../api/types";
+import { Link, useNavigate } from "react-router-dom";
+import { ApiError, apiRequest } from "../api/client";
+import type { BillingResponse, Client, Invoice, WorkObject } from "../api/types";
 import { useT } from "../i18n";
 
 function firstOfMonth(): string {
@@ -17,9 +17,18 @@ function eur(n: number): string {
   return `€${n.toFixed(2)}`;
 }
 
+/**
+ * Arvelduse eelvaade tellijate kaupa.
+ *
+ * Sisuliselt arve mustand: siin näidatakse täpselt need read ja summad,
+ * mis "Tee arve" nupust vormistatakse. Vaikimisi ainult veel arveldamata
+ * tunnid, et sama tundi ei saaks kaks korda arvele panna.
+ */
 export function BillingPage() {
   const d = useT();
+  const navigate = useNavigate();
   const [objects, setObjects] = useState<WorkObject[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [objectId, setObjectId] = useState<number | "">("");
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(today);
@@ -27,6 +36,7 @@ export function BillingPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [creating, setCreating] = useState<number | null>(null);
 
   async function load(e?: FormEvent) {
     e?.preventDefault();
@@ -49,10 +59,35 @@ export function BillingPage() {
       .catch(() => {
         /* filter on valikuline */
       });
+    apiRequest<Client[]>("/clients")
+      .then(setClients)
+      .catch(() => {
+        /* tellijate loend on abiinfo */
+      });
     load();
     // Esmane laadimine jooksva kuu peale; edasi käivitab kasutaja ise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function createInvoice(clientId: number) {
+    setError("");
+    setCreating(clientId);
+    try {
+      const invoice = await apiRequest<Invoice>("/invoices", {
+        method: "POST",
+        body: {
+          clientId,
+          dateFrom,
+          dateTo,
+          ...(objectId === "" ? {} : { objectId }),
+        },
+      });
+      navigate(`/admin/invoices/${invoice.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : d.billing.createFailed);
+      setCreating(null);
+    }
+  }
 
   const totals = data?.totals;
 
@@ -60,11 +95,12 @@ export function BillingPage() {
     <div className="page">
       <header className="topbar">
         <h1>{d.billing.title}</h1>
+        <Link className="btn btn-link" to="/admin/invoices">
+          {d.invoices.title}
+        </Link>
       </header>
 
-      <p className="subtitle">
-        {d.billing.intro}
-      </p>
+      <p className="subtitle">{d.billing.intro}</p>
 
       <form className="card" onSubmit={load}>
         <label>
@@ -125,71 +161,106 @@ export function BillingPage() {
         </section>
       )}
 
-      {data && data.objects.length === 0 && (
+      {data && data.clients.length === 0 && (
         <div className="card">
           <p>{d.billing.noData}</p>
         </div>
       )}
 
-      {data?.objects.map((o) => (
-        <section key={o.objectId} className="card">
-          <h2>{o.objectName}</h2>
-          {o.clientName && <p className="subtitle">{d.billing.client(o.clientName)}</p>}
+      {data?.clients.map((client) => (
+        <section key={client.clientId ?? "none"} className="card">
+          <h2>{client.clientName ?? d.billing.noClient}</h2>
 
           <dl className="stat-list">
             <div>
               <dt>{d.billing.hours}</dt>
-              <dd>{o.hours}</dd>
+              <dd>{client.hours}</dd>
             </div>
             <div>
               <dt>{d.billing.cost}</dt>
-              <dd>{eur(o.cost)}</dd>
+              <dd>{eur(client.cost)}</dd>
             </div>
             <div>
               <dt>{d.billing.billable}</dt>
-              <dd>{eur(o.billable)}</dd>
+              <dd>{eur(client.billable)}</dd>
             </div>
             <div>
               <dt>{d.billing.margin}</dt>
-              <dd className={o.margin < 0 ? "text-error" : "text-success"}>{eur(o.margin)}</dd>
+              <dd className={client.margin < 0 ? "text-error" : "text-success"}>{eur(client.margin)}</dd>
             </div>
           </dl>
 
-          {o.budgetHours !== null && (
-            <p className={o.overBudgetHours && o.overBudgetHours > 0 ? "text-error" : "subtitle"}>
-              {d.billing.budget(o.budgetHours)}
-              {o.overBudgetHours && o.overBudgetHours > 0 ? d.billing.overBudget(o.overBudgetHours) : ""}
+          {client.unbilledHours > 0 && (
+            <p className="text-warning">{d.billing.unbilledShort(client.unbilledHours)}</p>
+          )}
+
+          {client.objects.map((o) => (
+            <div key={o.objectId} style={{ marginTop: "0.75rem" }}>
+              <strong>{o.objectName}</strong>
+              <div className="subtitle">
+                {o.hours} {d.common.hours} · {eur(o.billable)}
+              </div>
+
+              {o.budgetHours !== null && (
+                <p className={o.overBudgetHours && o.overBudgetHours > 0 ? "text-error" : "subtitle"}>
+                  {d.billing.budget(o.budgetHours)}
+                  {o.overBudgetHours && o.overBudgetHours > 0 ? d.billing.overBudget(o.overBudgetHours) : ""}
+                </p>
+              )}
+
+              <button
+                className="btn btn-link"
+                style={{ padding: "0.35rem 0" }}
+                onClick={() => setExpanded(expanded === o.objectId ? null : o.objectId)}
+              >
+                {expanded === o.objectId ? d.billing.hideLines : d.billing.showLines}
+              </button>
+
+              {expanded === o.objectId && (
+                <ul className="log-list">
+                  {o.lines.map((line) => (
+                    <li key={`${line.objectId}:${line.workTypeId ?? "none"}`} className="log-item">
+                      <strong>{line.workTypeName ?? d.common.undefinedValue}</strong>
+                      <div>
+                        {line.hours} h ×{" "}
+                        {line.rate === null ? (
+                          <span className="text-warning">{d.billing.rateUndefined}</span>
+                        ) : (
+                          `${eur(line.rate)}/h`
+                        )}{" "}
+                        = {eur(line.billable)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+
+          {/* Arve saab teha ainult tellijale — tellijata objektid on
+              seadistamata ja nende jaoks pole kellelegi arvet esitada. */}
+          {client.clientId === null ? (
+            <p className="text-warning" style={{ marginTop: "0.75rem" }}>
+              {d.billing.needsClient}
             </p>
-          )}
-
-          {o.unbilledHours > 0 && (
-            <p className="text-warning">{d.billing.unbilledShort(o.unbilledHours)}</p>
-          )}
-
-          <button
-            className="btn btn-link"
-            style={{ padding: "0.35rem 0" }}
-            onClick={() => setExpanded(expanded === o.objectId ? null : o.objectId)}
-          >
-            {expanded === o.objectId ? d.billing.hideLines : d.billing.showLines}
-          </button>
-
-          {expanded === o.objectId && (
-            <ul className="log-list">
-              {o.lines.map((line) => (
-                <li key={line.costCode} className="log-item">
-                  <strong>{line.costCode}</strong>
-                  <div>
-                    {line.hours} h ×{" "}
-                    {line.rate === null ? <span className="text-warning">{d.billing.rateUndefined}</span> : `${eur(line.rate)}/h`} ={" "}
-                    {eur(line.billable)}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          ) : (
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: "0.75rem" }}
+              disabled={creating !== null || client.billable <= 0}
+              onClick={() => createInvoice(client.clientId!)}
+            >
+              {creating === client.clientId ? d.billing.creating : d.billing.createInvoice}
+            </button>
           )}
         </section>
       ))}
+
+      {clients.length === 0 && (
+        <Link className="btn btn-link" to="/admin/clients">
+          {d.clients.title}
+        </Link>
+      )}
 
       <Link className="btn btn-link" to="/dashboard">
         {d.common.backToDashboard}

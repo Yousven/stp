@@ -59,10 +59,28 @@ export const et = {
     overlapping: (from: string, to: string) => `Sellel töötajal on juba puudumine perioodil ${from} – ${to}.`,
   },
 
-  costCodes: {
-    notFound: "Kulukoodi ei leitud.",
-    selectedNotFound: "Valitud kulukoodi ei leitud.",
-    duplicate: "Selline kulukood on juba olemas.",
+  workTypes: {
+    notFound: "Tööliiki ei leitud.",
+    selectedNotFound: "Valitud tööliiki ei leitud.",
+    duplicate: "Sellise nimega tööliik on juba olemas.",
+    notOnObject: "See tööliik ei ole sellel objektil kasutusel.",
+  },
+
+  clients: {
+    notFound: "Tellijat ei leitud.",
+    duplicate: "Sellise nimega tellija on juba olemas.",
+    hasObjects: "Tellijat ei saa kustutada, kuna tal on seotud objekte.",
+    missingDetails: "Tellijal puudub nimi või aadress — arvet ei saa vormistada.",
+  },
+
+  invoices: {
+    notFound: "Arvet ei leitud.",
+    noBillableHours:
+      "Valitud perioodil ei ole ühtegi arveldatavat tundi. Kontrolli, kas tööliikidel on hind määratud.",
+    alreadyVoided: "Arve on juba tühistatud.",
+    cannotVoidPaid: "Makstud arvet ei saa tühistada. Vormista vajadusel kreeditarve.",
+    sellerDetailsMissing:
+      "Ettevõtte rekvisiidid on täitmata. Lisa need seadetes enne arve koostamist.",
   },
 
   billing: {
@@ -136,10 +154,27 @@ export const en: Messages = {
     overlapping: (from: string, to: string) => `This worker already has an absence for ${from} – ${to}.`,
   },
 
-  costCodes: {
-    notFound: "Cost code not found.",
-    selectedNotFound: "The selected cost code was not found.",
-    duplicate: "That cost code already exists.",
+  workTypes: {
+    notFound: "Work type not found.",
+    selectedNotFound: "The selected work type was not found.",
+    duplicate: "A work type with that name already exists.",
+    notOnObject: "That work type is not in use on this site.",
+  },
+
+  clients: {
+    notFound: "Client not found.",
+    duplicate: "A client with that name already exists.",
+    hasObjects: "This client cannot be deleted because sites are linked to it.",
+    missingDetails: "The client has no name or address — an invoice cannot be issued.",
+  },
+
+  invoices: {
+    notFound: "Invoice not found.",
+    noBillableHours:
+      "There are no billable hours in the selected period. Check that the work types have rates set.",
+    alreadyVoided: "This invoice has already been voided.",
+    cannotVoidPaid: "A paid invoice cannot be voided. Issue a credit note instead.",
+    sellerDetailsMissing: "Your company details are missing. Add them in settings before invoicing.",
   },
 
   billing: {
@@ -211,10 +246,27 @@ export const ru: Messages = {
     overlapping: (from: string, to: string) => `У этого работника уже есть отсутствие за период ${from} – ${to}.`,
   },
 
-  costCodes: {
-    notFound: "Код затрат не найден.",
-    selectedNotFound: "Выбранный код затрат не найден.",
-    duplicate: "Такой код затрат уже существует.",
+  workTypes: {
+    notFound: "Вид работ не найден.",
+    selectedNotFound: "Выбранный вид работ не найден.",
+    duplicate: "Вид работ с таким названием уже существует.",
+    notOnObject: "Этот вид работ не используется на данном объекте.",
+  },
+
+  clients: {
+    notFound: "Заказчик не найден.",
+    duplicate: "Заказчик с таким названием уже существует.",
+    hasObjects: "Заказчика нельзя удалить, так как с ним связаны объекты.",
+    missingDetails: "У заказчика не указано название или адрес — счёт выставить нельзя.",
+  },
+
+  invoices: {
+    notFound: "Счёт не найден.",
+    noBillableHours:
+      "За выбранный период нет оплачиваемых часов. Проверьте, указаны ли ставки у видов работ.",
+    alreadyVoided: "Счёт уже аннулирован.",
+    cannotVoidPaid: "Оплаченный счёт нельзя аннулировать. Оформите кредитный счёт.",
+    sellerDetailsMissing: "Реквизиты вашей компании не заполнены. Добавьте их в настройках.",
   },
 
   billing: {
@@ -286,10 +338,27 @@ export const uk: Messages = {
     overlapping: (from: string, to: string) => `У цього працівника вже є відсутність за період ${from} – ${to}.`,
   },
 
-  costCodes: {
-    notFound: "Код витрат не знайдено.",
-    selectedNotFound: "Обраний код витрат не знайдено.",
-    duplicate: "Такий код витрат уже існує.",
+  workTypes: {
+    notFound: "Вид робіт не знайдено.",
+    selectedNotFound: "Обраний вид робіт не знайдено.",
+    duplicate: "Вид робіт із такою назвою вже існує.",
+    notOnObject: "Цей вид робіт не використовується на цьому об'єкті.",
+  },
+
+  clients: {
+    notFound: "Замовника не знайдено.",
+    duplicate: "Замовник із такою назвою вже існує.",
+    hasObjects: "Замовника не можна видалити, оскільки з ним пов'язані об'єкти.",
+    missingDetails: "У замовника не вказано назву або адресу — рахунок неможливо виставити.",
+  },
+
+  invoices: {
+    notFound: "Рахунок не знайдено.",
+    noBillableHours:
+      "За обраний період немає оплачуваних годин. Перевірте, чи вказані ставки для видів робіт.",
+    alreadyVoided: "Рахунок уже анульовано.",
+    cannotVoidPaid: "Оплачений рахунок не можна анулювати. Оформіть кредит-ноту.",
+    sellerDetailsMissing: "Реквізити вашої компанії не заповнені. Додайте їх у налаштуваннях.",
   },
 
   billing: {

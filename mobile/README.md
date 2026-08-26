@@ -12,7 +12,7 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 - Tööajalugu (filtreeritav nimekiri, kokku tunnid)
 - Puudumised (töötaja näeb enda omi; admin lisab ja kustutab)
 - Admin: objektid, kasutajad, meeskonna ülevaade, seaded, raportid,
-  kulukoodid, arveldus, tellimus
+  tööliigid, tellijad, arveldus, arved, tellimus
 
 Dashboard, objektide loend ja tööpäeva lõpetamine töötavad ka ilma levita —
 vt `src/api/offlineQueue.ts` ja API README peatükki "Töötamine ilma levita".

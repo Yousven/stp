@@ -20,7 +20,12 @@ import { TeamPerformancePage } from "./pages/TeamPerformancePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { AbsencesPage } from "./pages/AbsencesPage";
-import { CostCodesPage } from "./pages/CostCodesPage";
+import { WorkTypesPage } from "./pages/WorkTypesPage";
+import { ClientsPage } from "./pages/ClientsPage";
+import { ObjectWorkTypesPage } from "./pages/ObjectWorkTypesPage";
+import { InvoicesPage } from "./pages/InvoicesPage";
+import { InvoiceDetailPage } from "./pages/InvoiceDetailPage";
+import { CompanyDetailsPage } from "./pages/CompanyDetailsPage";
 import { BillingPage } from "./pages/BillingPage";
 import { SubscriptionPage } from "./pages/SubscriptionPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -166,10 +171,50 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/cost-codes"
+          path="/admin/work-types"
           element={
             <ProtectedRoute>
-              <CostCodesPage />
+              <WorkTypesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/clients"
+          element={
+            <ProtectedRoute>
+              <ClientsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/objects/:id/work-types"
+          element={
+            <ProtectedRoute>
+              <ObjectWorkTypesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/invoices"
+          element={
+            <ProtectedRoute>
+              <InvoicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/invoices/:id"
+          element={
+            <ProtectedRoute>
+              <InvoiceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/company"
+          element={
+            <ProtectedRoute>
+              <CompanyDetailsPage />
             </ProtectedRoute>
           }
         />

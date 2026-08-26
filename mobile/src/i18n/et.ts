@@ -101,9 +101,11 @@ export const et = {
     joinRequests: "Liitumistaotlused",
     teamOverview: "Meeskonna ülevaade",
     settings: "Seaded",
-    costCodes: "Kulukoodid",
+    workTypes: "Tööliigid",
+    clients: "Tellijad",
     reports: "Raportid",
     billing: "Arveldus",
+    invoices: "Arved",
     subscription: "Tellimus",
   },
 
@@ -165,47 +167,149 @@ export const et = {
     },
   },
 
-  costCodes: {
-    title: "Kulukoodid",
+  workTypes: {
+    title: "Tööliigid",
     intro:
-      "Kulukood ütleb, mille peale tunnid läksid (nt müüritööd, koristus). Arveldusmäär on kliendile esitatav " +
-      "tunnihind — see võidab objekti oma. Ilma määrata jäävad tunnid arveldusraportis arveldamata.",
-    code: "Kood",
+      "Tööliik ütleb, MIDA tehti — lammutus, maalritöö, koristus. Nimekiri on ettevõtte ühine; millised tööliigid " +
+      "ühel objektil käivad ja mis hinnaga, määrad objekti juures.",
     name: "Nimetus",
-    billableRate: "Arveldusmäär (€/h)",
+    namePlaceholder: "nt Lammutus",
+    code: "Kood",
+    codeHint: "Valikuline raamatupidamise kood. Jäta tühjaks, kui seda vaja pole.",
+    defaultRate: "Vaikimisi kliendihind (€/h)",
     ratePlaceholder: "määramata",
-    rateUndefined: "Arveldusmäär määramata",
-    rateValue: (rate: string) => `Arveldusmäär: €${rate}/h`,
-    submitNew: "Lisa kulukood",
-    none: "Kulukoode pole veel lisatud. Ilma nendeta lähevad kõik tunnid ühte kotti.",
-    loadFailed: "Kulukoodide laadimine ebaõnnestus.",
+    rateUndefined: "Vaikehind määramata",
+    rateValue: (rate: string) => `Vaikehind: €${rate}/h`,
+    submitNew: "Lisa tööliik",
+    none: "Tööliike pole veel lisatud. Ilma nendeta ei saa arvele kirjutada, mille eest raha küsitakse.",
+    loadFailed: "Tööliikide laadimine ebaõnnestus.",
     removeFailed: "Eemaldamine ebaõnnestus.",
-    confirmRemove: (code: string) => `Eemaldada kulukood ${code} kasutusest?`,
+    confirmRemove: (name: string) => `Eemaldada tööliik "${name}" kasutusest?`,
+  },
+
+  clients: {
+    title: "Tellijad",
+    intro:
+      "Tellija on ettevõte, kellele objekti tunnid arveldatakse. Rekvisiidid lähevad arvele, seega registrikood ja " +
+      "aadress tasub kohe täita.",
+    name: "Nimi",
+    registryCode: "Registrikood",
+    vatNumber: "KMKR number",
+    email: "E-post",
+    emailHint: "Sellele aadressile saadetakse arve.",
+    address: "Aadress",
+    paymentTermDays: "Maksetähtaeg (päeva)",
+    vatRate: "Käibemaks (%)",
+    notes: "Märkused",
+    submitNew: "Lisa tellija",
+    none: "Tellijaid pole veel lisatud.",
+    objectCount: (count: number) => `${count} objekti`,
+    invoiceCount: (count: number) => `${count} arvet`,
+    loadFailed: "Tellijate laadimine ebaõnnestus.",
+    removeFailed: "Eemaldamine ebaõnnestus.",
+    confirmRemove: (name: string) => `Eemaldada tellija "${name}"?`,
+  },
+
+  objectWorkTypes: {
+    title: "Objekti tööliigid",
+    intro:
+      "Märgi, millised tööliigid sellel objektil käivad ja mis hinnaga neid tellijale arveldatakse. Samal objektil " +
+      "võib korraga käia mitu tööliiki — kolm meest lammutavad, üks maalib, üks koristab — ja igaüks läheb arvele " +
+      "oma hinnaga.",
+    enabled: "Kasutusel",
+    rate: "Hind (€/h)",
+    inherit: (rate: string) => `vaikehind €${rate}`,
+    noDefault: "vaikehinda pole",
+    none: "Ettevõttel pole veel ühtegi tööliiki. Lisa need enne, kui objektile hinnad määrad.",
+    manageWorkTypes: "Halda tööliike",
+    saved: "Salvestatud.",
+    loadFailed: "Tööliikide laadimine ebaõnnestus.",
+    saveFailed: "Salvestamine ebaõnnestus.",
+  },
+
+  companyDetails: {
+    title: "Ettevõtte rekvisiidid",
+    intro: "Need trükitakse igale kliendiarvele. Ilma registrikoodita ei saa arvet vormistada.",
+    name: "Nimi",
+    registryCode: "Registrikood",
+    vatNumber: "KMKR number",
+    address: "Aadress",
+    email: "E-post",
+    phone: "Telefon",
+    iban: "Arveldusarve (IBAN)",
+    defaultVatRate: "Vaikimisi käibemaks (%)",
+    saved: "Rekvisiidid salvestatud.",
+    loadFailed: "Rekvisiitide laadimine ebaõnnestus.",
+    saveFailed: "Salvestamine ebaõnnestus.",
   },
 
   billing: {
     title: "Arveldus",
     intro:
-      "Sama tunniandmestik, mis palgaarvestuses, aga teisest otsast: mida objektile kulus ja mida saab kliendilt " +
-      "küsida. Vahe on kate.",
+      "Sama tunniandmestik, mis palgaarvestuses, aga teisest otsast: mida objektile kulus ja mida saab tellijalt " +
+      "küsida. Vahe on kate. Siin näidatakse ainult veel arveldamata tunde.",
     calculating: "Arvutan...",
     total: "Kokku",
     hours: "Tunde",
     cost: "Kulu",
     billable: "Arveldatav",
     margin: "Kate",
-    client: (name: string) => `Klient: ${name}`,
+    noClient: "Tellijata objektid",
     budget: (hours: number) => `Eelarve: ${hours} h`,
     overBudget: (hours: number) => ` — ületatud ${hours} h võrra`,
     unbilledWarning: (hours: number) =>
-      `${hours} tundi on ilma arveldusmäärata ja neid EI ole ülal arvestatud. Määra arveldusmäär objektile või ` +
-      `kulukoodile, muidu jääb see raha küsimata.`,
-    unbilledShort: (hours: number) => `${hours} h ilma arveldusmäärata`,
-    noData: "Valitud perioodil pole lõpetatud tööpäevi.",
-    showLines: "Näita kulukoodide kaupa",
-    hideLines: "Peida kulukoodid",
+      `${hours} tundi on ilma tunnihinnata ja neid EI ole ülal arvestatud ega panda arvele. Määra hind objekti ` +
+      `tööliigile, muidu jääb see raha küsimata.`,
+    unbilledShort: (hours: number) => `${hours} h ilma hinnata`,
+    noData: "Valitud perioodil pole arveldamata tunde.",
+    showLines: "Näita tööliikide kaupa",
+    hideLines: "Peida tööliigid",
     rateUndefined: "määramata",
+    createInvoice: "Tee arve",
+    creating: "Koostan arvet...",
+    createFailed: "Arve koostamine ebaõnnestus.",
+    needsClient: "Arve saab teha ainult tellijaga seotud objektide tundidest. Määra objektile tellija.",
     loadFailed: "Arveldusandmete laadimine ebaõnnestus.",
+  },
+
+  invoices: {
+    title: "Arved",
+    intro:
+      "Vormistatud arved. Arvele läinud tunnid on lukus ja neid ei saa teist korda arveldada — tühistamine vabastab " +
+      "need tagasi.",
+    none: "Arveid pole veel vormistatud. Tee esimene arveldusvaates.",
+    number: "Arve",
+    period: "Periood",
+    issued: "Kuupäev",
+    due: "Maksetähtaeg",
+    total: "Summa",
+    subtotal: "Ilma käibemaksuta",
+    vat: (rate: string) => `Käibemaks ${rate}%`,
+    totalDue: "Tasumisele kuulub",
+    lines: "Read",
+    hoursColumn: "Tunnid",
+    rateColumn: "Hind",
+    amountColumn: "Summa",
+    status: {
+      draft: "Mustand",
+      sent: "Saadetud",
+      paid: "Makstud",
+      void: "Tühistatud",
+    },
+    open: "Ava trükivaade",
+    markSent: "Märgi saadetuks",
+    markPaid: "Märgi makstuks",
+    send: "Saada e-postiga",
+    sending: "Saadan...",
+    sentToEmail: (email: string) => `Arve saadeti aadressile ${email}.`,
+    sentNoEmail: "Tellijal pole e-posti aadressi — arve märgiti saadetuks, aga kirja ei läinud.",
+    sentNotConfigured: "E-posti server pole seadistatud — arve märgiti saadetuks, aga kirja ei läinud.",
+    voidLabel: "Tühista arve",
+    confirmVoid: (number: string) =>
+      `Tühistada arve ${number}? Number jääb kasutusele ja tunnid vabanevad uuesti arveldamiseks.`,
+    voidFailed: "Tühistamine ebaõnnestus.",
+    statusFailed: "Oleku muutmine ebaõnnestus.",
+    loadFailed: "Arvete laadimine ebaõnnestus.",
   },
 
   subscription: {
@@ -264,12 +368,12 @@ export const et = {
         "taotluse. Kood üksi ligipääsu ei anna.",
       action: "Lisa kasutaja",
     },
-    stepCostCode: {
-      title: "Kulukoodid kliendiarvelduseks",
+    stepWorkType: {
+      title: "Tööliigid kliendiarvelduseks",
       body:
-        "Kui tahad hiljem kliendile arve esitada, määra tööliigid ja nende tunnihinnad. Ilma nendeta on tunnid " +
-        "olemas, aga arveldusraportis ilma määrata.",
-      action: "Lisa kulukood",
+        "Kui tahad tellijale arve esitada, lisa tööliigid (lammutus, maalritöö, koristus) ja määra objekti juures " +
+        "nende tunnihinnad. Ilma nendeta on tunnid olemas, aga arvele ei saa kirjutada, mille eest raha küsitakse.",
+      action: "Lisa tööliik",
     },
     stepTimeLog: {
       title: "Proovi tööpäeva alustamist",
@@ -358,6 +462,14 @@ export const et = {
     notFound: "Objekti ei leitud.",
     loadFailed: "Objekti laadimine ebaõnnestus.",
     saveFailed: "Objekti salvestamine ebaõnnestus.",
+    billingSection: "Arveldus",
+    client: "Tellija",
+    clientNone: "Määramata",
+    clientHint: "Tellija on ettevõte, kellele selle objekti tunnid arveldatakse. Ilma selleta ei saa arvet teha.",
+    billableRate: "Objekti üldhind (€/h)",
+    billableRateHint: "Kehtib siis, kui tööliigil ei ole oma hinda. Tühi = määramata.",
+    budgetHours: "Eelarve (tundi)",
+    manageWorkTypes: "Tööliigid ja hinnad",
   },
 
   userForm: {

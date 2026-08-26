@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../api/client";
-import type { WorkObject } from "../api/types";
+import type { Client, WorkObject } from "../api/types";
 import { AddressMapPicker } from "../components/AddressMapPicker";
 import { useAddressSearch } from "../hooks/useAddressSearch";
 import { useT } from "../i18n";
@@ -21,11 +21,23 @@ export function ObjectFormPage() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radius, setRadius] = useState("200");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState<number | "">("");
+  const [billableRate, setBillableRate] = useState("");
+  const [budgetHours, setBudgetHours] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
 
   const suggestions = useAddressSearch(showSuggestions ? address : "");
+
+  useEffect(() => {
+    apiRequest<Client[]>("/clients")
+      .then(setClients)
+      .catch(() => {
+        /* tellijate loend on abiinfo — objekti saab ka ilma selleta salvestada */
+      });
+  }, []);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -42,6 +54,9 @@ export function ObjectFormPage() {
         setLatitude(object.latitude);
         setLongitude(object.longitude);
         setRadius(String(object.radius));
+        setClientId(object.clientId ?? "");
+        setBillableRate(object.billableRate === null ? "" : String(Number(object.billableRate)));
+        setBudgetHours(object.budgetHours === null ? "" : String(Number(object.budgetHours)));
       })
       .catch(() => setError(d.objectForm.loadFailed))
       .finally(() => setLoading(false));
@@ -70,6 +85,11 @@ export function ObjectFormPage() {
       latitude: Number(latitude),
       longitude: Number(longitude),
       radius: Number(radius),
+      clientId: clientId === "" ? null : clientId,
+      // Tühi väli tähendab "määramata", mitte nulli: null jätab tunnid
+      // arvelduses eraldi välja, 0 loeks need tasuta tehtuks.
+      billableRate: billableRate.trim() === "" ? null : Number(billableRate),
+      budgetHours: budgetHours.trim() === "" ? null : Number(budgetHours),
     };
     try {
       if (isEdit) {
@@ -151,10 +171,53 @@ export function ObjectFormPage() {
           {d.objectForm.radius}
           <input type="number" min="1" value={radius} onChange={(e) => setRadius(e.target.value)} required />
         </label>
+
+        <h2>{d.objectForm.billingSection}</h2>
+        <label>
+          {d.objectForm.client}
+          <select
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value === "" ? "" : Number(e.target.value))}
+          >
+            <option value="">{d.objectForm.clientNone}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="form-hint">{d.objectForm.clientHint}</div>
+        <label>
+          {d.objectForm.billableRate}
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={billableRate}
+            onChange={(e) => setBillableRate(e.target.value)}
+          />
+        </label>
+        <div className="form-hint">{d.objectForm.billableRateHint}</div>
+        <label>
+          {d.objectForm.budgetHours}
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            value={budgetHours}
+            onChange={(e) => setBudgetHours(e.target.value)}
+          />
+        </label>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? d.common.pleaseWait : isEdit ? d.common.save : d.objectForm.titleNew}
         </button>
       </form>
+      {isEdit && (
+        <Link className="btn btn-secondary" to={`/admin/objects/${id}/work-types`}>
+          {d.objectForm.manageWorkTypes}
+        </Link>
+      )}
       <button className="btn btn-link" onClick={() => navigate(-1)}>
         {d.common.back}
       </button>
