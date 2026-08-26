@@ -266,3 +266,38 @@ export interface OnboardingState {
   complete: boolean;
   dismissed: boolean;
 }
+
+export interface ReportRow {
+  id: number;
+  username: string;
+  objectName: string;
+  startTime: string;
+  endTime: string | null;
+  grossHours: number | null;
+  netHours: number | null;
+  awayHours: number | null;
+  lunch: number | null;
+  earnings: number | null;
+  locationMocked: boolean;
+  createdOffline: boolean;
+  comment: string | null;
+}
+
+export interface ReportOvertimeRow {
+  username: string;
+  regularHours: number;
+  overtimeHours: number;
+  payableHours: number;
+  hourlyRate: number;
+  total: number;
+}
+
+export interface ReportPreview {
+  rows: ReportRow[];
+  /** Nimekiri jäi lühemaks kui tulemus — kogusummad on siiski kõigi pealt. */
+  truncated: boolean;
+  totalRows: number;
+  totals: { logs: number; hours: number; earnings: number };
+  overtime: ReportOvertimeRow[];
+  overtimeRules: { dailyThreshold: number; weeklyThreshold: number; multiplier: number };
+}

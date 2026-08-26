@@ -647,6 +647,38 @@ button {
   line-height: 1.45;
 }
 
+/**
+ * Kuu päis tööajaloos. Vajutatav terve laiuses, sest kokkuvolditud kuu
+ * avamine peab õnnestuma ka siis, kui sõrm ei taba täpselt teksti.
+ */
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg-soft);
+  color: var(--text-strong);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.month-header .log-hours {
+  font-size: 1.15rem;
+}
+
+.month-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 /** Kirje ülemine rida: vasakul mis ja millal, paremal tundide arv. */
 .log-row {
   display: flex;

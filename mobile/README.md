@@ -9,7 +9,7 @@ Capacitoriga natiivseks Android/iOS äpiks. Osa plaanist Faas 2:
 - Login → Dashboard (aktiivne/viimane töölogi, kuu kokkuvõte)
 - Alusta tööpäeva (objekti ja töö liigi valik, nõuab asukohta)
 - Lõpeta tööpäev (kommentaar, sõidu-/lõunaaeg)
-- Tööajalugu (filtreeritav nimekiri, kokku tunnid)
+- Tööajalugu (kuude kaupa, kuu summa päises, vanemad kuud kokku volditud)
 - Puudumised (töötaja näeb enda omi; admin lisab ja kustutab)
 - Admin: objektid, kasutajad, meeskonna ülevaade, seaded, raportid,
   tööliigid, tellijad, arveldus, arved, tellimus
@@ -68,6 +68,26 @@ odavaid signaale (mobiilimastid/WiFi), äratades äpi ainult siis, kui piir
 tegelikult ületatakse. Kui kunagi ilmub aku-kaebusi, kontrolli esimesena,
 ega kuskile pole tekkinud pidevat `watchPosition`/`requestLocationUpdates`
 kutset — see oleks päris põhjus, mitte region monitoring.
+
+Esiplaani pool kasutab jagatud asukohamoodulit (`src/api/location.ts`),
+mis hoiab viimast mõõtmist ja annab selle 45 sekundi jooksul uuesti välja.
+Nii ei käivita dashboardi avamine iga kord uut GPS-i fixi — päevas
+avatakse äppi kümneid kordi ja just sellest koguneks tegelik aku kulu.
+Sama moodul teeb otsingu ette ära, kui tööpäeva alustamise ekraan
+avatakse, nii et nupuvajutuse hetkeks on asukoht enamasti juba olemas.
+
+Androidil on geofence'i `setNotificationResponsiveness` 60 sekundit, mitte
+vaikimisi 0. Null tähendab "teata nii kiiresti kui võimalik", mille nimel
+Play Services kontrollib asukohta tihedamini; minutine viivitus lubab
+süsteemil kontrolle kokku panna. Tööaja arvestusele see vahet ei tee.
+
+iOS-i pluginas on **tahtlikult seadmata** `allowsBackgroundLocationUpdates`
+ja `pausesLocationUpdatesAutomatically`. Need puudutavad ainult pidevat
+jälgimist (`startUpdatingLocation`), mida siin ei kasutata, ja teine neist
+lülitab välja just selle energiasäästu, mis pideva jälgimise vahele paneb.
+Taustal äratamiseks ei ole neid vaja — region monitoring äratab äpi ka
+mälust välja visatuna. Kui keegi lisab kunagi pideva jälgimise, tuleb need
+teadlikult tagasi panna.
 
 Natiivne pool ei tee ise HTTP-päringuid: sündmused lähevad seadmes
 järjekorda (`GeofenceQueue.java` / `UserDefaults` iOS-il) ja JS tõstab need

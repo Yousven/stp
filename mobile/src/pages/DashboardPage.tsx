@@ -97,10 +97,14 @@ export function DashboardPage() {
    * kontrollib "kaua ma juba teinud olen", saaks vale vastuse.
    */
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const workdayRunning = Boolean(data?.activeLog ?? offlineLog);
   useEffect(() => {
+    // Taimer käib ainult siis, kui on midagi lugeda. Lõpetatud tööpäeva
+    // kohal tiksuv intervall ärataks protsessorit asjata.
+    if (!workdayRunning) return;
     const id = setInterval(() => setNowTick(Date.now()), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [workdayRunning]);
 
   function elapsedSince(startTime: string): string {
     const minutes = Math.max(Math.floor((nowTick - new Date(startTime).getTime()) / 60_000), 0);

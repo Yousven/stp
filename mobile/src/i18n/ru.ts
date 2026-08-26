@@ -129,6 +129,8 @@ export const ru: Dictionary = {
       "Связи не было, но начало рабочего дня сохранено в телефоне с текущим временем и местоположением. Оно будет " +
       "отправлено автоматически, когда появится связь — ничего делать не нужно.",
     queueLabel: (objectName: string) => `Начало рабочего дня (${objectName})`,
+    locationReady: "Местоположение найдено — можно начинать",
+    locatingNow: "Определяю местоположение...",
   },
 
   endWork: {
@@ -415,6 +417,23 @@ export const ru: Dictionary = {
     dateTo: "Дата по",
     downloadExcel: "Скачать Excel",
     downloadPdf: "Скачать PDF",
+    show: "Показать отчёт",
+    loading: "Готовлю отчёт...",
+    loadFailed: "Не удалось загрузить отчёт.",
+    none: "По выбранным условиям рабочих дней нет.",
+    summary: "Итого",
+    entries: "Записей",
+    totalHours: "Всего часов",
+    totalEarnings: "Всего к оплате",
+    overtimeTitle: "Сверхурочные",
+    regularHours: "Обычные часы",
+    overtimeHours: "Сверхурочные часы",
+    payableHours: "К оплате",
+    truncated: (shown: number, total: number) =>
+      `Показано ${shown} записей из ${total}. Итоги посчитаны по всем; полный список — в файле.`,
+    suspicious: "Местоположение подозрительное",
+    offlineEntry: "Отправлено позже",
+    downloadTitle: "Скачать файлом",
   },
 
   teamPerformance: {

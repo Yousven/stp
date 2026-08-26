@@ -1,4 +1,4 @@
-import { Geolocation } from "@capacitor/geolocation";
+import { acquirePosition } from "../api/location";
 import { useEffect, useRef } from "react";
 import { apiRequest } from "../api/client";
 import type { TimeLog } from "../api/types";
@@ -54,20 +54,20 @@ export function useGeofence(activeLog: TimeLog | null, onPresenceChange: (status
 
     (async () => {
       try {
-        const position = await Geolocation.getCurrentPosition({
-          timeout: 15000,
-          enableHighAccuracy: true,
-          maximumAge: 0,
-        });
+        // Jagatud asukohamoodul annab hiljutise mõõtmise ilma uut GPS-i
+        // fixi käivitamata. Dashboardi avamine ei tohi iga kord raadiot
+        // äratada: seda tehakse päevas kümneid kordi ja just sellest
+        // koguneks aku kulu.
+        const position = await acquirePosition();
         if (cancelled) return;
 
         const distance = distanceMeters(
-          position.coords.latitude,
-          position.coords.longitude,
+          position.latitude,
+          position.longitude,
           Number(latitude),
           Number(longitude)
         );
-        const allowance = Math.min(position.coords.accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
+        const allowance = Math.min(position.accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
         const inside = distance <= radius + allowance;
 
         // Saada sündmus ainult siis, kui olek tegelikult muutus — muidu
@@ -83,9 +83,9 @@ export function useGeofence(activeLog: TimeLog | null, onPresenceChange: (status
                 {
                   type: inside ? "ENTER" : "EXIT",
                   occurredAt: new Date().toISOString(),
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                  accuracy: position.coords.accuracy,
+                  latitude: position.latitude,
+                  longitude: position.longitude,
+                  accuracy: position.accuracy ?? undefined,
                   source: "foreground",
                 },
               ],

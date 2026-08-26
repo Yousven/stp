@@ -34,10 +34,19 @@ public class BackgroundGeofencePlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
 
     override public func load() {
         locationManager.delegate = self
-        // Lubab iOS-il äpi taustal uuesti käivitada, kui see on vahepeal
-        // mälust välja visatud.
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = false
+
+        // TAHTLIKULT ei seata siin `allowsBackgroundLocationUpdates` ega
+        // `pausesLocationUpdatesAutomatically`. Need kaks puudutavad ainult
+        // pidevat asukoha jälgimist (`startUpdatingLocation`), mida see
+        // plugin ei kasuta — ja `pausesLocationUpdatesAutomatically = false`
+        // lülitab välja just selle iOS-i energiasäästu, mis pideva jälgimise
+        // vahele paneb. Taustal äratamiseks ei ole neid vaja: region
+        // monitoring äratab äpi ka siis, kui see on mälust välja visatud.
+        //
+        // Kui keegi lisab kunagi `startUpdatingLocation` kutse, muutuvad
+        // need read aku seisukohalt ohtlikuks — siis tuleb nad teadlikult
+        // tagasi panna ja koos sellega üle vaadata, kas pidev jälgimine on
+        // üldse vajalik.
     }
 
     // MARK: - Load / permissions

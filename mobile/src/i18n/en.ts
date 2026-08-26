@@ -125,6 +125,8 @@ export const en: Dictionary = {
       "There was no connection, but the start of your workday is saved on this phone with the current time and " +
       "location. It will be sent automatically once you are back online — you do not need to do anything.",
     queueLabel: (objectName: string) => `Start of workday (${objectName})`,
+    locationReady: "Location found — you can start",
+    locatingNow: "Finding your location...",
   },
 
   endWork: {
@@ -411,6 +413,23 @@ export const en: Dictionary = {
     dateTo: "Date to",
     downloadExcel: "Download Excel",
     downloadPdf: "Download PDF",
+    show: "Show report",
+    loading: "Preparing report...",
+    loadFailed: "Could not load the report.",
+    none: "No workdays match the selected filters.",
+    summary: "Summary",
+    entries: "Entries",
+    totalHours: "Total hours",
+    totalEarnings: "Total pay",
+    overtimeTitle: "Overtime",
+    regularHours: "Regular hours",
+    overtimeHours: "Overtime hours",
+    payableHours: "Payable",
+    truncated: (shown: number, total: number) =>
+      `Showing ${shown} of ${total} entries. Totals are calculated over all of them; the full list is in the file.`,
+    suspicious: "Location suspicious",
+    offlineEntry: "Sent later",
+    downloadTitle: "Download as a file",
   },
 
   teamPerformance: {

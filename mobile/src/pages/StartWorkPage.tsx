@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
+import { acquirePosition, hasFreshFix, PERMISSION_DENIED, warmUpLocation } from "../api/location";
 import { ApiError, apiRequest } from "../api/client";
 import type { WorkObject, WorkType } from "../api/types";
 import { isLocationMocked } from "../plugins/mockLocation";
@@ -9,37 +10,6 @@ import { useT } from "../i18n";
 import { Icon } from "../components/Icon";
 import { enqueue, isOfflineError } from "../api/offlineQueue";
 import { readCachedObjects, writeActiveLog, writeCachedObjects } from "../api/offlineCache";
-
-/** Brauseri GeolocationPositionError.code: 1 = luba puudub. */
-const PERMISSION_DENIED = 1;
-
-/**
- * Küsib asukoha, eristades puuduvat luba asukoha mitteleidmisest.
- *
- * Levita objektil ei ole telefonil A-GPS-i abi ja esimene fix võib võtta
- * kümneid sekundeid. Seepärast proovime ebaõnnestumisel teist korda
- * leebemate tingimustega — muidu jääks töötaja just seal, kus offline-tugi
- * kõige rohkem vajalik on, tööpäevata.
- */
-async function resolvePosition(messages: { required: string; unavailable: string }) {
-  try {
-    return await Geolocation.getCurrentPosition({ timeout: 20000, enableHighAccuracy: true, maximumAge: 0 });
-  } catch (first) {
-    if ((first as { code?: number })?.code === PERMISSION_DENIED) {
-      throw new Error(messages.required);
-    }
-    try {
-      return await Geolocation.getCurrentPosition({ timeout: 30000, enableHighAccuracy: false, maximumAge: 60000 });
-    } catch (second) {
-      // Tegelik põhjus konsooli, et vea uurimine ei algaks nullist.
-      console.warn("Asukoha määramine ebaõnnestus", first, second);
-      if ((second as { code?: number })?.code === PERMISSION_DENIED) {
-        throw new Error(messages.required);
-      }
-      throw new Error(messages.unavailable);
-    }
-  }
-}
 
 export function StartWorkPage() {
   const navigate = useNavigate();
@@ -52,6 +22,27 @@ export function StartWorkPage() {
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [offlineNotice, setOfflineNotice] = useState(false);
+  const [locationReady, setLocationReady] = useState(hasFreshFix);
+
+  /**
+   * Asukoha otsing algab kohe ekraani avamisel, mitte nupuvajutusest.
+   *
+   * Kuni töötaja objekti ja tööliigi valib, jõuab GPS tavaliselt fixi
+   * kätte saada — nupuvajutuse hetkel on asukoht juba olemas ja ootamist
+   * ei teki. Külmalt võttis see varem kuni 20 sekundit, halvemal juhul
+   * kaks katset järjest.
+   */
+  useEffect(() => {
+    warmUpLocation();
+    // Näita valmisolekut, kui fix kohale jõuab.
+    const id = setInterval(() => {
+      if (hasFreshFix()) {
+        setLocationReady(true);
+        clearInterval(id);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     function show(list: WorkObject[]) {
@@ -120,10 +111,16 @@ export function StartWorkPage() {
         }
       }
 
-      const position = await resolvePosition({
-        required: d.startWork.locationRequired,
-        unavailable: d.startWork.locationUnavailable,
-      });
+      let position;
+      try {
+        position = await acquirePosition();
+      } catch (err) {
+        throw new Error(
+          (err as { code?: number })?.code === PERMISSION_DENIED
+            ? d.startWork.locationRequired
+            : d.startWork.locationUnavailable
+        );
+      }
 
       // Võltsitud GPS ei blokeeri alustamist (vale positiivne jätaks ausa
       // töötaja tööpäevata), aga lipp läheb serverisse ja admin näeb seda.
@@ -132,9 +129,9 @@ export function StartWorkPage() {
       setStatus(d.startWork.registering);
       const body = {
         objectId,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy ?? undefined,
         mocked,
         ...(workTypeId === "" ? {} : { workTypeId }),
       };
@@ -208,6 +205,10 @@ export function StartWorkPage() {
         <span className="alert-strong">{d.startWork.hint}</span>
       </div>
       <form className="card" onSubmit={handleSubmit}>
+        <div className={locationReady ? "text-success" : "subtitle"} style={{ display: "flex", gap: "0.5rem", alignItems: "center", margin: 0 }}>
+          <Icon name={locationReady ? "check" : "pin"} size={18} />
+          {locationReady ? d.startWork.locationReady : d.startWork.locatingNow}
+        </div>
         <label>
           {d.common.object}
           <select value={objectId} onChange={(e) => setObjectId(Number(e.target.value))} required>

@@ -129,6 +129,8 @@ export const et = {
       "Ühendust ei olnud, aga tööpäeva algus on telefoni salvestatud koos praeguse kellaaja ja asukohaga. See " +
       "saadetakse automaatselt, kui võrk taastub — sa ei pea midagi tegema.",
     queueLabel: (objectName: string) => `Tööpäeva alustamine (${objectName})`,
+    locationReady: "Asukoht leitud — võid alustada",
+    locatingNow: "Otsin asukohta...",
   },
 
   endWork: {
@@ -415,6 +417,23 @@ export const et = {
     dateTo: "Kuupäev kuni",
     downloadExcel: "Laadi alla Excel",
     downloadPdf: "Laadi alla PDF",
+    show: "Näita raportit",
+    loading: "Koostan raportit...",
+    loadFailed: "Raporti laadimine ebaõnnestus.",
+    none: "Valitud tingimustele ei vasta ühtegi tööpäeva.",
+    summary: "Kokkuvõte",
+    entries: "Kirjeid",
+    totalHours: "Tunde kokku",
+    totalEarnings: "Tasu kokku",
+    overtimeTitle: "Ületunnid",
+    regularHours: "Tavatunnid",
+    overtimeHours: "Ületunnid",
+    payableHours: "Tasustatavad",
+    truncated: (shown: number, total: number) =>
+      `Näidatakse ${shown} kirjet ${total}-st. Kogusummad on arvutatud kõigi kirjete pealt; terve nimekiri on failis.`,
+    suspicious: "Asukoht kahtlane",
+    offlineEntry: "Järelsaadetud",
+    downloadTitle: "Laadi alla failina",
   },
 
   teamPerformance: {

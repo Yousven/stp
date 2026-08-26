@@ -109,6 +109,86 @@ function overtimeByUser(logs: ReportLog[], rules: OvertimeRules) {
   return result;
 }
 
+/**
+ * Raporti eelvaade JSON-ina.
+ *
+ * Sama andmestik, mis Exceli ja PDF-i ekspordis, aga ilma failita: raporti
+ * vaatamiseks ei pea seda alla laadima ja telefonis avama. Alla laadimine
+ * on siis, kui raportit on vaja kellelegi edasi saata või arhiveerida.
+ *
+ * `limit` piirab ridade arvu — telefoni ekraanil ei ole mõtet tuhandet rida
+ * renderdada; kogusummad arvutatakse siiski kõigi ridade pealt, muidu
+ * näitaks eelvaade vale summat.
+ */
+const PREVIEW_ROW_LIMIT = 300;
+
+reportsRouter.get(
+  "/preview",
+  asyncHandler(async (req, res) => {
+    const filters = reportQuerySchema.parse(req.query);
+    const logs = await fetchReportLogs(req.user!.organizationId, filters);
+    const rules = await overtimeRulesFor(req.user!.organizationId);
+    const overtime = overtimeByUser(logs, rules);
+    const usersById = new Map(logs.map((l) => [l.user.id, l.user]));
+
+    const rows = logs.slice(0, PREVIEW_ROW_LIMIT).map((log) => {
+      const hours = reportHours(log);
+      return {
+        id: log.id,
+        username: log.user.username,
+        objectName: log.object.name,
+        startTime: log.startTime,
+        endTime: log.endTime,
+        grossHours: hours.gross,
+        netHours: hours.net,
+        awayHours: hours.away,
+        lunch: log.endTime ? Number(log.lunch ?? 0) : null,
+        earnings: hours.earnings,
+        locationMocked: log.locationMocked,
+        createdOffline: log.createdOffline,
+        comment: log.comment,
+      };
+    });
+
+    const totals = logs.reduce(
+      (acc, log) => {
+        const hours = reportHours(log);
+        return {
+          logs: acc.logs + 1,
+          hours: round2(acc.hours + (hours.net ?? 0)),
+          earnings: round2(acc.earnings + (hours.earnings ?? 0)),
+        };
+      },
+      { logs: 0, hours: 0, earnings: 0 }
+    );
+
+    res.json({
+      rows,
+      // Kas nimekiri jäi lühemaks kui tegelik tulemus — seda tuleb
+      // kasutajale öelda, muidu paistab eelvaade lihtsalt puudulik.
+      truncated: logs.length > rows.length,
+      totalRows: logs.length,
+      totals,
+      overtime: [...overtime.entries()].flatMap(([userId, breakdown]) => {
+        const user = usersById.get(userId);
+        if (!user) return [];
+        const rate = Number(user.hourlyRate);
+        return [
+          {
+            username: user.username,
+            regularHours: breakdown.regularHours,
+            overtimeHours: breakdown.overtimeHours,
+            payableHours: breakdown.payableHours,
+            hourlyRate: rate,
+            total: round2(breakdown.payableHours * rate),
+          },
+        ];
+      }),
+      overtimeRules: rules,
+    });
+  })
+);
+
 // Port: public/export_report_excel.php
 reportsRouter.get(
   "/excel",

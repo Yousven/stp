@@ -129,6 +129,18 @@ Skript ei tõlgenda andmeid ümber: kui vanas kirjes olid "kood" ja "nimi"
 segamini, jäävad need samaks ja tuleb käsitsi parandada. Vaikne
 ümbertõlgendamine oleks halvem kui üks käsitsi muudatus.
 
+## Raportid
+
+`GET /reports/excel` ja `/reports/pdf` annavad faili, `GET /reports/preview`
+sama andmestiku JSON-ina. Eelvaade on olemas selleks, et raporti vaatamiseks
+ei peaks seda alla laadima: telefonis tähendab fail allalaadimist, õige
+rakenduse valimist ja tagasi äppi navigeerimist — kolm sammu selleks, et
+vaadata ühte numbrit.
+
+Eelvaade piirab ridade arvu (`PREVIEW_ROW_LIMIT`), aga **kogusummad
+arvutatakse kõigi ridade pealt** ja vastuses on `truncated` lipp. Vastupidine
+valik annaks telefonis vaikselt vale kogusumma.
+
 ## Teavitused (push + e-post)
 
 Millal midagi saadetakse:

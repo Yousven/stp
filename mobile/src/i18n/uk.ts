@@ -125,6 +125,8 @@ export const uk: Dictionary = {
       "Зв'язку не було, але початок робочого дня збережено в телефоні з поточним часом і місцезнаходженням. Його " +
       "буде надіслано автоматично, щойно з'явиться мережа — робити нічого не потрібно.",
     queueLabel: (objectName: string) => `Початок робочого дня (${objectName})`,
+    locationReady: "Місцезнаходження знайдено — можна починати",
+    locatingNow: "Визначаю місцезнаходження...",
   },
 
   endWork: {
@@ -411,6 +413,23 @@ export const uk: Dictionary = {
     dateTo: "Дата по",
     downloadExcel: "Завантажити Excel",
     downloadPdf: "Завантажити PDF",
+    show: "Показати звіт",
+    loading: "Готую звіт...",
+    loadFailed: "Не вдалося завантажити звіт.",
+    none: "За обраними умовами робочих днів немає.",
+    summary: "Підсумок",
+    entries: "Записів",
+    totalHours: "Усього годин",
+    totalEarnings: "Усього до сплати",
+    overtimeTitle: "Понаднормові",
+    regularHours: "Звичайні години",
+    overtimeHours: "Понаднормові години",
+    payableHours: "До сплати",
+    truncated: (shown: number, total: number) =>
+      `Показано ${shown} записів із ${total}. Підсумки пораховані за всіма; повний список — у файлі.`,
+    suspicious: "Місцезнаходження підозріле",
+    offlineEntry: "Надіслано пізніше",
+    downloadTitle: "Завантажити файлом",
   },
 
   teamPerformance: {

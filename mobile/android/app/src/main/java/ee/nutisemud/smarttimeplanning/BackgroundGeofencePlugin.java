@@ -129,6 +129,13 @@ public class BackgroundGeofencePlugin extends Plugin {
             .setCircularRegion(latitude, longitude, radius.floatValue())
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+            // Vastamise viivitus: vaikimisi 0 tähendab "teata nii kiiresti
+            // kui võimalik", mille nimel Play Services kontrollib asukohta
+            // tihedamini. Minut lubab süsteemil kontrolle kokku panna ja
+            // hoiab akut kokku. Tööaja arvestusele see vahet ei tee —
+            // objektile saabumine ja sealt lahkumine ei ole sekundi täpsusega
+            // sündmused ja viide mõjub sisse- ja väljaminekul vastassuunas.
+            .setNotificationResponsiveness(60_000)
             .build();
 
         GeofencingRequest request = new GeofencingRequest.Builder()
