@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
+import { useElapsedMinutes } from "../hooks/useElapsed";
 import { apiRequest } from "../api/client";
 import type { DashboardResponse, OnboardingState } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
@@ -92,22 +93,16 @@ export function DashboardPage() {
   }, [user?.role, data?.activeLog?.id]);
 
   /**
-   * Kulunud aja näit peab jooksma ka lahtise ekraani peal. Ilma selleta
-   * näitaks see avamise hetke ja jääks vaikselt valeks — töötaja, kes
-   * kontrollib "kaua ma juba teinud olen", saaks vale vastuse.
+   * Kulunud aeg tuleb telefoni enda kellast, mitte serverist — see näit ei
+   * sõltu levist ega jää levi kadudes seisma. Tundide arvestus ei sõltu
+   * sellest näidust üldse: palgale minevad tunnid arvutab server alguse ja
+   * lõpu ajatempli ning kohaloleku sündmuste põhjal.
    */
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  const workdayRunning = Boolean(data?.activeLog ?? offlineLog);
-  useEffect(() => {
-    // Taimer käib ainult siis, kui on midagi lugeda. Lõpetatud tööpäeva
-    // kohal tiksuv intervall ärataks protsessorit asjata.
-    if (!workdayRunning) return;
-    const id = setInterval(() => setNowTick(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, [workdayRunning]);
+  const activeStartTime = data?.activeLog?.startTime ?? offlineLog?.startTime ?? null;
+  const elapsedMinutes = useElapsedMinutes(activeStartTime);
 
-  function elapsedSince(startTime: string): string {
-    const minutes = Math.max(Math.floor((nowTick - new Date(startTime).getTime()) / 60_000), 0);
+  function elapsedLabel(): string {
+    const minutes = elapsedMinutes ?? 0;
     return d.dashboard.duration(Math.floor(minutes / 60), minutes % 60);
   }
 
@@ -137,7 +132,7 @@ export function DashboardPage() {
               <span className="pulse-dot" />
               {d.dashboard.workdayRunning}
             </div>
-            <div className="big-timer">{elapsedSince(offlineLog.startTime)}</div>
+            <div className="big-timer">{elapsedLabel()}</div>
             <div className="status-meta">
               <span>
                 <strong>{offlineLog.objectName}</strong>
@@ -253,7 +248,7 @@ export function DashboardPage() {
             {presence && !presence.inside ? <Icon name="pin" size={22} /> : <span className="pulse-dot" />}
             {presence && !presence.inside ? d.dashboard.awayShort : d.dashboard.workdayRunning}
           </div>
-          <div className="big-timer">{elapsedSince(activeLog.startTime)}</div>
+          <div className="big-timer">{elapsedLabel()}</div>
           <div className="status-meta">
             <span>
               <strong>{activeLog.object.name}</strong>
