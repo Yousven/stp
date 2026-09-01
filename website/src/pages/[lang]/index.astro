@@ -1,0 +1,42 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Hero from "../../components/sections/Hero.astro";
+import ProofSection from "../../components/sections/ProofSection.astro";
+import Chain from "../../components/sections/Chain.astro";
+import Admin from "../../components/sections/Admin.astro";
+import Capabilities from "../../components/sections/Capabilities.astro";
+import Trust from "../../components/sections/Trust.astro";
+import Offline from "../../components/sections/Offline.astro";
+import Billing from "../../components/sections/Billing.astro";
+import Pricing from "../../components/sections/Pricing.astro";
+import Faq from "../../components/sections/Faq.astro";
+import FinalCta from "../../components/sections/FinalCta.astro";
+import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../i18n";
+
+/**
+ * Ülejäänud kolm keelt. Eesti on välja jäetud, sest ta elab juurpolgul —
+ * `/et/` ei tohi tekkida, muidu on sama leht kahel aadressil ja
+ * otsingumootor peab valima.
+ */
+export function getStaticPaths() {
+  return LOCALES.filter((code) => code !== DEFAULT_LOCALE).map((code) => ({ params: { lang: code } }));
+}
+
+const { lang } = Astro.params;
+if (!isLocale(lang)) throw new Error(`Tundmatu keel: ${lang}`);
+const locale = lang;
+---
+
+<BaseLayout locale={locale} structuredData>
+  <Hero locale={locale} />
+  <ProofSection locale={locale} />
+  <Chain locale={locale} />
+  <Admin locale={locale} />
+  <Capabilities locale={locale} />
+  <Trust locale={locale} />
+  <Offline locale={locale} />
+  <Billing locale={locale} />
+  <Pricing locale={locale} />
+  <Faq locale={locale} />
+  <FinalCta locale={locale} />
+</BaseLayout>

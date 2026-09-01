@@ -1,0 +1,161 @@
+---
+import { site } from "../../config/site";
+import { t, type Locale } from "../../i18n";
+import Cta from "../ui/Cta.astro";
+import SitePlan from "../hud/SitePlan.astro";
+
+/**
+ * S10b — lõpp-CTA.
+ *
+ * Lehe viimane suur hetk. Sama mõõdistusjoonis mis heros, aga suurem ja
+ * vaiksem: jutustus jõuab tagasi sinna, kust algas — objektile.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).finalCta;
+---
+
+<section class="final" aria-labelledby="final-heading">
+  <div class="final__plan" aria-hidden="true"><SitePlan /></div>
+
+  <div class="final__inner">
+    <h2 id="final-heading" class="display final__heading">
+      {d.heading.map((line) => <span class="final__line">{line}</span>)}
+    </h2>
+    <p class="prose final__body">{d.body}</p>
+    <div class="final__cta">
+      <Cta label={d.cta} note={t(locale).pricing.trial(site.pricing.trialDays)} location="final" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .final {
+    position: relative;
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(5rem, 16vh, 10rem) var(--gutter);
+    overflow: hidden;
+  }
+
+  .final__plan {
+    position: absolute;
+    top: 50%;
+    right: -14%;
+    width: min(52rem, 70vw);
+    transform: translateY(-50%);
+    opacity: 0.3;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 40%, transparent 74%);
+    mask-image: radial-gradient(ellipse at 50% 50%, #000 40%, transparent 74%);
+  }
+
+  .final__inner {
+    position: relative;
+    /* Ridade `nowrap` tõttu peab plokk mahutama kõige pikema keele —
+       venekeelne "которому можно" ei mahtunud 52rem sisse. */
+    max-width: 66rem;
+  }
+
+  .final__heading {
+    font-size: clamp(2.6rem, 7vw, 7rem);
+    margin: 0;
+    color: var(--signal);
+  }
+
+  .final__line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .final__body {
+    margin: clamp(1.5rem, 3vh, 2.25rem) 0 0;
+  }
+
+  .final__cta {
+    margin-top: clamp(1.75rem, 4vh, 2.75rem);
+  }
+
+  @media (max-width: 899px) {
+    .final__heading {
+      font-size: clamp(2.3rem, 12vw, 4.6rem);
+    }
+
+    .final__line {
+      white-space: normal;
+    }
+
+    .final__plan {
+      right: -35%;
+      width: 40rem;
+      opacity: 0.22;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S10b — lõpetus (intensiivsus ~70 %).
+   *
+   * Lehe viimane suur hetk. Read tulevad ükshaaval maski alt, mõõdistus-
+   * joonis taustal triivib aeglaselt ja veidi suureneb, CTA tuleb kõige
+   * viimasena. Eesmärk on, et viimane vaade TUNDUKS lõpuna, mitte nagu
+   * kerimine lihtsalt lõppes.
+   */
+  motion("final-cta", ".final", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const lines = all(".final__line");
+      const body = q(".final__body");
+      const cta = q(".final__cta");
+      // NB: `.final__plan` on tsentreeritud `transform: translateY(-50%)`-ga.
+      // GSAP kirjutaks selle transformi üle ja joonis hüppaks paigast.
+      // Liigutame seetõttu joonist ennast, mitte tema ümbrist.
+      const plan = q(".final__plan .siteplan");
+
+      hideLines(lines);
+      gsap.set([body, cta], { opacity: 0, y: 18 * k });
+
+      const tl = gsap.timeline({
+        // `bottom bottom` on garanteeritult saavutatav, sest jalus jääb
+        // veel alla. Fikseeritud "top 40 %" ei jõuaks lehe lõpus lõpuni
+        // ja read jääksid poolenisti maski taha.
+        scrollTrigger: { trigger: ".final", start: "top 80%", end: "bottom bottom", scrub: 0.6 },
+        defaults: { ease: "power3.out" },
+      });
+      tl.to(lines, { ...UNMASKED, duration: 0.5, stagger: 0.16 })
+        .to(body, { opacity: 1, y: 0, duration: 0.4 }, 0.5)
+        .to(cta, { opacity: 1, y: 0, duration: 0.45 }, 0.68);
+
+      /*
+       * Joonis liigub kerimisest aeglasemalt — sügavus, mitte efekt.
+       * Liigub tervikuna ühe taustaplaadina: töötaja märk EI liigu
+       * joonise suhtes, sest toode ei jälgi töötajat pidevalt ja seda ei
+       * tohi ka vihjata.
+       */
+      const drift = gsap.fromTo(
+        plan,
+        { yPercent: -6 * k, scale: 0.96 },
+        {
+          yPercent: 4 * k,
+          scale: 1.02,
+          ease: "none",
+          scrollTrigger: { trigger: ".final", start: "top bottom", end: "bottom top", scrub: true },
+        },
+      );
+
+      return () => {
+        [tl, drift].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

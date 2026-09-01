@@ -1,0 +1,6 @@
+# Turundusleht on avalik. Juriidilised lehed ja 404 on `noindex` (meta),
+# sest nende sisu ei ole veel kinnitatud — sitemap'is neid samuti ei ole.
+User-agent: *
+Allow: /
+
+Sitemap: https://stp.nutisemud.ee/sitemap-index.xml

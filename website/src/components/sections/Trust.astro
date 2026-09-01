@@ -1,0 +1,388 @@
+---
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S6 — miks seda usaldada saab.
+ *
+ * Visuaalne keel on tõendiahel ja tehniline register, MITTE küberturbe
+ * esteetika: ei tabalukke, ei rohelist koodivihma, ei kilpe. Toode ei ole
+ * turvatoode — ta on tööriist, mille väited on kontrollitavad.
+ *
+ * Absoluutseid väiteid siin ei tehta. Lõpus on tahtlik reservatsioon:
+ * ükski süsteem ei ole eksimatu, ja seda on aus öelda.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).trust;
+---
+
+<section class="trust" aria-labelledby="trust-heading">
+  <div class="trust__top">
+    <span class="hud trust__label">{d.sectionLabel}</span>
+    <h2 id="trust-heading" class="display trust__heading">
+      {
+        d.heading.map((line, i) => (
+          <span class:list={["trust__heading-line", i === d.heading.length - 1 && "trust__heading-line--accent"]}>
+            {line}
+          </span>
+        ))
+      }
+    </h2>
+    <p class="prose trust__body">{d.body}</p>
+  </div>
+
+  <!-- Tõendiahel: mis iga kohaloleku kirje taga on. -->
+  <div class="trust__chain">
+    <span class="hud trust__chain-label">{d.chain.label}</span>
+    <div class="trust__chain-track">
+      {/* Rada, mida mööda kontroll kerides liigub. Ilma JS-ita on ta
+          lihtsalt ahela ülemine joon. */}
+      <span class="trust__chain-progress" aria-hidden="true"></span>
+      <ol class="trust__chain-items">
+        {
+          d.chain.items.map((item, i) => (
+            <li class="trust__chain-item">
+              <span class="hud trust__chain-index">{String(i + 1).padStart(2, "0")}</span>
+              <span class="trust__chain-name">{item}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </div>
+
+  <ul class="trust__points">
+    {
+      d.points.map((point) => (
+        <li class="trust__point">
+          <span class="trust__point-rule" aria-hidden="true" />
+          <h3 class="trust__point-title">{point.title}</h3>
+          <p class="trust__point-body">{point.body}</p>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="hud trust__disclaimer">{d.disclaimer}</p>
+</section>
+
+<style>
+  .trust {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt-sunk);
+    padding: clamp(4rem, 12vh, 8rem) var(--gutter) clamp(4rem, 10vh, 7rem);
+  }
+
+  .trust__top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: var(--gutter);
+    align-items: end;
+  }
+
+  .trust__label {
+    color: var(--signal);
+    grid-column: 1 / -1;
+  }
+
+  .trust__heading {
+    font-size: clamp(2.2rem, 5.6vw, 5.2rem);
+    margin: 0.75rem 0 0;
+  }
+
+  .trust__heading-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .trust__heading-line--accent {
+    color: var(--signal);
+  }
+
+  .trust__body {
+    margin: 0 0 0.4rem;
+    max-width: 40ch;
+  }
+
+  /* --- Tõendiahel --- */
+
+  .trust__chain {
+    margin-top: clamp(2.5rem, 7vh, 4rem);
+    padding-top: clamp(1.5rem, 4vh, 2.5rem);
+    border-top: 1px solid var(--hairline);
+  }
+
+  .trust__chain-label {
+    color: var(--concrete-faint);
+  }
+
+  .trust__chain-track {
+    position: relative;
+    margin: 1rem 0 0;
+  }
+
+  /*
+   * Kontrolli rada. Kerides jookseb ta ahelast läbi ja lülid süttivad
+   * järjest — see on tõendiahela liikumine, mitte kaunistus. Ilma JS-ita
+   * on ta täies pikkuses ja loeb ahela ülemise joonena.
+   */
+  .trust__chain-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--signal);
+    transform-origin: left center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .trust__chain-items {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+
+  .trust__chain-item {
+    background: var(--asphalt);
+    padding: clamp(1rem, 2.5vh, 1.6rem) clamp(0.85rem, 2vw, 1.4rem);
+    display: grid;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  /* Nool ühelt lülilt järgmisele: ahel, mitte neli eraldi kasti. */
+  .trust__chain-item + .trust__chain-item::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-top: 1px solid var(--signal);
+    border-right: 1px solid var(--signal);
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: var(--asphalt);
+  }
+
+  .trust__chain-index {
+    color: var(--signal);
+  }
+
+  .trust__chain-name {
+    font-weight: 600;
+    color: var(--concrete);
+    font-size: 0.95rem;
+  }
+
+  /* Ahela viimane lüli on kohalolekukirje — kontrollitud, seega roheline.
+     Sama tähendus mis kogu ülejäänud lehel ja äpis. */
+  .trust__chain-item:last-child .trust__chain-name {
+    color: var(--verified);
+  }
+
+  /* --- Väited --- */
+
+  .trust__points {
+    list-style: none;
+    margin: clamp(2.5rem, 7vh, 4rem) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1.5rem, 4vw, 3rem) clamp(2rem, 5vw, 4rem);
+  }
+
+  .trust__point {
+    position: relative;
+    padding-top: 1rem;
+  }
+
+  .trust__point-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: var(--hairline-strong);
+  }
+
+  .trust__point-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--concrete);
+  }
+
+  .trust__point-body {
+    margin: 0;
+    color: var(--concrete-dim);
+    max-width: 46ch;
+  }
+
+  .trust__disclaimer {
+    margin: clamp(2.5rem, 7vh, 4rem) 0 0;
+    color: var(--concrete-faint);
+    max-width: 62ch;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    line-height: 1.6;
+  }
+
+  /* --- Kitsas ekraan --- */
+
+  @media (max-width: 899px) {
+    .trust__top {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    .trust__heading {
+      font-size: clamp(2rem, 8.5vw, 3.4rem);
+    }
+
+    .trust__heading-line {
+      white-space: normal;
+    }
+
+    .trust__chain-items {
+      grid-template-columns: 1fr;
+    }
+
+    /* Vertikaalses ahelas jookseb rada ülalt alla. */
+    .trust__chain-progress {
+      width: 2px;
+      height: 100%;
+      transform-origin: center top;
+    }
+
+    /* Vertikaalses ahelas osutab nool alla, mitte paremale. */
+    .trust__chain-item + .trust__chain-item::before {
+      left: 1.4rem;
+      top: -1px;
+      transform: translate(-50%, -50%) rotate(135deg);
+    }
+
+    .trust__points {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S6 — tehniline jada (intensiivsus ~80 %).
+   *
+   * Lehe teine tugev hetk pärast S2. Tõendiahel ei ole neli kasti, vaid
+   * tee: kontroll liigub kerides ajatemplilt asukohale, sealt serverisse
+   * ja lõpuks kohalolekukirjesse, mis on ainsana roheline.
+   *
+   * Küberturbe esteetikat siin ei ole — ei kuma, ei tabalukku, ei kilpi.
+   * Ainus liikuv asi on mõõteriba, mis läbib ahelat.
+   */
+  motion("trust", ".trust", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const headLines = all(".trust__heading-line");
+      const label = q(".trust__label");
+      const body = q(".trust__body");
+      const chainLabel = q(".trust__chain-label");
+      const progress = q(".trust__chain-progress");
+      const items = all(".trust__chain-item");
+      const points = all(".trust__point");
+      const disclaimer = q(".trust__disclaimer");
+
+      hideLines(headLines);
+      gsap.set([label, chainLabel], { opacity: 0, x: -10 });
+      gsap.set(body, { opacity: 0, y: 16 * k });
+      /*
+       * Animeerime lüli SISU, mitte kasti.
+       *
+       * Varem ootas terve lüli `opacity: 0.18` juures. Kast jäi küll
+       * nähtavaks, aga koos temaga ka tekst — ja 18 % läbipaistvuses on
+       * see loetamatu (Lighthouse/axe luges kontrastiks 1,3:1). Nüüd
+       * jääb kast ja tema äärejooned paigale ning tekst tuleb nullist:
+       * ahela kuju on kohe olemas, sisu täitub kerides.
+       */
+      const itemContents = items.map((item) =>
+        Array.from(item.querySelectorAll<HTMLElement>(".trust__chain-index, .trust__chain-name")),
+      );
+      gsap.set(itemContents.flat(), { opacity: 0, y: 10 * k });
+      gsap.set(disclaimer, { opacity: 0 });
+      // Rada algab tühjana; suund sõltub sellest, kas ahel on rida või veerg.
+      gsap.set(progress, wide ? { scaleX: 0 } : { scaleY: 0 });
+
+      const top = gsap.timeline({
+        scrollTrigger: { trigger: ".trust__top", start: "top 86%", end: "top 40%", scrub: 0.5 },
+        defaults: { ease: "power2.out" },
+      });
+      top
+        .to(label, { opacity: 1, x: 0, duration: 0.3 })
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.15 }, 0.08)
+        .to(body, { opacity: 1, y: 0, duration: 0.4 }, 0.4);
+
+      /*
+       * Ahel. Rada liigub ühtlaselt (`ease: none`), lülid süttivad siis,
+       * kui rada nendeni jõuab — seega kerimise kiirus ON jada kiirus.
+       */
+      const chain = gsap.timeline({
+        scrollTrigger: { trigger: ".trust__chain", start: "top 82%", end: "bottom 68%", scrub: 0.7 },
+      });
+      chain
+        .to(chainLabel, { opacity: 1, x: 0, duration: 0.2, ease: "power2.out" }, 0)
+        .to(progress, { [wide ? "scaleX" : "scaleY"]: 1, duration: 1, ease: "none" }, 0.05);
+
+      itemContents.forEach((parts, i) => {
+        chain.to(
+          parts,
+          { opacity: 1, y: 0, duration: 0.28, stagger: 0.05, ease: "power2.out" },
+          0.05 + (i / itemContents.length) * 0.95,
+        );
+      });
+
+      // Väited: joon tõmmatakse, siis tuleb tekst.
+      const pointAnims = points.map((point) => {
+        const rule = point.querySelector(".trust__point-rule");
+        const title = point.querySelector(".trust__point-title");
+        const text = point.querySelector(".trust__point-body");
+        drawX(rule);
+        gsap.set([title, text], { opacity: 0, y: 12 * k });
+
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: point, start: "top 92%", end: "top 66%", scrub: 0.6 },
+          defaults: { ease: "power2.out" },
+        });
+        tl.to(rule, { scaleX: 1, duration: 0.45 })
+          .to(title, { opacity: 1, y: 0, duration: 0.35 }, 0.15)
+          .to(text, { opacity: 1, y: 0, duration: 0.35 }, 0.25);
+        return tl;
+      });
+
+      const tail = gsap.to(disclaimer, {
+        opacity: 1,
+        duration: 0.4,
+        ease: "none",
+        scrollTrigger: { trigger: disclaimer, start: "top 94%", end: "top 74%", scrub: 0.5 },
+      });
+
+      return () => {
+        [top, chain, ...pointAnims, tail].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

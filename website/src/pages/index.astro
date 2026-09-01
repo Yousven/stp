@@ -1,0 +1,31 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/sections/Hero.astro";
+import ProofSection from "../components/sections/ProofSection.astro";
+import Chain from "../components/sections/Chain.astro";
+import Admin from "../components/sections/Admin.astro";
+import Capabilities from "../components/sections/Capabilities.astro";
+import Trust from "../components/sections/Trust.astro";
+import Offline from "../components/sections/Offline.astro";
+import Billing from "../components/sections/Billing.astro";
+import Pricing from "../components/sections/Pricing.astro";
+import Faq from "../components/sections/Faq.astro";
+import FinalCta from "../components/sections/FinalCta.astro";
+
+// Eesti on lähtekeel ja elab juurpolgul (prefixDefaultLocale: false).
+const locale = "et" as const;
+---
+
+<BaseLayout locale={locale} structuredData>
+  <Hero locale={locale} />
+  <ProofSection locale={locale} />
+  <Chain locale={locale} />
+  <Admin locale={locale} />
+  <Capabilities locale={locale} />
+  <Trust locale={locale} />
+  <Offline locale={locale} />
+  <Billing locale={locale} />
+  <Pricing locale={locale} />
+  <Faq locale={locale} />
+  <FinalCta locale={locale} />
+</BaseLayout>

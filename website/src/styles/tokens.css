@@ -1,0 +1,57 @@
+/**
+ * Disainitokenid — ehitusvaldkonna palett, mitte SaaS-palett.
+ *
+ * Värvide TÄHENDUS on lukus, väärtused on häälestatavad (vt CLAUDE.md):
+ * roheline tähendab ainult "töötab / kinnitatud", punane ainult "objektilt
+ * väljas / peatatud / viga". Kui neid kasutada kaunistusena, kaob mõlemal
+ * tähendus — sama reegel kehtib äpis.
+ *
+ * Leht on ainult tume. See ei ole teemavalik, vaid identiteet: asfalt on
+ * alus, mille peal oranž signaalvärv töötab.
+ */
+
+:root {
+  /* --- Alus --- */
+  --asphalt: #0b0b0d;
+  --asphalt-raised: #141417;
+  --asphalt-sunk: #060607;
+  --hairline: #26262b;
+  --hairline-strong: #3a3a42;
+
+  /* --- Pind ja tekst --- */
+  /* Soe off-white, mitte puhas valge: #fff asfaldil on liiga terav ja
+     kaotab ehitusliku tunde. */
+  --concrete: #edeae3;
+  --concrete-dim: #97938b;
+  --concrete-faint: #84807a;
+
+  /* --- Põhivärv --- */
+  --signal: #ff5a00;
+  --signal-deep: #c43f00;
+  --signal-wash: rgba(255, 90, 0, 0.12);
+
+  /* --- Olekuvärvid: AINULT oleku jaoks --- */
+  --verified: #35c46f; /* töötab, kohalolek kinnitatud */
+  --stopped: #ff4457; /* objektilt väljas, peatatud, viga */
+
+  /* --- Tüpograafia --- */
+  --font-display: "Sofia Sans Condensed Variable", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Geist Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Display on alati raske ja kaldu — see on identiteet, mitte rõhutus. */
+  --display-weight: 900;
+
+  /* --- Ruudustik ja rütm --- */
+  --gutter: clamp(1.25rem, 4vw, 4rem);
+  --measure: 46ch;
+  --hud-size: 0.6875rem;
+  --hud-tracking: 0.14em;
+}
+
+/* Suured kuvarid: rohkem õhku, aga tüpo ei kasva lõputult. */
+@media (min-width: 1600px) {
+  :root {
+    --gutter: 5rem;
+  }
+}

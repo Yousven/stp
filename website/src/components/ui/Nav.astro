@@ -1,0 +1,205 @@
+---
+import { site } from "../../config/site";
+import { LOCALES, localePath, t, type Locale } from "../../i18n";
+
+/**
+ * Navigatsioon: nimi, keeled, tegevus. Rohkem ei ole.
+ *
+ * Ühe lehe saidil ei ole menüüd vaja ja hamburger oleks vidin, mis ei ava
+ * midagi. Keelevalik on siin tähtsam kui lingid — äpp on neljas keeles ja
+ * lugeja peab kohe nägema, et tema oma on olemas.
+ */
+interface Props {
+  locale: Locale;
+  /** Praeguse lehe tee — keelevahetus jääb samale lehele. */
+  path?: string;
+}
+const { locale, path = "/" } = Astro.props;
+const d = t(locale);
+---
+
+<header class="nav">
+  <a class="nav__brand" href={localePath(locale)}>
+    <span class="nav__mark" aria-hidden="true"></span>
+    <span class="nav__name">{site.vendor.product}</span>
+  </a>
+
+  <nav class="nav__sections" aria-label={d.nav.sections}>
+    <a class="nav__section" href="#how">{d.nav.links.how}</a>
+    <a class="nav__section" href="#admin">{d.nav.links.admin}</a>
+    <a class="nav__section" href="#billing">{d.nav.links.billing}</a>
+    <a class="nav__section" href="#pricing">{d.nav.links.pricing}</a>
+  </nav>
+
+  <nav class="nav__langs" aria-label={d.nav.language}>
+    {
+      LOCALES.map((code) => (
+        <a
+          class:list={["nav__lang", code === locale && "nav__lang--current"]}
+          href={localePath(code, path)}
+          hreflang={code}
+          aria-current={code === locale ? "true" : undefined}
+          data-analytics="language_change"
+          data-analytics-locale={code}
+        >
+          {code}
+        </a>
+      ))
+    }
+  </nav>
+
+  <a class="nav__cta" href={site.ctaUrl} data-analytics="cta_click" data-analytics-location="nav">
+    {d.nav.cta}
+  </a>
+</header>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    /* Läbipaistmatu varuvärv ENNE color-mix'i: Safari toetab color-mix'i
+       alles 16.2-st ja vanemas jääks riba muidu läbipaistvaks, mistõttu
+       suur tüpograafia loeks selle alt läbi. */
+    background: var(--asphalt);
+    background: color-mix(in srgb, var(--asphalt) 88%, transparent);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: transform 0.25s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem var(--gutter);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  /* Alla kerides läheb riba ära, et ta ei võitleks pinnitud sektsioonidega
+     ega sööks 100svh kompositsioonidest kõrgust. Ülespoole kerides tuleb
+     tagasi, sest siis on kasutaja tõenäoliselt midagi otsimas. */
+  .nav[data-hidden] {
+    transform: translateY(-100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav {
+      transition: none;
+    }
+  }
+
+  .nav__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    margin-inline-end: auto;
+  }
+
+  /* Oranž ruut, mitte logo: märgis, mis kannab põhivärvi. */
+  .nav__mark {
+    width: 0.7rem;
+    height: 0.7rem;
+    background: var(--signal);
+    flex: none;
+  }
+
+  .nav__name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 900;
+    font-size: 1.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--concrete);
+  }
+
+  /*
+   * Sektsioonilingid on ainult laial ekraanil ja ainult neli tähtsamat.
+   * Mobiilis ei ehitata tervet ekraani katvat animeeritud menüüd: ühe
+   * lehe saidil on kerimine kiirem kui menüü avamine, ja hiiglaslik
+   * menüü oleks efekt, mitte kasutatavus.
+   */
+  .nav__sections {
+    display: none;
+    gap: 1.25rem;
+    margin-inline-end: 1.5rem;
+  }
+
+  .nav__section {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--concrete-dim);
+    transition: color 0.15s ease-out;
+  }
+
+  .nav__section:hover {
+    color: var(--concrete);
+  }
+
+  @media (min-width: 1080px) {
+    .nav__sections {
+      display: flex;
+    }
+  }
+
+  .nav__langs {
+    display: flex;
+    gap: 0.15rem;
+  }
+
+  .nav__lang {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--concrete-faint);
+    padding: 0.4rem 0.5rem;
+    transition: color 0.15s ease-out;
+  }
+
+  .nav__lang:hover {
+    color: var(--concrete);
+  }
+
+  .nav__lang--current {
+    color: var(--asphalt);
+    background: var(--concrete);
+  }
+
+  .nav__cta {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--signal);
+    border: 1px solid var(--signal);
+    padding: 0.55rem 0.9rem;
+    transition: background 0.15s ease-out, color 0.15s ease-out;
+  }
+
+  .nav__cta:hover {
+    background: var(--signal);
+    color: var(--asphalt);
+  }
+
+  /* Kitsas ekraanis kaob nupp ära — hero enda CTA on paari sõrmeliigutuse
+     kaugusel ja kaks samasugust nuppu üksteise kõrval ei aita kedagi. */
+  @media (max-width: 560px) {
+    .nav__cta {
+      display: none;
+    }
+    .nav__name {
+      font-size: 1rem;
+    }
+  }
+</style>
+
+<script>
+  import { initNavAutoHide } from "../../lib/nav";
+
+  initNavAutoHide();
+</script>

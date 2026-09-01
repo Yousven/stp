@@ -1,0 +1,345 @@
+---
+import { Image } from "astro:assets";
+import awayShot from "../../assets/app/mobile-away.png";
+import workTypesShot from "../../assets/app/desktop-worktypes.png";
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S5 — mida toode teeb.
+ *
+ * TAHTLIKULT EI OLE kaardiruudustik. Kuus võimalust on editorial-register:
+ * number, pealkiri, seletus, joon. Sama keel mis raamatu sisukorral või
+ * joonise legendil — mitte "ikoon + pealkiri + lõik ümarnurkses kastis",
+ * mille järgi iga SaaS-mall ära tuntakse.
+ *
+ * Registri sisse on murtud kaks päris UI detaili: üks suurendus telefoni
+ * peatatud kella kaardilt ja üks tööliikide vaatest. Need ei ole
+ * illustratsioonid, vaid tõendid, et jutt vastab tootele.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).capabilities;
+---
+
+<section class="caps" aria-labelledby="caps-heading">
+  <header class="caps__head">
+    <span class="hud caps__label">{d.sectionLabel}</span>
+    <h2 id="caps-heading" class="display caps__heading">
+      {d.heading.map((line) => <span class="caps__heading-line">{line}</span>)}
+    </h2>
+  </header>
+
+  <ol class="caps__list">
+    {
+      d.items.map((item) => (
+        <li class="caps__row">
+          <span class="hud caps__index">{item.index}</span>
+          <h3 class="caps__title">{item.title}</h3>
+          <p class="caps__body">{item.body}</p>
+          {/* Eraldaja on element, mitte `border-bottom` — nii saab teda
+              kerides vasakult paremale tõmmata. */}
+          <span class="caps__rule" aria-hidden="true" />
+        </li>
+      ))
+    }
+  </ol>
+
+  <!-- Detailisuurendused: päris UI, kärbitud lähedale. -->
+  <div class="caps__details">
+    <figure class="caps__detail caps__detail--phone">
+      <div class="caps__zoom caps__zoom--phone">
+        <Image src={awayShot} alt="" widths={[640, 900]} sizes="(max-width: 900px) 92vw, 42vw" loading="lazy" aria-hidden="true" />
+      </div>
+      <figcaption class="hud caps__detail-cap">{d.items[1].title}</figcaption>
+    </figure>
+
+    <figure class="caps__detail caps__detail--desk">
+      <div class="caps__zoom caps__zoom--desk">
+        <Image src={workTypesShot} alt="" widths={[900, 1400]} sizes="(max-width: 900px) 92vw, 58vw" loading="lazy" aria-hidden="true" />
+      </div>
+      <figcaption class="hud caps__detail-cap">{d.items[4].title}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .caps {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(4rem, 12vh, 8rem) var(--gutter) clamp(4rem, 10vh, 7rem);
+  }
+
+  .caps__head {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: clamp(2.5rem, 7vh, 4.5rem);
+  }
+
+  .caps__label {
+    color: var(--signal);
+  }
+
+  .caps__heading {
+    font-size: clamp(2.2rem, 6vw, 5.6rem);
+    margin: 0;
+  }
+
+  .caps__heading-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* --- Register --- */
+
+  .caps__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .caps__row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(1rem, 3vw, 2.5rem);
+    align-items: baseline;
+    padding: clamp(1.25rem, 3vh, 2rem) 0;
+  }
+
+  .caps__rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+
+  .caps__index {
+    color: var(--signal);
+    padding-top: 0.35rem;
+  }
+
+  .caps__title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+    font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+    margin: 0;
+    color: var(--concrete);
+  }
+
+  .caps__body {
+    margin: 0;
+    color: var(--concrete-dim);
+    max-width: 46ch;
+  }
+
+  /* --- Detailisuurendused --- */
+
+  .caps__details {
+    display: grid;
+    grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+    gap: clamp(1rem, 3vw, 2rem);
+    margin-top: clamp(2.5rem, 7vh, 4.5rem);
+  }
+
+  .caps__detail {
+    margin: 0;
+  }
+
+  /*
+   * Suurendus, mitte pisipilt: kärbime päris ekraanipildilt välja täpselt
+   * selle koha, millest jutt käib. Ülejäänu ei ole vaataja jaoks oluline
+   * ja tervikpilt muutuks selles suuruses loetamatuks.
+   */
+  .caps__zoom {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+  }
+
+  .caps__zoom :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /*
+   * Kadreering, mitte suurendus. Varem oli pilt 190 % laiuses ja tekst
+   * läks uduseks — brauser venitas seda üle allika. Nüüd näidatakse
+   * ekraani ülaosa täislaiuses, seega piksel on piksli peal.
+   */
+  .caps__zoom--phone {
+    aspect-ratio: 4 / 3;
+  }
+
+  .caps__zoom--phone :global(img) {
+    width: 100%;
+    margin-top: -6%;
+  }
+
+  .caps__zoom--desk {
+    aspect-ratio: 4 / 3;
+  }
+
+  /*
+   * Sama kärbe kui S4-s ja S8-s: külgmenüü maha, kärbe allika 290 pealt.
+   * 290 × 126/1440 = 25,4 %. Varem oli -21 %, mis jättis menüüst 48 px
+   * kaadrisse.
+   *
+   * Ülemine nihe ei tohi olla suurem kui pildi ülejääk: 126 % laiuses on
+   * pildi kõrgus 78,75 % kaadri laiusest, kaader ise 4/3 juures 75 %,
+   * seega varu on ainult 3,75 %. Varasem -8 % jättis kaadri alla musta
+   * riba.
+   */
+  .caps__zoom--desk :global(img) {
+    width: 126%;
+    margin-left: -25.4%;
+    margin-top: -3%;
+  }
+
+  .caps__detail-cap {
+    display: block;
+    margin-top: 0.6rem;
+    color: var(--concrete-faint);
+  }
+
+  /* --- Kitsas ekraan --- */
+
+  @media (max-width: 899px) {
+    .caps__heading {
+      font-size: clamp(2rem, 9vw, 3.6rem);
+    }
+
+    .caps__heading-line {
+      white-space: normal;
+    }
+
+    .caps__row {
+      grid-template-columns: 2.75rem minmax(0, 1fr);
+      gap: 0.5rem 1rem;
+      align-items: start;
+    }
+
+    .caps__body {
+      grid-column: 2;
+    }
+
+    .caps__details {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S5 — rütmiline register (intensiivsus ~50 %).
+   *
+   * Vaiksem kui S4 ja S6, aga mitte surnud. Iga rida loeb ennast ette
+   * samas järjekorras nagu silm teda loeb: number, pealkiri, seletus,
+   * joon. Liikumine on väike ja kerimisega seotud — see on register,
+   * mitte slaidiesitlus.
+   */
+  motion("capabilities", ".caps", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const headLines = all(".caps__heading-line");
+      const label = q(".caps__label");
+      const rows = all(".caps__row");
+      const details = all(".caps__detail");
+
+      hideLines(headLines);
+      gsap.set(label, { opacity: 0, x: -10 });
+
+      const head = gsap.timeline({
+        scrollTrigger: { trigger: ".caps__head", start: "top 86%", end: "top 46%", scrub: 0.5 },
+        defaults: { ease: "power2.out" },
+      });
+      head
+        .to(label, { opacity: 1, x: 0, duration: 0.3 })
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.14 }, 0.1);
+
+      // Read: igaühel oma lühike scrub, nii et kerimine juhib rütmi.
+      // Desktopil vahelduv suund — vasakult, paremalt, vasakult.
+      const rowAnims = rows.map((row, i) => {
+        const index = row.querySelector(".caps__index");
+        const title = row.querySelector(".caps__title");
+        const body = row.querySelector(".caps__body");
+        const rule = row.querySelector(".caps__rule");
+        const dir = wide ? (i % 2 === 0 ? -1 : 1) : -1;
+
+        gsap.set(index, { opacity: 0, x: 12 * dir * k });
+        gsap.set(title, { opacity: 0, x: 18 * dir * k });
+        gsap.set(body, { opacity: 0, y: 12 * k });
+        drawX(rule);
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: row,
+            // Algab varakult: eelmine sektsioon on veel lahkumas, kui
+            // register juba sisse tuleb.
+            start: "top 95%",
+            end: "top 62%",
+            scrub: 0.6,
+          },
+          defaults: { ease: "power2.out" },
+        });
+        tl.to(index, { opacity: 1, x: 0, duration: 0.35 })
+          .to(title, { opacity: 1, x: 0, duration: 0.4 }, 0.1)
+          .to(body, { opacity: 1, y: 0, duration: 0.4 }, 0.22)
+          .to(rule, { scaleX: 1, duration: 0.5 }, 0.2);
+        return tl;
+      });
+
+      // Suurendused: clip-paljastus ja väga aeglane triiv.
+      const detailAnims = details.flatMap((figure) => {
+        const zoom = figure.querySelector(".caps__zoom");
+        const img = figure.querySelector("img");
+        const cap = figure.querySelector(".caps__detail-cap");
+
+        gsap.set(zoom, { clipPath: "inset(0% 0% 100% 0%)" });
+        gsap.set(cap, { opacity: 0 });
+
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: figure, start: "top 88%", end: "top 52%", scrub: 0.6 },
+          defaults: { ease: "power2.out" },
+        });
+        tl.to(zoom, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.6 }).to(
+          cap,
+          { opacity: 1, duration: 0.3 },
+          0.4,
+        );
+
+        const drift = gsap.fromTo(
+          img,
+          { yPercent: 1.5 },
+          {
+            yPercent: -1.5,
+            ease: "none",
+            scrollTrigger: { trigger: figure, start: "top bottom", end: "bottom top", scrub: true },
+          },
+        );
+        return [tl, drift];
+      });
+
+      return () => {
+        [head, ...rowAnims, ...detailAnims].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

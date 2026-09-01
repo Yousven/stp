@@ -1,0 +1,87 @@
+---
+import { site } from "../../config/site";
+
+/**
+ * Ainus tegevusnupp lehel.
+ *
+ * Sihtkoht tuleb `site.ctaUrl`-ist — turundusleht ei ehita oma
+ * registreerumisvoogu, vaid viitab olemasolevasse veebiliidesesse.
+ *
+ * Kuju on tahtlikult nurgeline: ümarad varjuga nupud on see, mille järgi
+ * SaaS-mall ära tuntakse. Siin on nupp pigem märgistus kui vidin.
+ */
+interface Props {
+  label: string;
+  note?: string;
+  class?: string;
+  /** Kus lehel see nupp on — ainus asi, mida klikist mõõdetakse. */
+  location: "hero" | "pricing" | "final";
+}
+const { label, note, class: className = "", location } = Astro.props;
+---
+
+<div class:list={["cta", className]}>
+  <a
+    class="cta__link"
+    href={site.ctaUrl}
+    data-analytics="cta_click"
+    data-analytics-location={location}
+  >
+    <span class="cta__label">{label}</span>
+    <span class="cta__arrow" aria-hidden="true">→</span>
+  </a>
+  {note && <span class="cta__note">{note}</span>}
+</div>
+
+<style>
+  .cta {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .cta__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--signal);
+    color: var(--asphalt);
+    text-decoration: none;
+    padding: 1rem 1.5rem;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease-out, transform 0.15s ease-out;
+  }
+
+  .cta__link:hover {
+    background: var(--concrete);
+    transform: translateX(3px);
+  }
+
+  .cta__arrow {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  .cta__note {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    color: var(--concrete-dim);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cta__link:hover {
+      transform: none;
+    }
+  }
+</style>

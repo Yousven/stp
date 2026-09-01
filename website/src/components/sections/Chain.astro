@@ -1,0 +1,509 @@
+---
+import { Image } from "astro:assets";
+import startShot from "../../assets/app/mobile-start.png";
+import activeShot from "../../assets/app/mobile-active.png";
+import awayShot from "../../assets/app/mobile-away.png";
+import { site } from "../../config/site";
+import { t, type Locale } from "../../i18n";
+import HudLabel from "../hud/HudLabel.astro";
+
+/**
+ * S3 — kohaloleku ahel. Lehe peamine tootedemo.
+ *
+ * Neli sammu ÜHES kompositsioonis: sama objekt, sama telefon, muutub olek.
+ * Töötaja märk liigub objekti piiri suhtes — väljas, sees, sees, väljas.
+ *
+ * Märk EI joonista teekonda ega liigu pidevalt: liikumine toimub ainult
+ * sammude vahel ja tähistab piiri ületamist, mitte jälgimist. Toode
+ * kasutab OS-i geofencing't ja äratatakse ainult piiri ületamisel — kaardil
+ * roomav punkt oleks nii vale kui ka müügiargumendina kahjulik.
+ *
+ * Mobiilis EI pinnita: samad neli sammu kerivad vertikaalselt üksteise
+ * järel, iga sammu juures oma telefon.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).chain;
+const demo = site.demoSite;
+
+const shots = [startShot, startShot, activeShot, awayShot];
+---
+
+<section class="chain" id="how" aria-labelledby="chain-heading">
+  <h2 id="chain-heading" class="visually-hidden">{d.heading}</h2>
+  <p class="visually-hidden">{d.summary}</p>
+
+  <div class="chain__stage">
+    <!-- Jagatud "maailm": objekt, piir ja töötaja märk. -->
+    <div class="chain__world" aria-hidden="true">
+      <svg class="chain__plan" viewBox="0 0 400 400" fill="none">
+        <defs>
+          <pattern id="chain-grid" width="25" height="25" patternUnits="userSpaceOnUse">
+            <path d="M25 0H0V25" stroke="currentColor" stroke-width="0.5" opacity="0.2"></path>
+          </pattern>
+        </defs>
+        <rect width="400" height="400" fill="url(#chain-grid)" class="chain__grid"></rect>
+        <path
+          class="chain__plot"
+          d="M96 128 L200 88 L306 132 L316 254 L214 306 L104 262 Z"
+          stroke="currentColor"
+          stroke-width="1"
+          opacity="0.3"></path>
+        <circle class="chain__ring" cx="200" cy="197" r="118" stroke-width="1.5"></circle>
+        <circle class="chain__ring-soft" cx="200" cy="197" r="118" stroke-width="1"></circle>
+      </svg>
+
+      <span class="chain__marker">
+        <span class="chain__marker-dot"></span>
+        <span class="chain__marker-ring"></span>
+      </span>
+    </div>
+
+    <!--
+      Tekstisammud tulevad DOM-is ENNE telefone.
+
+      Mobiilis paigutab CSS `order` need vaheldumisi, seega visuaalne
+      järjekord on S0 P0 S1 S2 ... — aga ekraanilugeja loeb DOM-i. Kui
+      telefonid oleksid ees, algaks sektsioon nelja pildikirjeldusega ja
+      alles siis tuleks jutustus. Nüüd tuleb lugu esimesena ja pildid
+      järele. Desktopil on nad eri gridiveergudes, seega paigutus ei muutu.
+    -->
+    <!-- Tekstisammud. -->
+    <div class="chain__steps">
+      {
+        d.steps.map((step, i) => (
+          <article class="chain__step" data-step={i}>
+            <div class="chain__step-head">
+              <span class="hud chain__index">{step.index}</span>
+              <span class="hud chain__label">{step.label}</span>
+            </div>
+            <h3 class="display chain__title">
+              {step.title.map((line) => (
+                <span class="chain__title-line">{line}</span>
+              ))}
+            </h3>
+            <p class="chain__body">{step.body}</p>
+            <div class="chain__meta">
+              <span class:list={["chain__status", `chain__status--${i}`]}>{step.status}</span>
+              <HudLabel label={step.hud} value={i === 0 ? "> 120 m" : i === 3 ? "—" : `${demo.radiusM} m`} />
+            </div>
+          </article>
+        ))
+      }
+    </div>
+    <!-- Telefonid: üks korraga desktopil, sammu juures mobiilis. -->
+    <div class="chain__phones">
+      {
+        shots.map((shot, i) => (
+          <figure class="chain__phone" data-phone={i}>
+            <Image
+              src={shot}
+              alt={`${site.vendor.product} — ${d.steps[i].status}`}
+              widths={[260, 390]}
+              sizes="(max-width: 900px) 52vw, 17vw"
+              loading={i === 0 ? "eager" : "lazy"}
+            />
+          </figure>
+        ))
+      }
+    </div>
+
+
+    <!-- Sammuriba: kus jutustuses ollakse. -->
+    <ol class="chain__progress" aria-hidden="true">
+      {d.steps.map((step) => <li class="chain__tick">{step.index}</li>)}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .chain {
+    position: relative;
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+  }
+
+  .chain__stage {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--gutter);
+    padding: clamp(2rem, 6vh, 4rem) var(--gutter) clamp(3rem, 8vh, 5rem);
+    overflow: hidden;
+  }
+
+  /* --- Maailm: objekt ja piir --- */
+
+  .chain__world {
+    position: absolute;
+    top: 50%;
+    right: 4%;
+    width: min(40rem, 46vw);
+    aspect-ratio: 1;
+    transform: translateY(-50%);
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 82%);
+    mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 82%);
+  }
+
+  .chain__plan {
+    width: 100%;
+    height: 100%;
+    color: var(--hairline-strong);
+  }
+
+  .chain__ring {
+    stroke: var(--signal);
+    opacity: 0.85;
+  }
+
+  .chain__ring-soft {
+    stroke: var(--signal);
+    opacity: 0.16;
+    stroke-dasharray: 2 9;
+  }
+
+  /* Töötaja märk. Liigub ainult sammude vahel — see on piiri ületamine,
+     mitte pidev jälgimine. */
+  .chain__marker {
+    position: absolute;
+    left: 14%;
+    top: 74%;
+    width: 0;
+    height: 0;
+  }
+
+  .chain__marker-dot,
+  .chain__marker-ring {
+    position: absolute;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .chain__marker-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    background: var(--concrete);
+  }
+
+  .chain__marker-ring {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--concrete);
+    opacity: 0.4;
+  }
+
+  /* --- Telefonid --- */
+
+  .chain__phones {
+    position: relative;
+    grid-column: 2;
+    justify-self: center;
+    width: min(15rem, 30vw);
+    aspect-ratio: 390 / 844;
+  }
+
+  .chain__phone {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+    padding: 0.35rem;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+  }
+
+  .chain__phone :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  /* --- Sammud --- */
+
+  .chain__steps {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .chain__step {
+    /* Laiem kui tekstirida vajaks: pealkirjaread on `nowrap` ja
+       venekeelne "Работник приезжает" ei mahtunud 34rem sisse. */
+    max-width: 44rem;
+  }
+
+  .chain__step-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .chain__index {
+    color: var(--signal);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+  }
+
+  .chain__label {
+    color: var(--concrete-dim);
+  }
+
+  .chain__title {
+    font-size: clamp(2rem, 4.1vw, 4rem);
+    margin: 0;
+  }
+
+  .chain__title-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .chain__body {
+    margin: 1.2rem 0 0;
+    max-width: 34ch;
+    color: var(--concrete-dim);
+  }
+
+  .chain__meta {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-top: 1.6rem;
+  }
+
+  .chain__status {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+
+  /* Olekuvärvid järgivad äppi: sinine-neutraalne kontrollimisel, roheline
+     kinnitatud/töötab, punane objektilt väljas. */
+  .chain__status--0 {
+    color: var(--concrete-dim);
+  }
+  .chain__status--1,
+  .chain__status--2 {
+    color: var(--verified);
+  }
+  .chain__status--3 {
+    color: var(--stopped);
+  }
+
+  /* --- Sammuriba --- */
+
+  .chain__progress {
+    position: absolute;
+    left: var(--gutter);
+    bottom: clamp(1.25rem, 4vh, 2.25rem);
+    display: flex;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chain__tick {
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    color: var(--concrete-faint);
+    padding-top: 0.5rem;
+    border-top: 2px solid var(--hairline-strong);
+    min-width: 3.25rem;
+    transition: color 0.25s ease-out, border-color 0.25s ease-out;
+  }
+
+  .chain__tick[data-on] {
+    color: var(--signal);
+    border-top-color: var(--signal);
+  }
+
+  /* --- Mobiil JA liikumise vähendamine: vertikaalne voog, ilma pinnita ---
+     Ilma selleta jääksid liikumise vähendamisel neli absoluutset telefoni
+     üksteise peale ja näha oleks ainult viimane. */
+
+  @media (max-width: 899px), (prefers-reduced-motion: reduce) {
+    /*
+     * Flex + `order`, mitte `block`: `display: contents` lükkab telefonid ja
+     * tekstid ühte voogu, aga DOM-i järjekorras tuleksid KÕIK telefonid enne
+     * KÕIKI tekste. `order` seob iga telefoni oma sammu juurde.
+     */
+    .chain__stage {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding-bottom: clamp(2rem, 6vh, 3rem);
+    }
+
+    .chain__step[data-step="0"] { order: 0; }
+    .chain__phone[data-phone="0"] { order: 1; }
+    .chain__step[data-step="1"] { order: 2; }
+    .chain__phone[data-phone="1"] { order: 3; }
+    .chain__step[data-step="2"] { order: 4; }
+    .chain__phone[data-phone="2"] { order: 5; }
+    .chain__step[data-step="3"] { order: 6; }
+    .chain__phone[data-phone="3"] { order: 7; }
+
+    /* Sammud 01 ja 02 kasutavad sama ekraani (asukoha kontroll toimub enne
+       tööpäeva algust). Desktopil on see nähtamatu ristfade, mobiilis
+       loeks kaks identset pilti järjest välja nagu viga. */
+    .chain__phone[data-phone="1"] {
+      display: none;
+    }
+
+    /* Maailm ja sammuriba on desktopi jutustuse osad. Mobiilis oleks
+       liikuv märk üle nelja ekraani segane ja kalliks maksev. */
+    .chain__world,
+    .chain__progress {
+      display: none;
+    }
+
+    .chain__phones {
+      display: contents;
+    }
+
+    /* Kärbitud ülaossa: terve ekraan oleks siin väga pikk ja alumine pool
+       (kuu kokkuvõte, menüü) ei kanna jutustust. */
+    .chain__phone {
+      position: static;
+      width: min(14rem, 58vw);
+      aspect-ratio: 390 / 520;
+      margin: 1.5rem auto 0;
+    }
+
+    .chain__steps {
+      display: contents;
+    }
+
+    .chain__step {
+      max-width: none;
+      padding: clamp(2.5rem, 8vh, 4rem) 0 0;
+      border-top: 1px solid var(--hairline);
+      margin-top: clamp(2.5rem, 8vh, 4rem);
+    }
+
+    .chain__step[data-step="0"] {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .chain__title {
+      font-size: clamp(1.9rem, 8.5vw, 3.2rem);
+    }
+
+    .chain__title-line {
+      white-space: normal;
+    }
+  }
+</style>
+
+<script>
+  import { gsap, ScrollTrigger } from "../../lib/gsap";
+
+  const section = document.querySelector<HTMLElement>(".chain");
+
+  if (section) {
+    const steps = gsap.utils.toArray<HTMLElement>(".chain__step");
+    const phones = gsap.utils.toArray<HTMLElement>(".chain__phone");
+    const ticks = gsap.utils.toArray<HTMLElement>(".chain__tick");
+    const marker = section.querySelector<HTMLElement>(".chain__marker");
+
+    // Märgi asukohad on samad mis Astro poolel; hoian neid siin, sest
+    // GSAP peab neid arvutama, mitte lugema stiililehelt.
+    const positions = [
+      { left: "14%", top: "74%" },
+      { left: "38%", top: "58%" },
+      { left: "44%", top: "50%" },
+      { left: "82%", top: "26%" },
+    ];
+
+    const mm = gsap.matchMedia();
+
+    mm.add("(min-width: 900px) and (prefers-reduced-motion: no-preference)", () => {
+      // Desktopil on kõik neli sammu ühes pinnitud kompositsioonis.
+      gsap.set(steps, { position: "absolute", inset: "auto 0 auto 0", opacity: 0, yPercent: 6 });
+      gsap.set(steps[0], { opacity: 1, yPercent: 0 });
+      gsap.set(phones, { opacity: 0 });
+      gsap.set(phones[0], { opacity: 1 });
+      ticks[0]?.setAttribute("data-on", "");
+
+      const tl = gsap.timeline({
+        defaults: { ease: "power2.inOut" },
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          // ~100 % kerimist sammu kohta, veidi lisa lõppu et viimane samm
+          // jõuaks enne lahtihaakimist ära lugeda.
+          end: "+=380%",
+          pin: ".chain__stage",
+          scrub: 1,
+          anticipatePin: 1,
+        },
+      });
+
+      for (let i = 1; i < steps.length; i++) {
+        const at = (i - 1) * 0.32 + 0.12;
+        tl.to(steps[i - 1], { opacity: 0, yPercent: -6, duration: 0.1 }, at)
+          .to(steps[i], { opacity: 1, yPercent: 0, duration: 0.12 }, at + 0.06)
+          .to(phones[i - 1], { opacity: 0, duration: 0.12 }, at)
+          .to(phones[i], { opacity: 1, duration: 0.12 }, at + 0.04)
+          .to(marker, { ...positions[i], duration: 0.16 }, at)
+          .add(() => {
+            ticks.forEach((tick, index) => {
+              if (index <= i) tick.setAttribute("data-on", "");
+              else tick.removeAttribute("data-on");
+            });
+          }, at + 0.06)
+          .add(() => {
+            ticks.forEach((tick, index) => {
+              if (index <= i - 1) tick.setAttribute("data-on", "");
+              else tick.removeAttribute("data-on");
+            });
+          }, at + 0.05);
+      }
+
+      /*
+       * Üleandmine S4-le.
+       *
+       * Viimases kümnendikus taandub toode: telefon läheb väiksemaks ja
+       * vaibub, joonis tuhmub. Sammu tekst jääb puutumata — lugu ei kao,
+       * ainult telefon annab järje arvutivaatele. Ilma selleta lõppes
+       * jutustus S3 pinni vabastamisel järsku ja S4 algas nagu uus,
+       * staatiline leht.
+       */
+      tl.to(".chain__phones", { scale: 0.9, yPercent: 4, opacity: 0.2, duration: 0.12 }, 0.94)
+        .to(".chain__world", { opacity: 0.4, duration: 0.12 }, 0.94);
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
+    });
+
+    // Mobiilis ja liikumise vähendamisel: sammud on lihtsalt üksteise all.
+    // Siin ei ole pinni, seega kasutaja ei saa kunagi lõksu jääda.
+    mm.add("(max-width: 899px), (prefers-reduced-motion: reduce)", () => {
+      gsap.set(steps, { clearProps: "all" });
+      gsap.set(phones, { clearProps: "all" });
+      ticks.forEach((tick) => tick.setAttribute("data-on", ""));
+      ScrollTrigger.refresh();
+    });
+  }
+</script>

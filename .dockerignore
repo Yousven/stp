@@ -17,5 +17,11 @@
 mobile/ios
 mobile/android
 
+# Turundusveeb ei kuulu API image'isse ega selle build-konteksti. Dockerfile
+# ei kopeeri sealt midagi, aga build-kontekst on repo juur (context: ../..),
+# seega ilma selle reata saadetaks kõik turunduslehe fondid ja pildid iga
+# API buildiga asjata daemonile. Veebil on oma deploy (Cloudflare Pages).
+website
+
 .git
 **/.DS_Store

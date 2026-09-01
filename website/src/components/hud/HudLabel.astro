@@ -1,0 +1,51 @@
+---
+/**
+ * Tehniline silt — HUD-keele põhiühik.
+ *
+ * Väike mono-tekst, mis annab numbrile või olekule nime. Referentsi
+ * tehniline tunne tuleb sellest, et ekraanil on päris andmed (koordinaat,
+ * raadius, kellaaeg), mitte kaunistuseks pandud sümbolid.
+ */
+interface Props {
+  label: string;
+  value?: string;
+  tone?: "default" | "verified" | "signal";
+  class?: string;
+}
+const { label, value, tone = "default", class: className = "" } = Astro.props;
+---
+
+<span class:list={["hud-label", `hud-label--${tone}`, className]}>
+  <span class="hud-label__key">{label}</span>
+  {value && <span class="hud-label__value">{value}</span>}
+</span>
+
+<style>
+  .hud-label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5ch;
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .hud-label__key {
+    color: var(--concrete-faint);
+  }
+
+  .hud-label__value {
+    color: var(--concrete-dim);
+  }
+
+  .hud-label--verified .hud-label__value {
+    color: var(--verified);
+  }
+
+  .hud-label--signal .hud-label__value {
+    color: var(--signal);
+  }
+</style>

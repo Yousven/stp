@@ -1,0 +1,81 @@
+---
+/**
+ * Ühendab DOM-i sündmused analytics-kihiga.
+ *
+ * Üks koht, mitte laiali sektsioonides — nii on näha, MIDA leht mõõdab, ja
+ * providerit vahetades ei pea sektsioone puutuma. Kiht ise on
+ * `src/lib/analytics.ts`.
+ *
+ * Kõik siin on delegeeritud kuulajad, seega ta ei tea sektsioonidest midagi
+ * peale `data-analytics` atribuutide.
+ */
+---
+
+<script>
+  import { track, trackOnce, type EventName } from "../../lib/analytics";
+
+  /* --- Klikid: CTA-d ja keelevahetus --- */
+  document.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target as HTMLElement | null;
+      const el = target?.closest<HTMLElement>("[data-analytics]");
+      if (!el) return;
+
+      const name = el.dataset.analytics as EventName;
+      if (name === "cta_click") {
+        track(name, { location: el.dataset.analyticsLocation ?? "unknown" });
+      } else if (name === "language_change") {
+        track(name, {
+          from: document.documentElement.lang,
+          to: el.dataset.analyticsLocale ?? "unknown",
+        });
+      }
+    },
+    { passive: true },
+  );
+
+  /* --- FAQ: mis küsimus avati (ainult järjekorranumber, mitte tekst) --- */
+  document.querySelectorAll<HTMLDetailsElement>(".faq__item").forEach((item, index) => {
+    item.addEventListener("toggle", () => {
+      if (item.open) track("faq_open", { index: index + 1 });
+    });
+  });
+
+  /* --- Hinnasektsioon jõudis ekraanile --- */
+  const pricing = document.querySelector("#pricing");
+  if (pricing && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          trackOnce("pricing_view");
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(pricing);
+  }
+
+  /* --- Kerimissügavus --- */
+  let ticking = false;
+  const depth = () => {
+    ticking = false;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    if (max <= 0) return;
+    const pct = (window.scrollY / max) * 100;
+    if (pct >= 50) trackOnce("scroll_50");
+    if (pct >= 90) trackOnce("scroll_90");
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(depth);
+    },
+    { passive: true },
+  );
+</script>

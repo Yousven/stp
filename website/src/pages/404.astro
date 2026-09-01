@@ -1,0 +1,91 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { site } from "../config/site";
+import { localePath, t } from "../i18n";
+
+/**
+ * 404.
+ *
+ * Cloudflare Pages serveerib staatilise saidi puhul `/404.html` iga
+ * tundmatu tee peale, seega on neid ainult ÜKS — see on lähtekeeles.
+ * Muudesse keeltesse saab jaluse keelevalikust; see on teadlik lihtsus,
+ * mitte puudujääk.
+ *
+ * `noindex`, sest veateade ei kuulu indeksisse.
+ */
+const locale = "et" as const;
+const d = t(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  path="/404/"
+  title={`${d.notFound.metaTitle} — ${site.vendor.product}`}
+  description={d.notFound.body}
+  noindex
+>
+  <section class="nf" aria-labelledby="nf-heading">
+    <span class="hud nf__code">{d.notFound.code}</span>
+    <h1 id="nf-heading" class="display nf__heading">
+      {d.notFound.heading.map((line) => <span class="nf__line">{line}</span>)}
+    </h1>
+    <p class="nf__body">{d.notFound.body}</p>
+    <a class="nf__back" href={localePath(locale)}>
+      <span class="nf__back-label">{d.notFound.cta}</span>
+      <span class="nf__back-arrow" aria-hidden="true">→</span>
+    </a>
+  </section>
+</BaseLayout>
+
+<style>
+  .nf {
+    /* Kleepuv nav on 72 px — sisu algab selle alt. */
+    padding: clamp(7rem, 22vh, 12rem) var(--gutter) clamp(5rem, 16vh, 9rem);
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+    min-height: 60vh;
+    align-content: center;
+  }
+
+  .nf__code {
+    color: var(--signal);
+  }
+
+  .nf__heading {
+    font-size: clamp(2.6rem, 9vw, 7rem);
+    margin: 0;
+  }
+
+  .nf__line {
+    display: block;
+  }
+
+  .nf__body {
+    margin: 0;
+    color: var(--concrete-dim);
+    max-width: 44ch;
+  }
+
+  /* Sama kuju mis CTA-l, aga vaiksem: see ei ole müügihetk. */
+  .nf__back {
+    margin-top: clamp(1rem, 3vh, 2rem);
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--signal);
+    color: var(--signal);
+    text-decoration: none;
+    padding: 0.85rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    transition: background 0.15s ease-out, color 0.15s ease-out;
+  }
+
+  .nf__back:hover {
+    background: var(--signal);
+    color: var(--asphalt);
+  }
+</style>

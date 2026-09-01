@@ -1,0 +1,457 @@
+---
+import { Image } from "astro:assets";
+import overviewShot from "../../assets/app/desktop-overview.png";
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S4 — mida haldur lõpuks näeb.
+ *
+ * Ekraanitõmmis EI ole "brauseri-kaardi" sees. Sidebar on maha kärbitud ja
+ * pilt jookseb paremast servast välja, nii et ta loeb kompositsiooni osana,
+ * mitte kleebitud mockup'ina. Peale käivad tehnilised viited, mis ütlevad,
+ * mida vaadata.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).admin;
+
+const annotations: { key: keyof typeof d.annotations; top: string; right?: boolean }[] = [
+  { key: "who", top: "30%" },
+  { key: "where", top: "37%" },
+  { key: "howLong", top: "30%", right: true },
+  { key: "state", top: "44%" },
+];
+---
+
+<section class="admin" id="admin" aria-labelledby="admin-heading">
+  <div class="admin__intro">
+    <h2 id="admin-heading" class="display admin__heading">
+      {d.heading.map((line) => <span class="admin__line">{line}</span>)}
+    </h2>
+    <p class="prose admin__body">{d.body}</p>
+  </div>
+
+  <figure class="admin__frame">
+    <!-- Viited on legend pildi KÕRVAL, mitte selle peal: peale laotuna
+         katsid nad täpselt need read, millele osutasid. -->
+    <ol class="admin__legend">
+      {
+        annotations.map((a, i) => (
+          <li class="admin__legend-item">
+            <span class="hud admin__legend-index">{String(i + 1).padStart(2, "0")}</span>
+            <span class="hud admin__legend-text">{d.annotations[a.key]}</span>
+            <span class="admin__legend-rule" aria-hidden="true" />
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="admin__crop">
+      <Image
+        src={overviewShot}
+        alt={`${d.caption} — ${d.annotations.who}, ${d.annotations.where}, ${d.annotations.state}`}
+        widths={[900, 1400, 1920]}
+        sizes="(max-width: 900px) 150vw, 72vw"
+        loading="lazy"
+        class="admin__shot"
+      />
+      <!-- Mõõteriba: kerides liigub see "Praegu tööl" ridadele. Raamib,
+           ei tõmba tekstist läbi. -->
+      <span class="admin__focus" aria-hidden="true"></span>
+    </div>
+
+    <figcaption class="hud admin__caption">{d.caption}</figcaption>
+  </figure>
+
+  <div class="admin__outro">
+    <p class="display admin__sub">
+      {d.subheading.map((line) => <span class="admin__line">{line}</span>)}
+    </p>
+  </div>
+</section>
+
+<style>
+  .admin {
+    position: relative;
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(4rem, 12vh, 8rem) 0 clamp(4rem, 10vh, 7rem);
+    overflow: hidden;
+  }
+
+  /*
+   * Sissejuhatus joondub kaadriga, mitte akna servaga.
+   *
+   * Kuna tõmmisel on nüüd lagi (vt `.admin__crop`), lõpeb pilt laial
+   * ekraanil enne akna serva. Ilma selleta ulatuks kõrvaltekst pildist
+   * paremale ja sektsioon näeks välja nihkes.
+   *   13rem legend + 1150 px kaader = 1358 px sisu.
+   */
+  .admin__intro {
+    padding-inline: var(--gutter);
+    max-width: calc(1150px + 13rem + 2 * var(--gutter));
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    gap: var(--gutter);
+    align-items: end;
+  }
+
+  .admin__heading {
+    font-size: clamp(2.2rem, 5vw, 5rem);
+    margin: 0;
+  }
+
+  .admin__line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .admin__body {
+    margin: 0;
+    max-width: 42ch;
+  }
+
+  /* --- Tõmmis kompositsioonis --- */
+
+  .admin__frame {
+    position: relative;
+    margin: clamp(2.5rem, 7vh, 4.5rem) 0 0;
+    padding-left: var(--gutter);
+    display: grid;
+    grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  /* Legend: mida vaadata, lugemisjärjekorras. */
+  .admin__legend {
+    list-style: none;
+    margin: 0;
+    padding: 2.5rem 0 0;
+    display: grid;
+    gap: clamp(1rem, 3vh, 2rem);
+  }
+
+  .admin__legend-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .admin__legend-index {
+    color: var(--signal);
+  }
+
+  .admin__legend-text {
+    color: var(--concrete-dim);
+    white-space: nowrap;
+  }
+
+  /* Joon jookseb legendist pildi servani — tehniline viide, mitte kaunistus. */
+  .admin__legend-rule {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--signal), transparent);
+    opacity: 0.5;
+  }
+
+  /*
+   * Kärbe: külgmenüü lõigatakse maha ja sisuveerg täidab raami täpselt.
+   * Varem oli pilt üle suurendatud ja parem serv koos tundide veeruga
+   * jäi kärpest välja — just see number, mille pärast sektsioon olemas on.
+   */
+  /*
+   * Kaadri lagi: ekraanipilti EI suurendata kunagi üle originaali.
+   *
+   * Sisuveerg on allikas 1150 px lai, seega 1150 px kaadris on täpselt
+   * 1:1. Ilma laeta kasvas kaader koos aknaga ja 1920 px juures venitati
+   * tõmmist 1,40× — rakenduse tekst muutus lehe enda tüpograafiast
+   * suuremaks ja udusemaks. Laiadel ekraanidel jääb pilt nüüd seisma ja
+   * paremale jääb lehe taust, seega parem serv vajab jälle äärejoont.
+   */
+  .admin__crop {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+    aspect-ratio: 1040 / 600;
+    max-width: 1150px;
+  }
+
+  /*
+   * Kärpe arvutus, mitte silma järgi valitud number.
+   *
+   * Number on MÕÕDETUD allikpildist, mitte tuletatud äpi CSS-ist.
+   * `.desktop-shell` ütleb `17rem`, aga tõmmisel on külgmenüü äärejoon
+   * loogilisel x = 288 (sisu algab 289) — tuletatud number oleks jätnud
+   * menüü servariba kaadrisse paistma.
+   *
+   * Kärbime 290 pealt, seega sisuveerg on 1440 - 290 = 1150:
+   *   laius = 1440/1150 = 125,2 %,  nihe = 290/1150 = 25,2 %.
+   *
+   * Varem oli siin 138,5 / 38,5, mis eeldas 400 px külgmenüüd — see
+   * lõikas 110 px päris sisu ära ja pealkiri "Ülevaade" algas kaadris
+   * poole tähe pealt.
+   *
+   * Ülemõõtmiseks: `node scripts/measure-crop.mjs`.
+   */
+  .admin__shot {
+    display: block;
+    width: 125.2%;
+    height: auto;
+    margin-left: -25.2%;
+    margin-top: -1%;
+  }
+
+  /*
+   * Mõõteriba. Sama keel mis heros ja S3-s: joonis mõõdab, ei helenda.
+   * Ribana, mitte joonena — 1 px joon tõmbaks üle nende ridade, millele
+   * ta osutab.
+   */
+  .admin__focus {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 22%;
+    height: 15%;
+    border-top: 1px solid var(--signal);
+    border-bottom: 1px solid var(--signal);
+    background: rgba(255, 90, 0, 0.07);
+    background: color-mix(in srgb, var(--signal) 7%, transparent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .admin__focus::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--signal);
+  }
+
+  .admin__caption {
+    grid-column: 2;
+    padding-top: 0.7rem;
+    color: var(--concrete-faint);
+  }
+
+  /* --- Lõpuväide --- */
+
+  .admin__outro {
+    padding-inline: var(--gutter);
+    margin-top: clamp(3rem, 9vh, 6rem);
+  }
+
+  .admin__sub {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    line-height: 0.84;
+    text-transform: uppercase;
+    letter-spacing: -0.015em;
+    font-size: clamp(2.4rem, 7.4vw, 7rem);
+    color: var(--signal);
+    margin: 0;
+  }
+
+  /* --- Kitsas ekraan --- */
+
+  @media (max-width: 899px) {
+    .admin__intro {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .admin__heading {
+      font-size: clamp(2rem, 9vw, 3.6rem);
+    }
+
+    .admin__line {
+      white-space: normal;
+    }
+
+    .admin__frame {
+      padding-left: 0;
+      display: block;
+    }
+
+    /* Kitsas ekraanis on legend lihtsalt loetelu pildi kohal. */
+    .admin__legend {
+      padding: 0 var(--gutter) 1.25rem;
+      grid-auto-flow: row;
+      gap: 0.5rem;
+    }
+
+    .admin__legend-rule {
+      display: none;
+    }
+
+    /* Admini vaade on kitsas ekraanis loetamatu, kui teda kokku suruda.
+       Laseme tal servast välja joosta ja horisontaalselt kerida. */
+    .admin__scroll,
+    .admin__crop {
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin__crop {
+      border-left: none;
+      border-right: none;
+      aspect-ratio: auto;
+    }
+
+    /* Kitsas ekraanis suurem, et tekst oleks loetav; sama 38,5 % nihe
+       skaleeritud laiusega. */
+    .admin__shot {
+      width: 260%;
+      max-width: none;
+      margin-left: -72%;
+      margin-top: 0;
+    }
+
+    .admin__caption {
+      display: block;
+      padding: 0.75rem var(--gutter) 0;
+    }
+
+    .admin__sub {
+      font-size: clamp(2.1rem, 10vw, 4rem);
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S4 — tootepaljastus (liikumise intensiivsus ~80 %).
+   *
+   * Neli kerimisega seotud liigutust, mitte üks fade:
+   *   1. pealkirja read tulevad maski alt
+   *   2. arvutivaade tõuseb sügavusest (clip + scale + nihe)
+   *   3. mõõteriba liigub "Praegu tööl" aladele, legend süttib järjest
+   *   4. raam taandub veidi üles, kui sektsioon lahkub
+   *
+   * Kõik on `scrub`-il: kerimise asend juhib ajajoont, nagu S1–S3-s.
+   */
+  motion("admin", ".admin", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.55; // mobiilis sama jada, lühemad liigutused
+
+      const headLines = all(".admin__intro .admin__line");
+      const subLines = all(".admin__sub .admin__line");
+      const legend = all(".admin__legend-item");
+      // Joon küsitakse lüli seest, mitte eraldi nimekirjana — nii ei saa
+      // kaks massiivi märkamatult eri pikkuseks minna.
+      const rules = legend.map((item) => item.querySelector(".admin__legend-rule"));
+      const crop = q(".admin__crop");
+      const shot = q(".admin__shot");
+      const focus = q(".admin__focus");
+      const body = q(".admin__body");
+      const caption = q(".admin__caption");
+
+      // Algseisud seatakse AINULT siit. CSS jätab kõik lõppseisu, seega
+      // liikumise vähendamisel ja ilma JS-ita on sektsioon täiesti loetav.
+      hideLines(headLines);
+      hideLines(subLines);
+      drawX(rules);
+      gsap.set(legend, { opacity: 0, x: -16 * k });
+      gsap.set([body, caption], { opacity: 0, y: 16 * k });
+      /*
+       * Skaala kasvab AINULT paremale ja üles (`transformOrigin: 0% 100%`).
+       * Keskelt kasvades ulatus kärbe animatsiooni ajal vasakule legendi
+       * peale ja viited jäid tõmmise alla — lõppseisus seda ei näinud,
+       * ainult liikumise keskel. Paremale kasvamine on nähtamatu, sest
+       * pilt niikuinii jookseb sealt servast välja.
+       */
+      gsap.set(crop, {
+        opacity: 0,
+        scale: 1 + 0.05 * k,
+        yPercent: 6 * k,
+        clipPath: "inset(0% 0% 100% 0%)",
+        transformOrigin: "0% 100%",
+      });
+
+      // 1. Sissejuhatus.
+      const intro = gsap.timeline({
+        scrollTrigger: { trigger: ".admin__intro", start: "top 88%", end: "top 44%", scrub: 0.5 },
+        defaults: { ease: "power2.out" },
+      });
+      intro
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.16 })
+        .to(body, { opacity: 1, y: 0, duration: 0.4 }, 0.25);
+
+      // 2. Arvutivaade tõuseb sügavusest.
+      const reveal = gsap.timeline({
+        scrollTrigger: { trigger: ".admin__frame", start: "top 85%", end: "top 38%", scrub: 0.6 },
+        defaults: { ease: "power2.out" },
+      });
+      reveal
+        .to(crop, {
+          opacity: 1,
+          scale: 1,
+          yPercent: 0,
+          clipPath: "inset(0% 0% 0% 0%)",
+          duration: 0.7,
+        })
+        .to(caption, { opacity: 1, y: 0, duration: 0.3 }, 0.5);
+
+      // 3. Legend süttib järjest ja mõõteriba laskub.
+      const read = gsap.timeline({
+        scrollTrigger: { trigger: ".admin__frame", start: "top 62%", end: "bottom 78%", scrub: 0.7 },
+        defaults: { ease: "power1.out" },
+      });
+      legend.forEach((item, i) => {
+        read
+          .to(item, { opacity: 1, x: 0, duration: 0.3 }, i * 0.22)
+          .to(rules[i], { scaleX: 1, duration: 0.35 }, i * 0.22 + 0.08);
+      });
+      read
+        .to(focus, { opacity: 1, duration: 0.25 }, 0.1)
+        .to(focus, { top: "40%", duration: 0.9, ease: "power1.inOut" }, 0.2);
+
+      /*
+       * 4. Väljumine: raam taandub tervikuna üles.
+       *
+       * Liigub RAAM, mitte kärbe — kärpel on juba sissetuleku ajajoon
+       * `yPercent`-i peal ja kaks scrub-ajajoont sama omaduse kallal
+       * kirjutaksid teineteise algväärtused üle.
+       */
+      const exit = gsap.to(".admin__frame", {
+        yPercent: -4 * k,
+        ease: "none",
+        scrollTrigger: { trigger: ".admin__frame", start: "bottom 75%", end: "bottom 10%", scrub: 0.8 },
+      });
+
+      // Aeglane parallax: tõmmis liigub raamist aeglasemalt. Kärpes on
+      // ~28 % vertikaalset varu, seega 4 % nihe ei too serva nähtavale.
+      const drift = gsap.to(shot, {
+        yPercent: -4,
+        ease: "none",
+        scrollTrigger: { trigger: ".admin__frame", start: "top bottom", end: "bottom top", scrub: true },
+      });
+
+      // Lõpuväide.
+      const outro = gsap.timeline({
+        scrollTrigger: { trigger: ".admin__outro", start: "top 88%", end: "top 52%", scrub: 0.5 },
+      });
+      outro.to(subLines, { ...UNMASKED, duration: 0.5, stagger: 0.14, ease: "power2.out" });
+
+      return () => {
+        [intro, reveal, read, exit, drift, outro].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

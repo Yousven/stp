@@ -1,0 +1,344 @@
+---
+import { Image } from "astro:assets";
+import appShot from "../../assets/app/mobile-active.png";
+import { site } from "../../config/site";
+import { t, type Locale } from "../../i18n";
+import Cta from "../ui/Cta.astro";
+import HudLabel from "../hud/HudLabel.astro";
+import StatusPill from "../hud/StatusPill.astro";
+import SitePlan from "../hud/SitePlan.astro";
+
+/**
+ * S1 — Hero.
+ *
+ * Ülesanne on näidata toote ideed ühe pilguga: objekt, selle piir, töötaja
+ * piiri sees, päris äpp kinnitatud olekuga. Ekraanipilt on PÄRIS
+ * rakendusest demoandmetega, mitte joonistatud (vt ASSETS.md).
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale);
+const { hero } = d;
+const demo = site.demoSite;
+---
+
+<section class="hero" id="main">
+  <div class="hero__inner">
+    <div class="hero__text">
+      <h1 class="display hero__headline">
+        {
+          hero.headline.map((line, i) => (
+            <span class="hero__line">
+              <span class:list={["hero__line-in", i === hero.headlineAccentLine && "hero__line-in--accent"]}>
+                {line}
+              </span>
+            </span>
+          ))
+        }
+      </h1>
+
+      <p class="prose hero__lede">{hero.lede}</p>
+
+      <div class="hero__cta">
+        <Cta label={hero.cta} note={hero.ctaNote(site.pricing.trialDays)} location="hero" />
+      </div>
+    </div>
+
+    <div class="hero__visual">
+      <div class="hero__plan" aria-hidden="true">
+        <SitePlan />
+      </div>
+
+      <div class="hero__stack">
+        <StatusPill text={hero.hud.presenceConfirmed} class="hero__presence" />
+
+        <figure class="hero__device">
+          <Image
+            src={appShot}
+            alt={`${site.vendor.product} — ${hero.hud.clockRunning}, ${demo.name}`}
+            widths={[280, 400, 560, 640]}
+            sizes="(max-width: 900px) 55vw, 20vw"
+            loading="eager"
+            fetchpriority="high"
+            class="hero__screen"
+          />
+        </figure>
+      </div>
+
+      <div class="hero__marks">
+        <div class="hero__note hero__note--inside">
+          <HudLabel label={hero.hud.inside} value={demo.name} tone="verified" />
+        </div>
+        <div class="hero__note hero__note--radius">
+          <HudLabel label={hero.hud.radius} value={`${demo.radiusM} m`} tone="signal" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero__strip">
+    <HudLabel label={hero.hud.site} value={demo.name} />
+    <HudLabel label={hero.hud.coordinates} value={`${demo.lat}, ${demo.lon}`} />
+    <HudLabel label={hero.hud.radius} value={`${demo.radiusM} m`} />
+    <HudLabel label={hero.hud.serverChecked} tone="signal" />
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: calc(100svh - 3.75rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .hero__inner {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    align-items: center;
+    gap: var(--gutter);
+    padding: clamp(1.5rem, 4vh, 3.5rem) var(--gutter);
+  }
+
+  /* --- Tüpograafia --- */
+
+  .hero__headline {
+    font-size: clamp(2.4rem, 6.4vw, 6.4rem);
+  }
+
+  .hero__line {
+    display: block;
+    /* Kaldkirja ülaosa ulatub reakastist välja; ilma varuta lõikaks
+       mask (overflow: hidden) tähed ära. */
+    padding-top: 0.06em;
+    overflow: hidden;
+  }
+
+  .hero__line-in {
+    display: block;
+    /* Rida on jagamatu ühik: i18n-failis on pealkiri juba ridadeks
+       murtud, ja automaatne murdmine lõhuks selle kuju — vene keeles
+       läks kolm rida neljaks. */
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  .hero__line-in--accent {
+    color: var(--signal);
+  }
+
+  .hero__lede {
+    margin: clamp(1.25rem, 2.5vh, 2rem) 0 0;
+    font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem);
+  }
+
+  .hero__cta {
+    margin-top: clamp(1.5rem, 3.5vh, 2.5rem);
+  }
+
+  /* --- Visuaal: plaan, seade, sildid --- */
+
+  .hero__visual {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /*
+   * Mõõdistusjoonis istub seadme taga ja vasakul: ringi vasak pool ja
+   * töötaja märk jäävad nähtavaks, parem pool kaob telefoni taha. Nii
+   * loeb kompositsioon "telefon on objektil", mitte "kaks eraldi pilti".
+   */
+  .hero__plan {
+    position: absolute;
+    top: 50%;
+    left: -52%;
+    width: 160%;
+    transform: translateY(-50%);
+    opacity: 0.55;
+    pointer-events: none;
+    /* Ilma maskita paistab SVG ristkülikuserv kõva joonena — see luges
+       välja nagu pilt pildi sees, mitte nagu leheni ulatuv joonis. */
+    -webkit-mask-image: radial-gradient(ellipse at 45% 50%, #000 45%, transparent 78%);
+    mask-image: radial-gradient(ellipse at 45% 50%, #000 45%, transparent 78%);
+  }
+
+  .hero__device {
+    position: relative;
+    margin: 0;
+    /* Telefon on tervikuna näha, mitte kärbitud: pool kaarti ekraani
+       servas näeb välja nagu viga. Väiksem, aga terve. `max-height` on
+       ainult madalate akende jaoks. */
+    width: min(14.5rem, 52%);
+    max-height: 58vh;
+    overflow: hidden;
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+    padding: 0.4rem;
+    /* Vaid nii palju varju, et seade plaanist eralduks. Suur pehme vari
+       on täpselt see, mille järgi SaaS-mockup ära tuntakse. */
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.55);
+  }
+
+  .hero__screen {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  .hero__note {
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  /* Kinnitatud olek istub seadme kohal, mitte veeru ülaservas: kaugel
+     olles ei loeks silt ja telefon enam ühe asjana. */
+  .hero__stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.7rem;
+  }
+
+  /* Ringi ja töötaja märgi juurde, seadmest vasakule. */
+  .hero__marks {
+    position: absolute;
+    left: 0;
+    bottom: 8%;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .hero__marks .hero__note {
+    position: static;
+  }
+
+  /* --- Andmeriba --- */
+
+  .hero__strip {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem clamp(1.25rem, 3vw, 2.75rem);
+    padding: 0.9rem var(--gutter);
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt-sunk);
+  }
+
+  /* --- Kitsas ekraan --- */
+
+  @media (max-width: 900px) {
+    .hero {
+      min-height: auto;
+    }
+
+    .hero__inner {
+      grid-template-columns: 1fr;
+      gap: clamp(1.75rem, 5vh, 2.75rem);
+      padding-top: clamp(1.75rem, 5vh, 2.75rem);
+    }
+
+    .hero__headline {
+      font-size: clamp(2.1rem, 10vw, 4.4rem);
+    }
+
+    .hero__visual {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.1rem;
+      padding-block: 1rem;
+    }
+
+    .hero__plan {
+      left: 50%;
+      width: 165%;
+      transform: translate(-50%, -50%);
+      opacity: 0.45;
+    }
+
+    .hero__device {
+      /* Telefonis on see ainus visuaal — väiksena ei loeks äpi UI enam
+         välja ja kogu mõte läheks kaotsi. */
+      width: min(15.5rem, 62%);
+      max-height: none;
+    }
+
+    /* Sildid lähevad seadme alla ritta — üle pildi laotuna kattuksid nad
+       kitsas ekraanis nii pildi kui üksteisega. */
+    .hero__stack {
+      align-items: center;
+    }
+
+    /* Voogu, mitte absoluutseks: seadme peale laotuna kattusid sildid
+       telefoni alaservaga. */
+    .hero__marks {
+      position: static;
+      transform: none;
+      grid-auto-flow: column;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .hero__strip {
+      gap: 0.4rem 1.25rem;
+    }
+
+    .hero__marks {
+      grid-auto-flow: row;
+      justify-items: center;
+      gap: 0.3rem;
+    }
+  }
+</style>
+
+<script>
+  import { gsap, prefersReducedMotion } from "../../lib/gsap";
+
+  const lines = document.querySelectorAll<HTMLElement>(".hero__line-in");
+  const device = document.querySelector<HTMLElement>(".hero__device");
+  const ring = document.querySelector<SVGCircleElement>(".hero .siteplan__ring");
+  const notes = document.querySelectorAll<HTMLElement>(".hero__note");
+  const strip = document.querySelectorAll<HTMLElement>(".hero__strip > *");
+  const lede = document.querySelector<HTMLElement>(".hero__lede");
+  const cta = document.querySelector<HTMLElement>(".hero__cta");
+
+  if (prefersReducedMotion()) {
+    // Lõppseis kohe. Hero ei tohi sõltuda animatsioonist, et loetav olla.
+    gsap.set([...lines, device, ...notes, ...strip, lede, cta], { clearProps: "all" });
+  } else {
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+    tl.from(lines, { yPercent: 108, duration: 0.9, stagger: 0.075 });
+
+    // Ring joonistub kohale — ainus liikumine plaanil. Töötaja punkt EI
+    // liigu: toode ei jälgi pidevalt (vt SitePlan.astro).
+    if (ring) {
+      const len = ring.getTotalLength();
+      tl.fromTo(
+        ring,
+        { strokeDasharray: len, strokeDashoffset: len },
+        { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut" },
+        0.15
+      );
+    }
+
+    tl.from(device, { opacity: 0, y: 26, duration: 0.8 }, 0.45)
+      .from(lede, { opacity: 0, y: 14, duration: 0.6 }, 0.6)
+      .from(notes, { opacity: 0, duration: 0.5, stagger: 0.09 }, 0.9)
+      .from(cta, { opacity: 0, y: 12, duration: 0.55 }, 0.95)
+      .from(strip, { opacity: 0, duration: 0.4, stagger: 0.05 }, 1.05);
+  }
+</script>

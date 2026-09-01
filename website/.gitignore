@@ -1,0 +1,6 @@
+dist/
+# Ülevaatuspildid (scripts/review-shots.mjs) on arenduse tööriist.
+.review/
+node_modules/
+.astro/
+.DS_Store

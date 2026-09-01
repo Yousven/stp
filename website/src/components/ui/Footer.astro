@@ -1,0 +1,217 @@
+---
+import { site } from "../../config/site";
+import { LEGAL_PAGES } from "../../config/legal";
+import { LOCALES, localePath, t, type Locale } from "../../i18n";
+
+/**
+ * Jalus.
+ *
+ * Minimaalne: mis toode, kes teeb, mis aadress, mis keel. Viie veeruga
+ * ettevõttejalust siin ei ole — meil ei ole viit veergu sisu ja tühjad
+ * lingirubriigid on ainult müra.
+ *
+ * Siin on ka ainus koht lehel, kus juriidiline isik nimetatakse:
+ * `SmartTimePlanning` on toode, `Nutisemud OÜ` on ettevõte selle taga.
+ * Wordmark ja kogu turunduskoopia kannavad tootenime; ettevõtte nimi
+ * esineb ainult autoriõiguse real ja juriidilistel lehtedel.
+ */
+interface Props {
+  locale: Locale;
+  /** Praeguse lehe tee ilma keeleprefiksita — keelevahetus jääb samale lehele. */
+  path?: string;
+}
+const { locale, path = "/" } = Astro.props;
+const d = t(locale);
+const year = new Date().getFullYear();
+---
+
+<footer class="foot">
+  <div class="foot__row">
+    <div class="foot__brand">
+      <span class="foot__mark" aria-hidden="true"></span>
+      <span class="foot__name">{site.vendor.product}</span>
+    </div>
+    <p class="foot__product">{d.footer.product}</p>
+  </div>
+
+  <div class="foot__row foot__row--meta">
+    <a class="hud foot__link" href={site.url}>{site.domain}</a>
+
+    <nav class="foot__legal" aria-label={d.footer.legalNav}>
+      {
+        LEGAL_PAGES.map((page) => (
+          <a class="hud foot__legal-link" href={localePath(locale, page.path)}>
+            {d.footer[page.labelKey]}
+          </a>
+        ))
+      }
+    </nav>
+
+    <nav class="foot__langs" aria-label={d.footer.language}>
+      {
+        LOCALES.map((code) => (
+          <a
+            class:list={["hud", "foot__lang", code === locale && "foot__lang--current"]}
+            href={localePath(code, path)}
+            hreflang={code}
+            aria-current={code === locale ? "true" : undefined}
+            data-analytics="language_change"
+            data-analytics-locale={code}
+          >
+            {t(code).meta.langName}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+
+  <div class="foot__row foot__row--legal">
+    <span class="hud foot__byline">
+      {d.footer.byline(site.vendor.product, site.vendor.legalName)}
+    </span>
+    <span class="hud foot__rights">{d.footer.rights(year, site.vendor.legalName)}</span>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt-sunk);
+    padding: clamp(2.5rem, 7vh, 4rem) var(--gutter);
+    display: grid;
+    gap: clamp(1.5rem, 4vh, 2.5rem);
+  }
+
+  .foot__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.5rem;
+  }
+
+  .foot__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .foot__mark {
+    width: 0.6rem;
+    height: 0.6rem;
+    background: var(--signal);
+  }
+
+  .foot__name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 900;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    color: var(--concrete);
+  }
+
+  .foot__product {
+    margin: 0;
+    color: var(--concrete-dim);
+    font-size: 0.95rem;
+  }
+
+  .foot__row--meta {
+    justify-content: space-between;
+    padding-top: clamp(1.25rem, 3vh, 2rem);
+    border-top: 1px solid var(--hairline);
+  }
+
+  .foot__link {
+    color: var(--signal);
+    text-decoration: none;
+  }
+
+  .foot__link:hover {
+    text-decoration: underline;
+  }
+
+  .foot__langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+
+  .foot__lang {
+    color: var(--concrete-faint);
+    text-decoration: none;
+  }
+
+  .foot__lang:hover {
+    color: var(--concrete);
+  }
+
+  .foot__lang--current {
+    color: var(--concrete);
+  }
+
+  .foot__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+  }
+
+  .foot__legal-link {
+    color: var(--concrete-dim);
+    text-decoration: none;
+  }
+
+  .foot__legal-link:hover {
+    color: var(--concrete);
+    text-decoration: underline;
+  }
+
+  .foot__row--legal {
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .foot__byline,
+  .foot__rights {
+    color: var(--concrete-faint);
+  }
+
+  @media (max-width: 899px) {
+    .foot__row--meta,
+    .foot__row--legal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  }
+</style>
+
+<script>
+  import { motion, MOTION, gsap } from "../../lib/motion";
+
+  /*
+   * Jalus tuleb lõpp-CTA järel rahulikult järele. Ilma selleta lõppes
+   * leht nii, et viimane suur hetk oli animeeritud ja siis kukkus järsku
+   * paigalseisev jalus ette.
+   */
+  motion("footer", ".foot", ({ all, when }) => {
+    when(MOTION, () => {
+      const rows = all(".foot__row");
+      gsap.set(rows, { opacity: 0, y: 12 });
+
+      const tl = gsap.to(rows, {
+        opacity: 1,
+        y: 0,
+        duration: 0.4,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: { trigger: ".foot", start: "top 96%", end: "top 72%", scrub: 0.5 },
+      });
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
+    });
+  });
+</script>

@@ -1,0 +1,331 @@
+---
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S2 — vastandus. Lehe kõige tugevam hetk.
+ *
+ *   10H KIRJAS.  →  5H OBJEKTIL.  →  SEE EI OLE ENAM VÕIMALIK.
+ *
+ * Riba ei ole kaunistus: see näitab täpselt seda väidet, mida tekst ütleb.
+ * Kümme tundi esitatud, viis tõendatud — ja lõpus kaob tõendamata pool ära,
+ * jättes alles ainult selle, mis päriselt kohalolekuga kaetud on.
+ *
+ * Värvid järgivad äpi tähendusi: roheline = kohalolekuga tõendatud, punane
+ * = objektilt väljas. Muuks neid siin ei kasutata.
+ *
+ * TAHTLIKULT ILMA REACTITA. Algne kavand nägi siin ette React-saart, aga
+ * valmis komponent ei kasutanud ühtegi Reacti võimalust — ei olekut ega
+ * efekte peale GSAP-i. React oleks maksnud ~56 kB (gzip) lehe JS-ist, mis
+ * on rohkem kui kogu ülejäänu kokku. Kui mõni sektsioon vajab päriselt
+ * olekut (nt S3 sammuindeks), on `@astrojs/react` endiselt seadistatud.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).proof;
+---
+
+<section class="proof" aria-labelledby="proof-heading">
+  <h2 id="proof-heading" class="visually-hidden">{d.verdict}</h2>
+  <p class="visually-hidden">{d.summary}</p>
+
+  <div class="proof__stage">
+    <div class="proof__lines">
+      <p class="display proof__line proof__line--claimed">{d.claimed}</p>
+      <p class="display proof__line proof__line--actual">{d.actual}</p>
+      <p class="display proof__verdict">{d.verdict}</p>
+    </div>
+
+    <div class="proof__bar" aria-hidden="true">
+      <div class="proof__bar-track">
+        <div class="proof__bar-fill proof__bar-fill--claimed"></div>
+        <div class="proof__bar-fill proof__bar-fill--verified"></div>
+        <div class="proof__bar-fill proof__bar-fill--gap"></div>
+        <div class="proof__ticks">
+          {Array.from({ length: 11 }, () => <span class="proof__tick" />)}
+        </div>
+      </div>
+
+      {/* Tunniskaala teeb ribast mõõteriista, mitte kaunistuse.
+          Numbrid on keeleneutraalsed, seega tõlget ei vaja. */}
+      <div class="proof__scale" aria-hidden="true">
+        {Array.from({ length: 11 }, (_, i) => (
+          <span class="hud proof__scale-mark">{i % 2 === 0 ? i : ""}</span>
+        ))}
+      </div>
+
+      <div class="proof__seg-labels">
+        <span class="hud proof__seg-label proof__seg-label--verified">{d.labelActual} · 5h</span>
+        <span class="hud proof__seg-label proof__seg-label--gap">{d.labelGap} · 5h</span>
+        <span class="hud proof__seg-label proof__seg-label--claimed">{d.labelClaimed} · 10h</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .proof {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    overflow: hidden;
+  }
+
+  .proof__stage {
+    width: 100%;
+    padding: clamp(2.5rem, 6vh, 4.5rem) var(--gutter);
+    display: grid;
+    align-content: center;
+    gap: clamp(1.75rem, 5vh, 3.25rem);
+  }
+
+  /* --- Read --- */
+
+  .proof__lines {
+    display: grid;
+    gap: 0.1em;
+  }
+
+  .proof__line,
+  .proof__verdict {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-style: italic;
+    line-height: 0.84;
+    text-transform: uppercase;
+    letter-spacing: -0.015em;
+  }
+
+  .proof__line {
+    font-size: clamp(2.1rem, 5.8vw, 5.4rem);
+    white-space: nowrap;
+  }
+
+  .proof__line--claimed {
+    color: var(--concrete);
+  }
+
+  /* Roheline = kohalolekuga tõendatud, sama tähendus mis äpis. */
+  .proof__line--actual {
+    color: var(--verified);
+  }
+
+  /* Otsus on lehe suurim tekst — suurem kui hero pealkiri. */
+  .proof__verdict {
+    margin-top: 0.14em;
+    font-size: clamp(2.5rem, 7.6vw, 7.4rem);
+    max-width: 21ch;
+    color: var(--signal);
+  }
+
+  /* --- Riba --- */
+
+  .proof__bar {
+    width: 100%;
+  }
+
+  .proof__bar-track {
+    position: relative;
+    height: clamp(2.75rem, 6vh, 4.25rem);
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+    overflow: hidden;
+  }
+
+  .proof__bar-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+
+  /* Esitatud 10 h: neutraalne taust, mille peale tõendus joonistub. */
+  .proof__bar-fill--claimed {
+    left: 0;
+    width: 100%;
+    background: var(--hairline-strong);
+  }
+
+  .proof__bar-fill--verified {
+    left: 0;
+    width: 50%;
+    background: var(--verified);
+  }
+
+  /* Tõendamata pool — punane, sama tähendus mis äpis: objektilt väljas. */
+  .proof__bar-fill--gap {
+    left: 50%;
+    width: 50%;
+    background: var(--stopped);
+  }
+
+  .proof__ticks {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .proof__tick {
+    width: 1px;
+    background: var(--asphalt);
+    opacity: 0.55;
+  }
+
+  .proof__tick:first-child,
+  .proof__tick:last-child {
+    opacity: 0;
+  }
+
+  /* Tunniskaala teeb ribast mõõteriista, mitte kaunistuse. */
+  .proof__scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.45rem;
+    color: var(--concrete-faint);
+  }
+
+  .proof__scale-mark {
+    /* Nullilaiune märk istub täpselt tiki kohal ja skaala ei nihku. */
+    width: 0;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  .proof__seg-labels {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.9rem;
+  }
+
+  .proof__seg-label--verified {
+    color: var(--verified);
+  }
+
+  .proof__seg-label--gap {
+    color: var(--stopped);
+  }
+
+  .proof__seg-label--claimed {
+    color: var(--concrete-faint);
+    text-align: right;
+  }
+
+  @media (max-width: 899px) {
+    .proof__line {
+      /* Kitsas ekraanis peab rida murduma; nowrap ajaks selle üle serva. */
+      white-space: normal;
+      font-size: clamp(2.1rem, 11vw, 3.8rem);
+    }
+
+    .proof__verdict {
+      font-size: clamp(2.4rem, 13vw, 4.6rem);
+      max-width: 13ch;
+    }
+
+    .proof__seg-labels {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+    }
+
+    .proof__seg-label--claimed {
+      text-align: left;
+    }
+
+    /* Skaala jääb kitsas ekraanis liiga tihedaks — riba ise räägib ära. */
+    .proof__scale {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { gsap, ScrollTrigger } from "../../lib/gsap";
+
+  const section = document.querySelector<HTMLElement>(".proof");
+
+  if (section) {
+    const mm = gsap.matchMedia();
+
+    const build = (endDistance: string) => {
+      const claimed = ".proof__line--claimed";
+      const actual = ".proof__line--actual";
+      const verdict = ".proof__verdict";
+
+      // Algseis seatakse JS-ist, mitte CSS-ist: ilma JS-ita ja liikumise
+      // vähendamisel peab sektsioon olema lõppseisus loetav.
+      gsap.set([claimed, actual, verdict], { opacity: 0, yPercent: 12 });
+      gsap.set(".proof__bar-fill", { scaleX: 0, transformOrigin: "left center" });
+      gsap.set(".proof__seg-label", { opacity: 0 });
+
+      const tl = gsap.timeline({
+        defaults: { ease: "none" },
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: endDistance,
+          pin: true,
+          scrub: 1,
+          anticipatePin: 1,
+        },
+      });
+
+      // 1. Esitatud tunnid: neutraalne, ilma hinnanguta.
+      tl.to(claimed, { opacity: 1, yPercent: 0, duration: 0.12 })
+        .to(".proof__bar-fill--claimed", { scaleX: 1, duration: 0.14 }, "<")
+        .to(".proof__seg-label--claimed", { opacity: 1, duration: 0.08 }, "<0.06")
+
+        // 2. Tõendatud pool — roheline, sama tähendus mis äpis.
+        .to(actual, { opacity: 1, yPercent: 0, duration: 0.12 }, 0.22)
+        .to(".proof__bar-fill--verified", { scaleX: 1, duration: 0.14 }, "<")
+        .to(".proof__seg-label--verified", { opacity: 1, duration: 0.08 }, "<0.06")
+
+        // 3. Vahe: see osa, mille kohta tõendit ei ole.
+        .to(".proof__bar-fill--gap", { scaleX: 1, duration: 0.12 }, 0.42)
+        .to(".proof__seg-label--gap", { opacity: 1, duration: 0.08 }, "<0.04")
+
+        // 4. Hoia — lugejal peab olema aega vastandus omaks võtta.
+        .to({}, { duration: 0.16 })
+
+        // 5. Esimesed kaks rida taanduvad.
+        .to([claimed, actual], { opacity: 0.22, duration: 0.1 }, 0.72)
+
+        // 6. Otsus. Tõendamata pool kaob — mitte ei tuhmu, vaid kaob.
+        .to(verdict, { opacity: 1, yPercent: 0, duration: 0.14 }, 0.78)
+        .to(".proof__bar-fill--gap", { scaleX: 0, duration: 0.12, ease: "power2.in" }, 0.8)
+        .to(".proof__seg-label--gap", { opacity: 0, duration: 0.06 }, 0.8)
+        .to(".proof__bar-fill--claimed", { opacity: 0.15, duration: 0.1 }, 0.8);
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
+    };
+
+    mm.add("(min-width: 900px) and (prefers-reduced-motion: no-preference)", () => build("+=200%"));
+
+    // Mobiilis lühem kerimisteekond: sama jutustus, aga pinnitud sektsioon
+    // puuteseadmes ei tohi tunduda kinnijäänuna.
+    mm.add("(max-width: 899px) and (prefers-reduced-motion: no-preference)", () => build("+=120%"));
+
+    // Liikumise vähendamisel EI pinnita ega scrub'i: kõik on korraga näha
+    // ja sektsioon on tavaline leheosa.
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set([".proof__line--claimed", ".proof__line--actual", ".proof__verdict", ".proof__seg-label"], {
+        opacity: 1,
+        yPercent: 0,
+      });
+      gsap.set(".proof__bar-fill", { scaleX: 1, transformOrigin: "left center" });
+      ScrollTrigger.refresh();
+    });
+  }
+</script>

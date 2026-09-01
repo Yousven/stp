@@ -14,8 +14,14 @@ arvutatakse objektil viibitud intervallide summana.
 |---|---|
 | [`api/`](api/README.md) | Node.js + TypeScript + Express + Prisma REST API, MySQL |
 | [`mobile/`](mobile/README.md) | React + TypeScript + Vite SPA, Capacitoriga Android/iOS äpp |
+| [`website/`](website/README.md) | Avalik turundusveeb — Astro, TypeScript, GSAP |
 
-Mõlemas kaustas on oma README seadistuse, arenduse ja deploy juhistega.
+Igas kaustas on oma README seadistuse, arenduse ja deploy juhistega.
+
+Turundusveeb (`stp.nutisemud.ee`) on ülejäänust **sõltumatu** — ei impordi
+`api/`-st ega `mobile/`-ist, ei lähe API Docker-image'i sisse ja tal on oma
+deploy. Kasutajate loomine ja sisselogimine jäävad olemasolevasse
+lahendusse; veeb ainult suunab sinna.
 
 ## Keeled
 

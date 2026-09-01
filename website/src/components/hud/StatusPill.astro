@@ -1,0 +1,51 @@
+---
+/**
+ * Olekumärgis: kohalolek kinnitatud / kell käib.
+ *
+ * Roheline tähendab siin sama, mida äpis — töötab, kinnitatud. Muuks seda
+ * värvi ei kasutata (vt CLAUDE.md).
+ */
+interface Props {
+  text: string;
+  tone?: "verified" | "stopped";
+  class?: string;
+}
+const { text, tone = "verified", class: className = "" } = Astro.props;
+---
+
+<span class:list={["pill", `pill--${tone}`, className]}>
+  <span class="pill__dot" aria-hidden="true"></span>
+  {text}
+</span>
+
+<style>
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6ch;
+    font-family: var(--font-mono);
+    font-size: var(--hud-size);
+    letter-spacing: var(--hud-tracking);
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+
+  .pill--verified {
+    color: var(--verified);
+  }
+
+  .pill--stopped {
+    color: var(--stopped);
+  }
+
+  .pill__dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+</style>

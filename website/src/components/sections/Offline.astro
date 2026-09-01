@@ -1,0 +1,249 @@
+---
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S7 — päris töömaa: levi kaob.
+ *
+ * Siin EI OLE tootekaadrit. Ühenduseta olekut ei õnnestunud päris
+ * rakendusest usaldusväärselt jäädvustada (brauseris annab võrgu
+ * katkestamine dev-serveri veaehe, mitte äpi enda vaate), ja pigem
+ * tehniline kompositsioon kui joonistatud võlts-UI. Vt ASSETS.md.
+ *
+ * Sektsioon on tahtlikult MADAL — pärast kahte suurt plokki on vaja
+ * rütmis hingetõmmet, mitte kolmandat täisekraani.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).offline;
+
+/** Olekuvärvid järgivad äpi tähendusi. */
+const tones = ["stopped", "muted", "muted", "verified"] as const;
+---
+
+<section class="offline" aria-labelledby="offline-heading">
+  <div class="offline__head">
+    <span class="hud offline__label">{d.sectionLabel}</span>
+    <h2 id="offline-heading" class="display offline__heading">
+      {d.heading.map((line) => <span class="offline__heading-line">{line}</span>)}
+    </h2>
+    <p class="prose offline__body">{d.body}</p>
+  </div>
+
+  <ol class="offline__states">
+    {
+      d.states.map((state, i) => (
+        <li class:list={["offline__state", `offline__state--${tones[i]}`]}>
+          {/* Joon eraldi elemendina, et ta saaks kerides tekkida. */}
+          <span class="offline__state-rule" aria-hidden="true" />
+          <span class="hud offline__state-index">{String(i + 1).padStart(2, "0")}</span>
+          <span class="offline__state-label">{state.label}</span>
+          <span class="offline__state-note">{state.note}</span>
+        </li>
+      ))
+    }
+  </ol>
+
+  <p class="offline__caveat">{d.caveat}</p>
+</section>
+
+<style>
+  .offline {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(3.5rem, 9vh, 6rem) var(--gutter);
+  }
+
+  .offline__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--gutter);
+    align-items: end;
+  }
+
+  .offline__label {
+    color: var(--signal);
+    grid-column: 1 / -1;
+  }
+
+  .offline__heading {
+    font-size: clamp(2.1rem, 4.2vw, 3.9rem);
+    margin: 0.75rem 0 0;
+  }
+
+  .offline__heading-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .offline__body {
+    margin: 0 0 0.4rem;
+    max-width: 40ch;
+  }
+
+  /* --- Olekute jada --- */
+
+  .offline__states {
+    list-style: none;
+    margin: clamp(2rem, 5vh, 3rem) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+  }
+
+  .offline__state {
+    position: relative;
+    display: grid;
+    gap: 0.55rem;
+    align-content: start;
+    padding-top: 0.85rem;
+  }
+
+  .offline__state-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: var(--hairline-strong);
+    transform-origin: left center;
+  }
+
+  .offline__state-index {
+    color: var(--concrete-faint);
+  }
+
+  .offline__state-label {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .offline__state-note {
+    color: var(--concrete-dim);
+    font-size: 0.95rem;
+    max-width: 32ch;
+  }
+
+  /* Punane = ühendus kadunud, roheline = kinnitatud. Vahepealsed on
+     neutraalsed: "järjekorras" ei ole ei viga ega õnnestumine. */
+  .offline__state--stopped .offline__state-rule {
+    background: var(--stopped);
+  }
+  .offline__state--stopped .offline__state-label {
+    color: var(--stopped);
+  }
+
+  .offline__state--muted .offline__state-label {
+    color: var(--concrete);
+  }
+
+  .offline__state--verified .offline__state-rule {
+    background: var(--verified);
+  }
+  .offline__state--verified .offline__state-label {
+    color: var(--verified);
+  }
+
+  .offline__caveat {
+    margin: clamp(2rem, 5vh, 3rem) 0 0;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--hairline);
+    color: var(--concrete-dim);
+    max-width: 62ch;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 899px) {
+    .offline__head {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    .offline__heading {
+      font-size: clamp(1.9rem, 8.5vw, 3.2rem);
+    }
+
+    .offline__heading-line {
+      white-space: normal;
+    }
+
+    .offline__states {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S7 — hingetõmme (intensiivsus ~30 %).
+   *
+   * Pärast S6 tehnilist jada ei tohi tulla kolmas suur plokk. Siin liigub
+   * ainult nelja oleku jada: joon tekib, silt ja selgitus tulevad järele.
+   * Taust ja pealkiri on peaaegu paigal. Vaikus on siin sisu, mitte viga.
+   */
+  motion("offline", ".offline", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const headLines = all(".offline__heading-line");
+      const body = q(".offline__body");
+      const states = all(".offline__state");
+      const caveat = q(".offline__caveat");
+
+      hideLines(headLines);
+      gsap.set(body, { opacity: 0, y: 12 * k });
+      gsap.set(caveat, { opacity: 0 });
+
+      const head = gsap.timeline({
+        scrollTrigger: { trigger: ".offline__head", start: "top 86%", end: "top 52%", scrub: 0.5 },
+        defaults: { ease: "power2.out" },
+      });
+      head
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.12 })
+        .to(body, { opacity: 1, y: 0, duration: 0.35 }, 0.25);
+
+      // Neli olekut: ühendus kaob → järjekord → saadetud → kinnitatud.
+      const seq = gsap.timeline({
+        scrollTrigger: { trigger: ".offline__states", start: "top 88%", end: "bottom 76%", scrub: 0.7 },
+        defaults: { ease: "power2.out" },
+      });
+      states.forEach((state, i) => {
+        const rule = state.querySelector(".offline__state-rule");
+        const rest = state.querySelectorAll(".offline__state-index, .offline__state-label, .offline__state-note");
+        drawX(rule);
+        gsap.set(rest, { opacity: 0, y: 8 * k });
+
+        const at = i * 0.24;
+        seq.to(rule, { scaleX: 1, duration: 0.35 }, at).to(
+          rest,
+          { opacity: 1, y: 0, duration: 0.3, stagger: 0.05 },
+          at + 0.1,
+        );
+      });
+
+      const tail = gsap.to(caveat, {
+        opacity: 1,
+        duration: 0.4,
+        ease: "none",
+        scrollTrigger: { trigger: caveat, start: "top 94%", end: "top 76%", scrub: 0.5 },
+      });
+
+      return () => {
+        [head, seq, tail].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

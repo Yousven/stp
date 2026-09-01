@@ -1,0 +1,14 @@
+---
+import LegalPage from "../../components/legal/LegalPage.astro";
+import { LOCALES, DEFAULT_LOCALE, isLocale } from "../../i18n";
+
+/** Eesti elab juurpolgul, seega teda siin ei ole. */
+export function getStaticPaths() {
+  return LOCALES.filter((code) => code !== DEFAULT_LOCALE).map((code) => ({ params: { lang: code } }));
+}
+
+const { lang } = Astro.params;
+if (!isLocale(lang)) throw new Error(`Tundmatu keel: ${lang}`);
+---
+
+<LegalPage locale={lang} slug="contact" />

@@ -1,0 +1,135 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { site } from "../../config/site";
+import { LEGAL_PAGES } from "../../config/legal";
+import { localePath, t, type Locale } from "../../i18n";
+
+/**
+ * Juriidiline leht — privaatsus, tingimused, kontakt.
+ *
+ * SISU EI OLE KINNITATUD ja leht ütleb seda ise välja. Väljamõeldud
+ * tingimusi ega väljamõeldud rekvisiite siin ei avaldata: registrikood,
+ * KMKR, aadress, telefon ja e-post tulevad `site.legal`-ist ja on praegu
+ * kõik `null`, seega neid ridu lihtsalt ei renderdata.
+ *
+ * Lehed on olemas ainult selleks, et jaluse lingid ei viiks 404-le.
+ * Nad on `noindex`, sest kinnitamata teksti ei ole mõtet indekseerida.
+ * Vt LAUNCH.md — lõpliku teksti lisamine on avaldamise blokeerija.
+ */
+interface Props {
+  locale: Locale;
+  slug: "privacy" | "terms" | "contact";
+}
+const { locale, slug } = Astro.props;
+const d = t(locale);
+
+const page = LEGAL_PAGES.find((p) => p.slug === slug);
+if (!page) throw new Error(`Tundmatu juriidiline leht: ${slug}`);
+
+const heading = d.legal[page.titleKey] as string;
+const company = site.vendor.legalName;
+const body = slug === "contact" ? d.legal.contactPending(company) : d.legal.pendingBody(company);
+
+/** Ainult need read, mille väärtus on päriselt teada. */
+const details = [
+  { label: d.legal.company, value: company },
+  { label: d.legal.registryCode, value: site.legal.registryCode },
+  { label: d.legal.vatNumber, value: site.legal.vatNumber },
+  { label: d.legal.email, value: site.legal.email },
+  { label: d.legal.phone, value: site.legal.phone },
+  { label: d.legal.address, value: site.legal.address },
+].filter((row): row is { label: string; value: string } => Boolean(row.value));
+---
+
+<BaseLayout
+  locale={locale}
+  path={page.path}
+  title={`${heading} — ${site.vendor.product}`}
+  description={body}
+  noindex
+>
+  <article class="legal">
+    <span class="hud legal__label">{d.legal.pendingLabel}</span>
+    <h1 class="display legal__heading">{heading}</h1>
+    <p class="legal__body">{body}</p>
+
+    <dl class="legal__details">
+      {
+        details.map((row) => (
+          <div class="legal__detail">
+            <dt class="hud legal__detail-label">{row.label}</dt>
+            <dd class="legal__detail-value">{row.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <a class="hud legal__back" href={localePath(locale)}>{d.legal.back}</a>
+  </article>
+</BaseLayout>
+
+<style>
+  .legal {
+    /* Nav on kleepuv ja 72 px kõrge — sisu ei tohi selle alla jääda. */
+    padding: clamp(6rem, 18vh, 10rem) var(--gutter) clamp(4rem, 12vh, 8rem);
+    max-width: 46rem;
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+  }
+
+  .legal__label {
+    color: var(--signal);
+  }
+
+  .legal__heading {
+    font-size: clamp(2.2rem, 6vw, 4.4rem);
+    margin: 0;
+  }
+
+  .legal__body {
+    margin: 0;
+    color: var(--concrete-dim);
+    max-width: 60ch;
+  }
+
+  .legal__details {
+    margin: clamp(1rem, 3vh, 2rem) 0 0;
+    padding: clamp(1rem, 3vh, 1.5rem) 0 0;
+    border-top: 1px solid var(--hairline);
+    display: grid;
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .legal__detail {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .legal__detail-label {
+    color: var(--concrete-faint);
+  }
+
+  .legal__detail-value {
+    margin: 0;
+    color: var(--concrete);
+  }
+
+  .legal__back {
+    margin-top: clamp(1.5rem, 4vh, 2.5rem);
+    color: var(--signal);
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 0.15rem;
+  }
+
+  @media (max-width: 599px) {
+    .legal__detail {
+      grid-template-columns: 1fr;
+      gap: 0.15rem;
+    }
+  }
+</style>

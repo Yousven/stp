@@ -1,0 +1,403 @@
+---
+import { Image } from "astro:assets";
+import billingShot from "../../assets/app/desktop-billing.png";
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S8 — tunnist arveni.
+ *
+ * Ahel on lehe selgroog ka siin: kontrollitud tunnid → tööliik → hind →
+ * arve. Kolm reeglit all on need, mida süsteem päriselt teeb ja mida
+ * turundusjutt kõige kergemini valesti ütleks:
+ *
+ *   - hinnata töö EI ole tasuta töö (jääb arvelt välja, loetakse eraldi)
+ *   - sama tundi ei arveldata kaks korda
+ *   - arve on hetktõmmis, mitte elav raport
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).billing;
+---
+
+<section class="bill" id="billing" aria-labelledby="bill-heading">
+  <div class="bill__head">
+    <span class="hud bill__label">{d.sectionLabel}</span>
+    <h2 id="bill-heading" class="display bill__heading">
+      {d.heading.map((line) => <span class="bill__heading-line">{line}</span>)}
+    </h2>
+  </div>
+
+  <!-- Ahel: neli lüli, mitte neli kaarti. Rada näitab, kust andmed
+       tulevad ja kuhu lähevad. -->
+  <div class="bill__flow-track">
+    <span class="bill__flow-progress" aria-hidden="true"></span>
+    <ol class="bill__flow">
+      {
+        d.flow.map((step, i) => (
+          <li class:list={["bill__flow-item", i === 0 && "bill__flow-item--start", i === d.flow.length - 1 && "bill__flow-item--end"]}>
+            <span class="hud bill__flow-index">{String(i + 1).padStart(2, "0")}</span>
+            <span class="bill__flow-name">{step}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+
+  <div class="bill__main">
+    <figure class="bill__shot">
+      <div class="bill__crop">
+        <Image
+          src={billingShot}
+          alt={d.caption}
+          widths={[800, 1200, 1800]}
+          sizes="(max-width: 900px) 150vw, 58vw"
+          loading="lazy"
+        />
+      </div>
+      <figcaption class="hud bill__caption">{d.caption}</figcaption>
+    </figure>
+
+    <div class="bill__side">
+      <p class="bill__body">{d.body}</p>
+      <ul class="bill__rules">
+        {
+          d.rules.map((rule) => (
+            <li class="bill__rule">
+              <span class="bill__rule-line" aria-hidden="true" />
+              <h3 class="bill__rule-title">{rule.title}</h3>
+              <p class="bill__rule-body">{rule.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .bill {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(4rem, 12vh, 8rem) var(--gutter) clamp(4rem, 10vh, 7rem);
+  }
+
+  .bill__head {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .bill__label {
+    color: var(--signal);
+  }
+
+  .bill__heading {
+    font-size: clamp(2.1rem, 5.6vw, 5.2rem);
+    margin: 0;
+  }
+
+  .bill__heading-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* --- Ahel --- */
+
+  .bill__flow-track {
+    position: relative;
+    margin: clamp(2rem, 5vh, 3rem) 0 0;
+  }
+
+  /* Andmete tee läbi ahela. Ilma JS-ita täies pikkuses, ehk ahela ülemine joon. */
+  .bill__flow-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--signal);
+    transform-origin: left center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bill__flow {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+
+  .bill__flow-item {
+    background: var(--asphalt-sunk);
+    padding: clamp(0.9rem, 2.2vh, 1.4rem) clamp(0.85rem, 2vw, 1.35rem);
+    display: grid;
+    gap: 0.45rem;
+    position: relative;
+  }
+
+  .bill__flow-item + .bill__flow-item::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-top: 1px solid var(--signal);
+    border-right: 1px solid var(--signal);
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: var(--asphalt-sunk);
+  }
+
+  .bill__flow-index {
+    color: var(--concrete-faint);
+  }
+
+  .bill__flow-name {
+    font-weight: 600;
+    color: var(--concrete);
+    font-size: 0.95rem;
+  }
+
+  /* Esimene lüli on kontrollitud tunnid — roheline, sama tähendus mis
+     mujal. Viimane on arve — signaalvärv, sest see on tulemus. */
+  .bill__flow-item--start .bill__flow-name {
+    color: var(--verified);
+  }
+
+  .bill__flow-item--end .bill__flow-name {
+    color: var(--signal);
+  }
+
+  /* --- Tõmmis ja reeglid --- */
+
+  .bill__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    margin-top: clamp(2rem, 5vh, 3rem);
+    align-items: start;
+  }
+
+  .bill__shot {
+    margin: 0;
+  }
+
+  /* Sama lagi mis S4-s: 1150 px on tõmmise sisuveerg 1:1. */
+  .bill__crop {
+    overflow: hidden;
+    border: 1px solid var(--hairline-strong);
+    background: var(--asphalt-sunk);
+    aspect-ratio: 16 / 11;
+    max-width: 1150px;
+  }
+
+  /* Külgmenüü kärbitakse välja: vaataja jaoks on tähtis tabel, mitte
+     navigatsioon. Sama mõõdetud arvutus mis S4-s — kärbe 290, sisuveerg
+     1150, seega 125,2 % laius ja 25,2 % nihe. */
+  .bill__crop :global(img) {
+    display: block;
+    width: 125.2%;
+    height: auto;
+    margin-left: -25.2%;
+    margin-top: -2%;
+  }
+
+  .bill__caption {
+    display: block;
+    margin-top: 0.6rem;
+    color: var(--concrete-faint);
+  }
+
+  .bill__body {
+    margin: 0;
+    color: var(--concrete-dim);
+    max-width: 44ch;
+  }
+
+  .bill__rules {
+    list-style: none;
+    margin: clamp(1.5rem, 4vh, 2.25rem) 0 0;
+    padding: 0;
+    display: grid;
+    gap: clamp(1.1rem, 3vh, 1.75rem);
+  }
+
+  .bill__rule {
+    position: relative;
+    padding-top: 0.9rem;
+  }
+
+  .bill__rule-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: var(--hairline-strong);
+  }
+
+  .bill__rule-title {
+    margin: 0 0 0.4rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--concrete);
+  }
+
+  .bill__rule-body {
+    margin: 0;
+    color: var(--concrete-dim);
+    font-size: 0.97rem;
+    max-width: 46ch;
+  }
+
+  /* --- Kitsas ekraan --- */
+
+  @media (max-width: 899px) {
+    .bill__heading {
+      font-size: clamp(1.9rem, 8.5vw, 3.2rem);
+    }
+
+    .bill__heading-line {
+      white-space: normal;
+    }
+
+    .bill__flow {
+      grid-template-columns: 1fr;
+    }
+
+    .bill__flow-progress {
+      width: 2px;
+      height: 100%;
+      transform-origin: center top;
+    }
+
+    .bill__flow-item + .bill__flow-item::before {
+      left: 1.4rem;
+      top: -1px;
+      transform: translate(-50%, -50%) rotate(135deg);
+    }
+
+    .bill__main {
+      grid-template-columns: 1fr;
+    }
+
+    .bill__crop {
+      aspect-ratio: 16 / 12;
+    }
+
+    .bill__crop :global(img) {
+      width: 240%;
+      margin-left: -66%;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S8 — konveier (intensiivsus ~70 %).
+   *
+   * Pärast S7 vaikust võtab tempo tagasi üles. Ahel EI ole neli kasti,
+   * mis ükshaaval ilmuvad: rada jookseb kontrollitud tundidest arveni ja
+   * lülid süttivad siis, kui rada nendeni jõuab.
+   *
+   * Numbreid siin ei animeerita. Hinnata tund ei tohi kunagi näidata
+   * teel olevat "0 €" — see oleks vale ka ühe kaadri jooksul.
+   */
+  motion("billing", ".bill", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const headLines = all(".bill__heading-line");
+      const label = q(".bill__label");
+      const progress = q(".bill__flow-progress");
+      const flow = all(".bill__flow-item");
+      const crop = q(".bill__crop");
+      const shot = q(".bill__crop img");
+      const caption = q(".bill__caption");
+      const body = q(".bill__body");
+      const rules = all(".bill__rule");
+
+      hideLines(headLines);
+      gsap.set(label, { opacity: 0, x: -10 });
+      /* Sama põhimõte mis S6-s: kast jääb, sisu tuleb nullist — 18 %
+         läbipaistvusega tekst ei ole loetav ega läbi kontrastikontrolli. */
+      const flowContents = flow.map((item) =>
+        Array.from(item.querySelectorAll<HTMLElement>(".bill__flow-index, .bill__flow-name")),
+      );
+      gsap.set(flowContents.flat(), { opacity: 0, y: 10 * k });
+      gsap.set(progress, wide ? { scaleX: 0 } : { scaleY: 0 });
+      // Paljastus vasakult paremale — teine liigutus kui S4-s, et kaks
+      // tootekaadrit ei tuleks ekraanile ühtemoodi.
+      gsap.set(crop, { clipPath: "inset(0% 100% 0% 0%)" });
+      gsap.set([caption, body], { opacity: 0, y: 14 * k });
+
+      const head = gsap.timeline({
+        scrollTrigger: { trigger: ".bill__head", start: "top 86%", end: "top 46%", scrub: 0.5 },
+        defaults: { ease: "power2.out" },
+      });
+      head
+        .to(label, { opacity: 1, x: 0, duration: 0.3 })
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.15 }, 0.08);
+
+      const pipeline = gsap.timeline({
+        scrollTrigger: { trigger: ".bill__flow-track", start: "top 86%", end: "bottom 70%", scrub: 0.7 },
+      });
+      pipeline.to(progress, { [wide ? "scaleX" : "scaleY"]: 1, duration: 1, ease: "none" }, 0);
+      flowContents.forEach((parts, i) => {
+        pipeline.to(
+          parts,
+          { opacity: 1, y: 0, duration: 0.26, stagger: 0.05, ease: "power2.out" },
+          (i / flowContents.length) * 0.95,
+        );
+      });
+
+      const shotTl = gsap.timeline({
+        scrollTrigger: { trigger: ".bill__shot", start: "top 86%", end: "top 44%", scrub: 0.6 },
+        defaults: { ease: "power2.out" },
+      });
+      shotTl
+        .to(crop, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.7 })
+        .to(caption, { opacity: 1, y: 0, duration: 0.3 }, 0.5);
+
+      const drift = gsap.to(shot, {
+        yPercent: -3.5,
+        ease: "none",
+        scrollTrigger: { trigger: ".bill__main", start: "top bottom", end: "bottom top", scrub: true },
+      });
+
+      const side = gsap.timeline({
+        scrollTrigger: { trigger: ".bill__side", start: "top 88%", end: "bottom 72%", scrub: 0.6 },
+        defaults: { ease: "power2.out" },
+      });
+      side.to(body, { opacity: 1, y: 0, duration: 0.35 });
+      rules.forEach((rule, i) => {
+        const line = rule.querySelector(".bill__rule-line");
+        const title = rule.querySelector(".bill__rule-title");
+        const text = rule.querySelector(".bill__rule-body");
+        drawX(line);
+        gsap.set([title, text], { opacity: 0, y: 10 * k });
+
+        const at = 0.25 + i * 0.22;
+        side
+          .to(line, { scaleX: 1, duration: 0.4 }, at)
+          .to([title, text], { opacity: 1, y: 0, duration: 0.3, stagger: 0.06 }, at + 0.1);
+      });
+
+      return () => {
+        [head, pipeline, shotTl, drift, side].forEach((a) => {
+          a.scrollTrigger?.kill();
+          a.kill();
+        });
+      };
+    });
+  });
+</script>

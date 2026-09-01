@@ -1,0 +1,106 @@
+---
+/**
+ * Objekti plaan: geofence'i piir ja töötaja asukoht selle sees.
+ *
+ * TAHTLIKULT LIIKUMATU. Toode ei jälgi töötajat pidevalt — OS äratab äpi
+ * ainult piiri ületamisel — ja liikuv punkt kaardil oleks nii vale kui ka
+ * müügiargumendina kahjulik: see teeks tootest jälgimisseadme. Ainus
+ * liikumine siin on ringi joonistumine lehe avamisel.
+ *
+ * See ei ole kaart. Mõõdistusjoonise keel on aus (me ei teeskle
+ * satelliidipilti) ja sobib HUD-tüpograafiaga kokku.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className = "" } = Astro.props;
+---
+
+<svg
+  class:list={["siteplan", className]}
+  viewBox="0 0 600 600"
+  fill="none"
+  aria-hidden="true"
+  focusable="false"
+>
+  <defs>
+    <pattern id="sp-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" stroke="currentColor" stroke-width="0.5" opacity="0.18" />
+    </pattern>
+  </defs>
+
+  <rect width="600" height="600" fill="url(#sp-grid)" class="siteplan__grid" />
+
+  <!-- Objekti krundi kontuur — nurgeline, nagu katastriüksus. -->
+  <path
+    class="siteplan__plot"
+    d="M148 190 L300 132 L455 196 L470 372 L322 452 L160 388 Z"
+    stroke="currentColor"
+    stroke-width="1"
+    opacity="0.35"
+  />
+
+  <!-- Geofence: raadius, mille sees tööpäeva alustamine on lubatud. -->
+  <circle class="siteplan__ring" cx="300" cy="292" r="176" stroke-width="1.5" />
+  <circle class="siteplan__ring-inner" cx="300" cy="292" r="176" stroke-width="1" />
+
+  <!-- Raadiuse mõõtjoon. -->
+  <g class="siteplan__radius">
+    <line x1="300" y1="292" x2="476" y2="292" stroke-width="1" stroke-dasharray="4 5" />
+    <line x1="476" y1="284" x2="476" y2="300" stroke-width="1" />
+  </g>
+
+  <!-- Töötaja asukoht: üks paigalseisev punkt ringi SEES. -->
+  <g class="siteplan__worker">
+    <line x1="238" y1="330" x2="278" y2="330" stroke-width="1" />
+    <line x1="322" y1="330" x2="362" y2="330" stroke-width="1" />
+    <line x1="300" y1="268" x2="300" y2="308" stroke-width="1" />
+    <line x1="300" y1="352" x2="300" y2="392" stroke-width="1" />
+    <circle cx="300" cy="330" r="7" class="siteplan__worker-dot" />
+    <circle cx="300" cy="330" r="15" stroke-width="1" class="siteplan__worker-halo" />
+  </g>
+</svg>
+
+<style>
+  .siteplan {
+    color: var(--concrete);
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .siteplan__grid,
+  .siteplan__plot {
+    color: var(--hairline-strong);
+  }
+
+  .siteplan__ring {
+    stroke: var(--signal);
+    opacity: 0.9;
+  }
+
+  .siteplan__ring-inner {
+    stroke: var(--signal);
+    opacity: 0.25;
+    stroke-dasharray: 2 10;
+  }
+
+  .siteplan__radius line {
+    stroke: var(--concrete-faint);
+  }
+
+  /* Töötaja on objektil — seega roheline, sama tähendus mis äpis. */
+  .siteplan__worker line {
+    stroke: var(--verified);
+    opacity: 0.8;
+  }
+
+  .siteplan__worker-dot {
+    fill: var(--verified);
+  }
+
+  .siteplan__worker-halo {
+    stroke: var(--verified);
+    opacity: 0.6;
+  }
+</style>

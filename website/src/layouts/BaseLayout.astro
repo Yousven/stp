@@ -1,0 +1,159 @@
+---
+import "../styles/global.css";
+import { site } from "../config/site";
+import Nav from "../components/ui/Nav.astro";
+import Footer from "../components/ui/Footer.astro";
+import Analytics from "../components/ui/Analytics.astro";
+import { HTML_LANG, LOCALES, localePath, t, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+  /** Tee ilma keeleprefiksita. Juhib canonical'i, hreflang'i ja keelevahetust. */
+  path?: string;
+  /** Ülekirjutab `meta.title` — juriidilised lehed ja 404. */
+  title?: string;
+  description?: string;
+  /** Kinnitamata sisuga lehed ei kuulu indeksisse. */
+  noindex?: boolean;
+  /** Structured data lisatakse ainult avalehele. */
+  structuredData?: boolean;
+}
+const {
+  locale,
+  path = "/",
+  title,
+  description,
+  noindex = false,
+  structuredData = false,
+} = Astro.props;
+const d = t(locale);
+
+const pageTitle = title ?? d.meta.title;
+const pageDescription = description ?? d.meta.description;
+const canonical = new URL(localePath(locale, path), site.url).href;
+
+/**
+ * Structured data.
+ *
+ * Ainult kontrollitud väljad: toote nimi, pakkuja ja hind tulevad
+ * `site.config`-ist, mis omakorda kattub API koodiga (`PRICE_PER_SEAT_EUR`,
+ * `TRIAL_DAYS`). Hinnanguid, arvustusi ega reitinguid siia EI panda —
+ * neid ei ole olemas.
+ *
+ * Toode ja ettevõte on eraldi: `SoftwareApplication` on SmartTimePlanning,
+ * `provider` / `publisher` on Nutisemud OÜ.
+ */
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: site.vendor.product,
+  alternateName: site.vendor.short,
+  applicationCategory: "BusinessApplication",
+  applicationSubCategory: "Time tracking",
+  operatingSystem: "iOS, Android, Web",
+  url: site.url,
+  inLanguage: LOCALES.map((code) => HTML_LANG[code]),
+  description: pageDescription,
+  provider: {
+    "@type": "Organization",
+    name: site.vendor.legalName,
+    url: site.url,
+  },
+  offers: {
+    "@type": "Offer",
+    price: String(site.pricing.pricePerSeatEur),
+    priceCurrency: site.pricing.currency,
+    category: "Subscription",
+    // Hind on kasutaja kohta kuus — schema.org väljendab seda
+    // `UnitPriceSpecification`-i kaudu, mitte vabatekstina.
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: String(site.pricing.pricePerSeatEur),
+      priceCurrency: site.pricing.currency,
+      unitText: "user",
+      billingDuration: 1,
+      billingIncrement: 1,
+      referenceQuantity: {
+        "@type": "QuantitativeValue",
+        value: 1,
+        unitCode: "MON",
+      },
+    },
+  },
+};
+
+/**
+ * Display-fondi eellaadimine käib keele järgi: kirillitsa lehel ei ole
+ * mõtet latin-subsetti eellaadida ja vastupidi. Ainult display saab
+ * preloadi — see on ekraani esimene asi ja peab kohe õige olema.
+ */
+const displaySubset = locale === "ru" || locale === "uk" ? "cyrillic" : "latin";
+const displayFont = `/fonts/sofia-sans-condensed-${displaySubset}-wght-italic.woff2`;
+---
+
+<!doctype html>
+<html lang={HTML_LANG[locale]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+
+    {
+      LOCALES.map((code) => (
+        <link
+          rel="alternate"
+          hreflang={code}
+          href={new URL(localePath(code, path), site.url).href}
+        />
+      ))
+    }
+    <link rel="alternate" hreflang="x-default" href={new URL(localePath("et", path), site.url).href} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <link rel="preload" as="font" type="font/woff2" href={displayFont} crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={site.vendor.product} />
+    <meta property="og:locale" content={HTML_LANG[locale].replace("-", "_")} />
+    {
+      LOCALES.filter((code) => code !== locale).map((code) => (
+        <meta property="og:locale:alternate" content={HTML_LANG[code].replace("-", "_")} />
+      ))
+    }
+    <meta property="og:image" content={new URL("/og.png", site.url).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={d.meta.ogAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={new URL("/og.png", site.url).href} />
+    <meta name="twitter:image:alt" content={d.meta.ogAlt} />
+
+    <meta name="theme-color" content="#0b0b0d" />
+
+    {
+      structuredData && (
+        <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />
+      )
+    }
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">{d.nav.skipToContent}</a>
+    <Nav locale={locale} path={path} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer locale={locale} path={path} />
+    <Analytics />
+  </body>
+</html>

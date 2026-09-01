@@ -1,0 +1,125 @@
+@import "./fonts.css";
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--asphalt);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--asphalt);
+  color: var(--concrete);
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  /* Pinnitud sektsioonid arvutavad kõrgusi kerimisel; horisontaalne
+     ülevool tekiks siis nähtavaks ribaks. */
+  overflow-x: hidden;
+}
+
+/* --- Tüpograafia --- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-style: italic;
+  line-height: 0.84;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  /* Condensed raskes kaalus vajab optilist tasakaalustust, muidu jäävad
+     sõnavahed suureks ja plokk laguneb. */
+  word-spacing: -0.04em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.hud {
+  font-family: var(--font-mono);
+  font-size: var(--hud-size);
+  letter-spacing: var(--hud-tracking);
+  text-transform: uppercase;
+  color: var(--concrete-dim);
+  font-weight: 500;
+}
+
+.prose {
+  max-width: var(--measure);
+  color: var(--concrete-dim);
+}
+
+a {
+  color: inherit;
+}
+
+/*
+ * Ankrunavigatsioon kleepuva ribaga.
+ *
+ * Ilma selleta jääks #how, #admin, #billing ja #pricing sihtkoha ülemine
+ * serv riba alla peitu. `scroll-margin-top` on ainsana õige koht seda
+ * parandada — JS-iga nihutamine läheks kerimisanimatsioonidega tülli.
+ */
+:target,
+section[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+/* --- Ligipääsetavus --- */
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100%;
+  z-index: 100;
+  background: var(--signal);
+  color: var(--asphalt);
+  padding: 0.6rem 1rem;
+  font-family: var(--font-mono);
+  font-size: var(--hud-size);
+  letter-spacing: var(--hud-tracking);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/*
+ * Liikumise vähendamine. GSAP-i pool on lahendatud lib/gsap.ts-s
+ * (pin ja scrub ära, lõppseis kohe) — siin on CSS-i pool.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

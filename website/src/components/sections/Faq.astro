@@ -1,0 +1,243 @@
+---
+import { t, type Locale } from "../../i18n";
+
+/**
+ * S10a — küsimused.
+ *
+ * Natiivne `<details>` / `<summary>`: klaviatuurilt kasutatav, töötab ilma
+ * JS-ita ja ekraanilugeja teab ise, mis on lahti ja mis kinni. Omakirjutatud
+ * akordion oleks siin ainult võimalus midagi katki teha.
+ *
+ * Vastused tulevad päris toote loogikast. Midagi, mida repos ei ole, siin
+ * ei lubata.
+ */
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const d = t(locale).faq;
+---
+
+<section class="faq" aria-labelledby="faq-heading">
+  <header class="faq__head">
+    <span class="hud faq__label">{d.sectionLabel}</span>
+    <h2 id="faq-heading" class="display faq__heading">
+      {d.heading.map((line) => <span class="faq__heading-line">{line}</span>)}
+    </h2>
+  </header>
+
+  <div class="faq__list">
+    {
+      d.items.map((item, i) => (
+        <details class="faq__item" open={i === 0}>
+          <summary class="faq__q">
+            <span class="hud faq__num">{String(i + 1).padStart(2, "0")}</span>
+            <span class="faq__q-text">{item.q}</span>
+            <span class="faq__sign" aria-hidden="true" />
+            {/* Eraldaja elab `summary` sees, sest ta peab jääma nähtavaks
+                ka siis, kui vastus on kinni. Absoluutne asetus võtab ta
+                grid-voost välja ja seob `.faq__item` servaga. */}
+            <span class="faq__rule" aria-hidden="true" />
+          </summary>
+          <p class="faq__a">{item.a}</p>
+        </details>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .faq {
+    border-top: 1px solid var(--hairline);
+    background: var(--asphalt);
+    padding: clamp(4rem, 12vh, 8rem) var(--gutter) clamp(4rem, 10vh, 7rem);
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  .faq__head {
+    display: grid;
+    gap: 0.9rem;
+    position: sticky;
+    top: clamp(1.5rem, 8vh, 5rem);
+  }
+
+  .faq__label {
+    color: var(--signal);
+  }
+
+  .faq__heading {
+    font-size: clamp(2.1rem, 5vw, 4.6rem);
+    margin: 0;
+  }
+
+  .faq__heading-line {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .faq__list {
+    border-top: 1px solid var(--hairline);
+  }
+
+  .faq__item {
+    position: relative;
+  }
+
+  .faq__rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--hairline);
+    transform-origin: left center;
+  }
+
+  .faq__q {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 1.5rem;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: clamp(1rem, 2.5vh, 1.5rem) 0;
+    cursor: pointer;
+    list-style: none;
+    color: var(--concrete);
+  }
+
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq__num {
+    color: var(--concrete-faint);
+  }
+
+  .faq__q-text {
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    font-weight: 600;
+  }
+
+  /* Pluss/miinus joontest, ilma ikooniteegita. */
+  .faq__sign {
+    position: relative;
+    width: 0.85rem;
+    height: 0.85rem;
+    justify-self: end;
+    align-self: center;
+  }
+
+  .faq__sign::before,
+  .faq__sign::after {
+    content: "";
+    position: absolute;
+    background: var(--signal);
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  }
+
+  .faq__sign::before {
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1.5px;
+    transform: translateY(-50%);
+  }
+
+  .faq__sign::after {
+    top: 0;
+    left: 50%;
+    width: 1.5px;
+    height: 100%;
+    transform: translateX(-50%);
+  }
+
+  .faq__item[open] .faq__sign::after {
+    transform: translateX(-50%) scaleY(0);
+    opacity: 0;
+  }
+
+  .faq__a {
+    margin: 0 0 clamp(1rem, 2.5vh, 1.5rem);
+    padding-left: 3.25rem;
+    color: var(--concrete-dim);
+    max-width: 58ch;
+  }
+
+  @media (max-width: 899px) {
+    .faq {
+      grid-template-columns: 1fr;
+    }
+
+    .faq__head {
+      position: static;
+    }
+
+    .faq__heading {
+      font-size: clamp(1.9rem, 8.5vw, 3.2rem);
+    }
+
+    .faq__heading-line {
+      white-space: normal;
+    }
+
+    .faq__q {
+      grid-template-columns: 2rem 1fr 1.25rem;
+      gap: 0.5rem;
+    }
+
+    .faq__a {
+      padding-left: 2.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq__sign::before,
+    .faq__sign::after {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { motion, DESKTOP, NARROW, gsap, hideLines, drawX, UNMASKED } from "../../lib/motion";
+
+  /*
+   * S10a — küsimused.
+   *
+   * Igal real EI ole oma trigger'it: see oleks kümme trigger'it selleks,
+   * et näidata teksti, mille kasutaja niikuinii lahti klõpsab. Sektsiooni
+   * sissetulek on üks jada — pealkiri, read, jooned.
+   */
+  motion("faq", ".faq", ({ q, all, when }) => {
+    when({ wide: DESKTOP, narrow: NARROW }, (self) => {
+      const wide = !!self.conditions?.wide;
+      const k = wide ? 1 : 0.6;
+
+      const headLines = all(".faq__heading-line");
+      const label = q(".faq__label");
+      const items = all(".faq__item");
+      const rules = all(".faq__rule");
+
+      hideLines(headLines);
+      drawX(rules);
+      gsap.set(label, { opacity: 0, x: -10 });
+      gsap.set(items, { opacity: 0, y: 16 * k });
+
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: ".faq", start: "top 84%", end: "top 34%", scrub: 0.6 },
+        defaults: { ease: "power2.out" },
+      });
+      tl.to(label, { opacity: 1, x: 0, duration: 0.3 })
+        .to(headLines, { ...UNMASKED, duration: 0.5, stagger: 0.14 }, 0.08)
+        .to(items, { opacity: 1, y: 0, duration: 0.4, stagger: 0.09 }, 0.2)
+        .to(rules, { scaleX: 1, duration: 0.45, stagger: 0.09 }, 0.28);
+
+      return () => {
+        tl.scrollTrigger?.kill();
+        tl.kill();
+      };
+    });
+  });
+</script>
