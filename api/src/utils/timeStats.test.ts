@@ -453,3 +453,38 @@ test("mitu käiku liidetakse kokku", () => {
   assert.equal(state.presentMsBefore, 6 * HOUR_MS);
   assert.deepEqual(state.since, H(15));
 });
+
+// --- Negatiivsed tunnid ---
+
+test("lõuna ei saa teha tööpäeva negatiivseks", () => {
+  // Päris juhtum: nelja minuti pikkusele tööpäevale oli märgitud 30 min
+  // lõunat, mis andis -0,43 h ja jõudis kuu kokkuvõttesse negatiivse
+  // palgana. Vale lõuna ei tähenda, et töötaja võlgneb aega.
+  const start = new Date(2026, 8, 1, 8, 0, 0);
+  const end = new Date(2026, 8, 1, 8, 4, 0);
+  const result = computeWorkedHours({ startTime: start, endTime: end, lunch: 0.5 });
+  assert.equal(result.net, 0);
+  assert.equal(result.gross, 0.07);
+});
+
+test("lõuna ei saa teha negatiivseks ka kohaloleku sündmustega päeva", () => {
+  const start = new Date(2026, 8, 1, 8, 0, 0);
+  const end = new Date(2026, 8, 1, 9, 0, 0);
+  const result = computeWorkedHours({
+    startTime: start,
+    endTime: end,
+    lunch: 2,
+    presenceEvents: [
+      { type: "ENTER", occurredAt: start },
+      { type: "EXIT", occurredAt: new Date(2026, 8, 1, 8, 30, 0) },
+    ],
+  });
+  assert.equal(result.net, 0);
+});
+
+test("tavaline lõuna arvatakse endiselt maha", () => {
+  const start = new Date(2026, 8, 1, 8, 0, 0);
+  const end = new Date(2026, 8, 1, 16, 0, 0);
+  const result = computeWorkedHours({ startTime: start, endTime: end, lunch: 0.5 });
+  assert.equal(result.net, 7.5);
+});

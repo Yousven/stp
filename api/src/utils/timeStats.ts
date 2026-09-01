@@ -147,7 +147,7 @@ export function computeWorkedHours(log: WorkLogLike, now: Date = new Date()): Wo
 
   if (events.length === 0) {
     return {
-      net: round2(gross - lunch),
+      net: round2(nonNegative(gross - lunch)),
       gross: round2(gross),
       awayHours: 0,
       openLimitReached,
@@ -179,7 +179,7 @@ export function computeWorkedHours(log: WorkLogLike, now: Date = new Date()): Wo
 
   const awayHours = Math.max(gross - presentHours, 0);
   return {
-    net: round2(presentHours - lunch),
+    net: round2(nonNegative(presentHours - lunch)),
     gross: round2(gross),
     awayHours: round2(awayHours),
     openLimitReached,
@@ -189,6 +189,19 @@ export function computeWorkedHours(log: WorkLogLike, now: Date = new Date()): Wo
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Töötatud tunde ei saa olla vähem kui null.
+ *
+ * Lõuna lahutatakse kohalolekust, aga miski ei taganud, et lõuna oleks
+ * kohalolekust lühem: nelja minuti pikkusele tööpäevale märgitud 30 min
+ * lõunat andis -0,43 h. See läks otse kuu kokkuvõttesse ja sealt palka —
+ * negatiivsed teenitud eurod. Liiga pikk lõuna tähendab, et lõuna on
+ * valesti sisestatud, mitte et töötaja võlgneb tööandjale aega.
+ */
+function nonNegative(hours: number): number {
+  return Math.max(hours, 0);
 }
 
 // --- Ületunnid ---
