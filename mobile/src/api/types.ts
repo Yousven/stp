@@ -183,6 +183,8 @@ export interface AdminUser {
 
 export type AbsenceType = "vacation" | "sick" | "unpaid" | "other";
 
+export type AbsenceStatus = "pending" | "approved" | "rejected";
+
 export interface Absence {
   id: number;
   userId: number;
@@ -191,7 +193,21 @@ export interface Absence {
   startDate: string;
   endDate: string;
   comment: string | null;
+  /**
+   * Haldur sisestab kohe `approved`; töötaja taotlus algab `pending`-ina.
+   * AINULT `approved` vähendab kuu töötundide normi.
+   */
+  status: AbsenceStatus;
+  decidedAt: string | null;
+  /** Halduri põhjendus, eelkõige tagasilükkamisel. */
+  decisionComment: string | null;
   user: { id: number; username: string };
+}
+
+export interface AbsencesResponse {
+  absences: Absence[];
+  /** Ootel taotluste arv (adminile kogu ettevõte, töötajale enda omad). */
+  pending: number;
 }
 
 export interface WorkType {

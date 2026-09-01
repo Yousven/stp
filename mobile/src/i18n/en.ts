@@ -153,8 +153,8 @@ export const en: Dictionary = {
   absences: {
     title: "Absences",
     employeeIntro:
-      "These are your absences. An absence lowers your monthly hours target, so a week of holiday no longer shows " +
-      "as a shortfall.",
+      "Your absences and requests. Submit a request and your manager will approve or reject it. " +
+      "An approved absence lowers the monthly hour target, so a holiday week no longer shows as a shortfall.",
     employee: "Worker",
     type: "Type",
     start: "Start",
@@ -165,6 +165,19 @@ export const en: Dictionary = {
     addFailed: "Could not add the absence.",
     usersLoadFailed: "Could not load users.",
     confirmDelete: (name: string, from: string, to: string) => `Delete ${name}'s absence ${from} – ${to}?`,
+    request: "Submit a request",
+    requestSubmit: "Submit request",
+    pendingCount: (n: number) => `${n} pending requests`,
+    statusPending: "Pending",
+    statusApproved: "Approved",
+    statusRejected: "Rejected",
+    approve: "Approve",
+    reject: "Reject",
+    withdraw: "Withdraw",
+    rejectReason: "Reason (optional)",
+    decidedBy: "Manager's comment",
+    confirmWithdraw: "Withdraw this request?",
+    decisionFailed: "Saving the decision failed.",
     types: {
       vacation: "Holiday",
       sick: "Sick leave",

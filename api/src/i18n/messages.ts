@@ -60,6 +60,8 @@ export const et = {
   },
 
   absences: {
+    alreadyDecided: "Taotlus on juba otsustatud.",
+    cannotWithdraw: "Saad tagasi võtta ainult oma ootel taotluse.",
     notFound: "Puudumist ei leitud.",
     overlapping: (from: string, to: string) => `Sellel töötajal on juba puudumine perioodil ${from} – ${to}.`,
   },
@@ -160,6 +162,8 @@ export const en: Messages = {
   },
 
   absences: {
+    alreadyDecided: "This request has already been decided.",
+    cannotWithdraw: "You can only withdraw your own pending request.",
     notFound: "Absence not found.",
     overlapping: (from: string, to: string) => `This worker already has an absence for ${from} – ${to}.`,
   },
@@ -257,6 +261,8 @@ export const ru: Messages = {
   },
 
   absences: {
+    alreadyDecided: "Заявка уже рассмотрена.",
+    cannotWithdraw: "Отозвать можно только свою заявку в ожидании.",
     notFound: "Отсутствие не найдено.",
     overlapping: (from: string, to: string) => `У этого работника уже есть отсутствие за период ${from} – ${to}.`,
   },
@@ -354,6 +360,8 @@ export const uk: Messages = {
   },
 
   absences: {
+    alreadyDecided: "Заявку вже розглянуто.",
+    cannotWithdraw: "Відкликати можна лише свою заявку в очікуванні.",
     notFound: "Відсутність не знайдено.",
     overlapping: (from: string, to: string) => `У цього працівника вже є відсутність за період ${from} – ${to}.`,
   },

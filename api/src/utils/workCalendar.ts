@@ -46,7 +46,15 @@ export async function absentWorkDaysInMonth(
   const endStr = toDateString(end);
 
   const absences = await prisma.absence.findMany({
-    where: { userId, startDate: { lte: endStr }, endDate: { gte: startStr } },
+    where: {
+      userId,
+      // AINULT kinnitatud puudumine vähendab normi. Ootel taotlus ei tohi
+      // seda teha — muidu näeks töötaja end kuuülevaates juba puhkusel,
+      // kuigi keegi ei ole midagi kinnitanud.
+      status: "approved",
+      startDate: { lte: endStr },
+      endDate: { gte: startStr },
+    },
     select: { startDate: true, endDate: true },
   });
   if (absences.length === 0) return 0;

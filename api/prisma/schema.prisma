@@ -177,10 +177,28 @@ model Absence {
   createdById    Int      @map("created_by_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
+  /**
+   * "approved" | "pending" | "rejected"
+   *
+   * Vaikeväärtus on `approved`, sest haldur sisestab puudumise otsuse
+   * järel — tema kirje ongi kinnitatud fakt. `pending` tekib ainult
+   * töötaja enda taotlusest.
+   *
+   * NORMI VÄHENDAB AINULT `approved`. Ootel taotlus ei tohi kuu normi
+   * muuta: siis näeks töötaja end kuuülevaates juba puhkusel, kuigi
+   * keegi ei ole midagi kinnitanud.
+   */
+  status          String    @default("approved") @db.VarChar(20)
+  decidedAt       DateTime? @map("decided_at")
+  decidedById     Int?      @map("decided_by_id")
+  /** Halduri põhjendus, eelkõige tagasilükkamisel. */
+  decisionComment String?   @map("decision_comment") @db.Text
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, startDate, endDate])
   @@index([userId])
+  @@index([organizationId, status])
   @@map("absences")
 }
 

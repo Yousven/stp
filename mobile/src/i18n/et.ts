@@ -157,8 +157,8 @@ export const et = {
   absences: {
     title: "Puudumised",
     employeeIntro:
-      "Siin on sinu puudumised. Puudumine vähendab kuu töötundide normi, seega puhkusenädal ei näita " +
-      "kuuülevaates enam puudujääki.",
+      "Siin on sinu puudumised ja taotlused. Esita taotlus ja haldur kinnitab või lükkab selle tagasi. " +
+      "Kinnitatud puudumine vähendab kuu töötundide normi, seega puhkusenädal ei näita kuuülevaates puudujääki.",
     employee: "Töötaja",
     type: "Liik",
     start: "Algus",
@@ -169,6 +169,19 @@ export const et = {
     addFailed: "Puudumise lisamine ebaõnnestus.",
     usersLoadFailed: "Kasutajate laadimine ebaõnnestus.",
     confirmDelete: (name: string, from: string, to: string) => `Kustutada ${name} puudumine ${from} – ${to}?`,
+    request: "Esita taotlus",
+    requestSubmit: "Esita taotlus",
+    pendingCount: (n: number) => `${n} ootel taotlust`,
+    statusPending: "Ootel",
+    statusApproved: "Kinnitatud",
+    statusRejected: "Tagasi lükatud",
+    approve: "Kinnita",
+    reject: "Lükka tagasi",
+    withdraw: "Võta tagasi",
+    rejectReason: "Põhjendus (valikuline)",
+    decidedBy: "Halduri kommentaar",
+    confirmWithdraw: "Võtta taotlus tagasi?",
+    decisionFailed: "Otsuse salvestamine ebaõnnestus.",
     types: {
       vacation: "Puhkus",
       sick: "Haigusleht",

@@ -157,8 +157,8 @@ export const ru: Dictionary = {
   absences: {
     title: "Отсутствия",
     employeeIntro:
-      "Здесь ваши отсутствия. Отсутствие снижает месячную норму часов, поэтому неделя отпуска больше не выглядит " +
-      "как недоработка.",
+      "Ваши отсутствия и заявки. Подайте заявку, и руководитель её подтвердит или отклонит. " +
+      "Подтверждённое отсутствие снижает месячную норму часов, поэтому неделя отпуска больше не выглядит как недоработка.",
     employee: "Работник",
     type: "Вид",
     start: "Начало",
@@ -169,6 +169,19 @@ export const ru: Dictionary = {
     addFailed: "Не удалось добавить отсутствие.",
     usersLoadFailed: "Не удалось загрузить пользователей.",
     confirmDelete: (name: string, from: string, to: string) => `Удалить отсутствие ${name} ${from} – ${to}?`,
+    request: "Подать заявку",
+    requestSubmit: "Подать заявку",
+    pendingCount: (n: number) => `${n} заявок в ожидании`,
+    statusPending: "В ожидании",
+    statusApproved: "Подтверждено",
+    statusRejected: "Отклонено",
+    approve: "Подтвердить",
+    reject: "Отклонить",
+    withdraw: "Отозвать",
+    rejectReason: "Причина (необязательно)",
+    decidedBy: "Комментарий руководителя",
+    confirmWithdraw: "Отозвать заявку?",
+    decisionFailed: "Не удалось сохранить решение.",
     types: {
       vacation: "Отпуск",
       sick: "Больничный",

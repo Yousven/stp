@@ -103,7 +103,14 @@ export async function runRemindersOnce(): Promise<void> {
             // Puhkusel/haiguslehel olija ei tohi saada "registreerimata"
             // meeldetuletust — see oli originaali käitumine ja tekitaks
             // põhjendamatuid teateid nii töötajale kui adminile.
-            absences: { none: { startDate: { lte: date }, endDate: { gte: date } } },
+            //
+            // AINULT KINNITATUD puudumine vaigistab meeldetuletuse. Ootel
+            // taotlus ei tohi seda teha: siis saaks igaüks meeldetuletused
+            // vaikima panna, esitades taotluse, mida keegi ei kinnita.
+            // Tagasi lükatud taotlus ammugi mitte.
+            absences: {
+              none: { status: "approved", startDate: { lte: date }, endDate: { gte: date } },
+            },
           },
           select: { id: true, username: true },
         });

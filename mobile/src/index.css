@@ -627,6 +627,14 @@ button {
   border-left: 4px solid var(--warning);
 }
 
+/* Nupurida kirje all (kinnita / lükka tagasi / kustuta). Murrab kitsal
+   ekraanil ise ridadesse — objektiäpis on nupud suured. */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .stat-list {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -181,3 +181,32 @@ export function notifySecurityAlert(alert: {
     "kahtlase tegevuse teavitus"
   );
 }
+
+/** Uus puudumistaotlus → ettevõtte adminid. */
+export function notifyAbsenceRequest(organizationId: number, username: string, absenceId: number) {
+  fireAndForget(
+    (async () => {
+      const adminIds = await orgAdminIds(organizationId);
+      await sendPushToUsers(adminIds, {
+        title: "Uus puudumistaotlus",
+        body: `${username} esitas puudumistaotluse.`,
+        data: { route: "/absences", absenceId: String(absenceId) },
+      });
+    })(),
+    "puudumistaotluse teavitus"
+  );
+}
+
+/** Taotlus kinnitatud või tagasi lükatud → taotlejale. */
+export function notifyAbsenceDecision(userId: number, approved: boolean, period: string) {
+  fireAndForget(
+    sendPushToUsers([userId], {
+      title: approved ? "Puudumine kinnitatud" : "Puudumine tagasi lükatud",
+      body: approved
+        ? `Sinu puudumine ${period} on kinnitatud.`
+        : `Sinu puudumistaotlus ${period} lükati tagasi.`,
+      data: { route: "/absences" },
+    }),
+    "puudumise otsuse teavitus"
+  );
+}
