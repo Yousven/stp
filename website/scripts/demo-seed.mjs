@@ -54,6 +54,15 @@ export const DEMO = {
  * Kõrvalmõju: kellaajad tõmmistel sõltuvad sellest, mis kell capture't
  * jooksutati. Kõige loomulikumad ajad saab, kui teha tõmmised tööajal.
  */
+/** ISO-ajatemplist ainult kuupäev (puudumised on päevatäpsusega). */
+const dateOnly = (iso) => iso.slice(0, 10);
+
+/**
+ * Töötaja "oma" seade. Ilma selleta ei ole tööpäeval alustamise seadet ja
+ * teisest seadmest tulnud sündmus ei tekita märget — võrrelda ei ole millega.
+ */
+const PRIMARY_DEVICE = "demo-tootaja-telefon-0001";
+
 const openStart = (hoursBack) => new Date(Date.now() - hoursBack * 3600_000).toISOString();
 
 const daysAgo = (d, hour) => {
@@ -63,12 +72,16 @@ const daysAgo = (d, hour) => {
   return t.toISOString();
 };
 
-async function call(path, { method = "GET", body, token } = {}) {
+async function call(path, { method = "GET", body, token, deviceId } = {}) {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // Seadme tuvastus. Demoandmetes on see vajalik selleks, et saaks
+      // tekitada PÄRIS seadmemärke — mitte käsitsi andmebaasi kirjutatud
+      // rida, vaid selle, mille tegelik tuvastusloogika ise tekitab.
+      ...(deviceId ? { "X-Device-Id": deviceId } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -225,6 +238,7 @@ export async function seedDemo() {
     const site = DEMO.sites[f.obj];
     const log = await call("/time-logs/start", {
       method: "POST",
+      deviceId: PRIMARY_DEVICE,
       body: {
         objectId: objects[f.obj].id,
         latitude: site.lat + 0.0002,
@@ -281,6 +295,7 @@ export async function seedDemo() {
   const onSiteToken = await login(DEMO.workers[0].username);
   const onSiteLog = await call("/time-logs/start", {
     method: "POST",
+    deviceId: PRIMARY_DEVICE,
     body: {
       objectId: objects[0].id,
       latitude: DEMO.site.lat + 0.0002,
@@ -295,6 +310,7 @@ export async function seedDemo() {
   const awayToken = await login(DEMO.workers[1].username);
   const awayLog = await call("/time-logs/start", {
     method: "POST",
+    deviceId: PRIMARY_DEVICE,
     body: {
       objectId: objects[0].id,
       latitude: DEMO.site.lat + 0.0002,
@@ -325,12 +341,81 @@ export async function seedDemo() {
     token: awayToken,
   });
 
+  /*
+   * --- Puudumised: kinnitatud + ootel taotlus ---
+   *
+   * Kaks olekut, sest just neid on vaja näidata: haldur sisestab
+   * kinnitatud puudumise, töötaja esitab taotluse, mis jääb ootele.
+   */
+  const absences = [];
+  try {
+    absences.push(
+      await call("/absences", {
+        method: "POST",
+        token: admin,
+        body: {
+          userId: workers[2].id,
+          type: "vacation",
+          startDate: dateOnly(daysAgo(-21, 9)),
+          endDate: dateOnly(daysAgo(-25, 9)),
+          comment: "Suvepuhkus",
+        },
+      })
+    );
+    const requesterToken = await login(DEMO.workers[0].username);
+    absences.push(
+      await call("/absences", {
+        method: "POST",
+        token: requesterToken,
+        body: {
+          type: "sick",
+          userId: workers[0].id,
+          startDate: dateOnly(daysAgo(-3, 9)),
+          endDate: dateOnly(daysAgo(-4, 9)),
+          comment: "Perearsti juurde",
+        },
+      })
+    );
+  } catch (err) {
+    // Kordusjooksul on puudumised juba olemas (kattuvuse kontroll) —
+    // see ei ole viga.
+    if (!String(err.message).includes("409")) throw err;
+  }
+
+  /*
+   * --- Seadmemärge ---
+   *
+   * Saadame kohaloleku sündmuse TEISEST seadmest kui see, kus tööpäev
+   * algas. Märke tekitab tegelik tuvastusloogika, mitte see skript —
+   * nii on demo see, mida toode päriselt teeb.
+   */
+  try {
+    const awayTokenForAlert = await login(DEMO.workers[1].username);
+    await call(`/time-logs/${awayLog.id}/presence-events`, {
+      method: "POST",
+      token: awayTokenForAlert,
+      deviceId: "demo-teine-seade-0002",
+      body: {
+        events: [
+          {
+            type: "EXIT",
+            occurredAt: new Date(Date.now() - 30 * 60_000).toISOString(),
+            source: "foreground",
+          },
+        ],
+      },
+    });
+  } catch {
+    // Märke tekitamine ei ole demoandmete jaoks kriitiline.
+  }
+
   return {
     invoice,
     objects,
     workTypes,
     workers,
     client,
+    absences,
     onSiteLog,
     awayLog,
     onSiteUser: DEMO.workers[0].username,

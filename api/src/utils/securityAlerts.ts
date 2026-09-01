@@ -17,9 +17,7 @@ export type SecurityAlertType =
   /** Sündmused tulevad teisest seadmest kui see, kus tööpäev algas. */
   | "device_mismatch"
   /** Seade teatas, et asukoht on võltsitud. */
-  | "mock_location"
-  /** Seadme kell on serveri omast oluliselt nihkes. */
-  | "clock_drift";
+  | "mock_location";
 
 export interface RaiseAlertInput {
   organizationId: number;
@@ -71,8 +69,6 @@ export async function raiseSecurityAlert(input: RaiseAlertInput): Promise<void> 
   }
 }
 
-/** Kellanihe, millest alates tekib märge (sekundites). */
-export const CLOCK_DRIFT_ALERT_SECONDS = 15 * 60;
 
 /**
  * Kas tegevus tuleb teisest seadmest kui see, kus tööpäev algas?

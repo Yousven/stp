@@ -203,13 +203,22 @@ Mõeldud eelkõige **karussellina** (Facebook / Instagram), kus inimene
 kerib slaidilt slaidile ja saab voost aru ilma ühtegi sõna lugemata.
 Poe-mõõt (1290 × 2796) on olemas selleks ajaks, kui äpp poodi läheb.
 
+**Karussell (voog):**
+
 | Slaid | Ekraan | Ütleb |
 |---|---|---|
 | `01-alusta` | Alusta tööpäeva | Asukoht kontrollitakse enne alustamist |
-| `02-kell-kaib` | Tööpäev käib | Tunnid koguvad ainult objektil |
+| `02-kell-kaib` | Tööpäev käib | Tunnid koguvad ainult objektil, tänane jaotus kohe näha |
 | `03-kell-peatub` | Objektilt eemal | Lahkumine peatab kella ise |
 | `04-tunnid-kirjas` | Tööajalugu | Iga päev koos objekti ja tundidega |
-| `05-proovi` | — | Hind ja CTA |
+| `07-proovi` | — | Hind ja CTA |
+
+**Eraldi kuulutused** (ei ole karusselli osa, seetõttu ilma punktideta):
+
+| Slaid | Ekraan | Ütleb |
+|---|---|---|
+| `05-puudumised` | Puudumised | Töötaja taotleb, haldur kinnitab |
+| `06-margis` | Märge avalehel | Kui keegi kasutab su kontot, saad teada |
 
 ## Karusselli põhitekst
 
@@ -250,7 +259,22 @@ Kui kasutad slaide eraldi kuulutustena, mitte karussellina:
 > Objekt, kellaajad ja tunnid nädalate kaupa. Kuu lõpus ei ole vaja
 > kellegi mälu usaldada.
 
-**05 — Proovi tasuta**
+**05 — Puudumine: taotle ja saa vastus**
+
+> Töötaja esitab puudumistaotluse äpist, haldur kinnitab või lükkab
+> tagasi koos põhjendusega. Kinnitatud puudumine vähendab kuu normi,
+> ootel taotlus mitte.
+
+**06 — Kui keegi kasutab su kontot**
+
+> Tööpäev seotakse seadmega, milles ta algas. Kui kirje tuleb teisest
+> seadmest, saavad nii töötaja kui haldur teate. Tööpäev jääb kehtima —
+> see on märge kontrollimiseks, mitte blokeering.
+>
+> Aus piir: kui inimene annab oma telefoni kolleegile, ei tuvasta seda
+> ükski asukohapõhine süsteem.
+
+**07 — Proovi tasuta**
 
 > 5 € kasutaja kohta kuus. iOS, Android ja arvutiliides brauseris.
 > Neli keelt: eesti, inglise, vene, ukraina. Esimesed 14 päeva tasuta.
@@ -269,3 +293,41 @@ Kui kasutad slaide eraldi kuulutustena, mitte karussellina:
 esimese klikiga pettub. CTA on sama mis lehel: *Proovi tasuta*,
 aadressilt `stp.nutisemud.ee`. Kui äpp poodi jõuab, muuda seda skriptis
 ühes kohas ja tee komplekt uuesti.
+
+---
+
+## Kaadrid on PÄRIS äpist
+
+`app/` komplekti telefonipildid ei ole joonistatud ega vanad — nad
+tehakse päris rakendusest demoandmetega:
+
+```bash
+# 1. kohalik demo-andmebaas (MITTE time_tracking)
+colima start
+cd api && docker compose up -d
+docker exec api-mysql-1 mysql -uroot -pdevrootpassword \
+  -e "CREATE DATABASE IF NOT EXISTS stp_demo; GRANT ALL ON stp_demo.* TO 'app'@'%'; FLUSH PRIVILEGES;"
+DATABASE_URL="mysql://app:devpassword@localhost:3306/stp_demo" npx prisma db push
+DATABASE_URL="mysql://app:devpassword@localhost:3306/stp_demo" npm run prisma:seed
+DATABASE_URL="mysql://app:devpassword@localhost:3306/stp_demo" REMINDERS_ENABLED=false npm run dev
+
+# 2. neutraalsed demoandmed (sh puudumistaotlus ja päris seadmemärge)
+cd ../website && node scripts/demo-seed.mjs
+
+# 3. äpp selle API vastu
+echo 'VITE_API_BASE_URL="http://localhost:3000/api"' > ../mobile/.env.development.local
+npm --prefix ../mobile run dev
+
+# 4. kaadrid + reklaamid
+node scripts/capture-app-ui.mjs
+node scripts/app-ads.mjs
+
+# 5. KORISTA
+rm ../mobile/.env.development.local
+docker exec api-mysql-1 mysql -uroot -pdevrootpassword -e "DROP DATABASE stp_demo;"
+```
+
+Seadmemärge demoandmetes tekib **tegeliku tuvastusloogika kaudu**:
+seeme saadab kohaloleku sündmuse teisest seadmest kui see, kus tööpäev
+algas. Käsitsi andmebaasi kirjutatud rida näitaks reklaamis midagi, mida
+toode ei pruugi teha.

@@ -100,6 +100,24 @@ const shots = [
     geo: GEO,
     desc: "tööajalugu nädalate kaupa",
   },
+  {
+    name: "mobile-absences",
+    user: DEMO.workers[0].username,
+    path: "/absences",
+    viewport: MOBILE,
+    geo: GEO,
+    desc: "puudumised: kinnitatud ja ootel taotlus",
+  },
+  {
+    name: "mobile-alert",
+    // Sellel töötajal on päris seadmemärge — sündmus tuli teisest
+    // seadmest kui see, kus tööpäev algas.
+    user: DEMO.workers[1].username,
+    path: "/dashboard",
+    viewport: MOBILE,
+    geo: GEO_AWAY,
+    desc: "kahtlase tegevuse märge töötaja avalehel",
+  },
 
   // --- Arvuti (admin) ---
   {

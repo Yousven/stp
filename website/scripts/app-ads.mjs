@@ -32,6 +32,8 @@ const shots = {
   active: await uri(`${WEB}src/assets/app/mobile-active.png`, "image/png"),
   away: await uri(`${WEB}src/assets/app/mobile-away.png`, "image/png"),
   history: await uri(`${WEB}src/assets/app/mobile-history.png`, "image/png"),
+  absences: await uri(`${WEB}src/assets/app/mobile-absences.png`, "image/png"),
+  alert: await uri(`${WEB}src/assets/app/mobile-alert.png`, "image/png"),
 };
 
 /** Allikkaadri mõõdud — kärpe arvutuse alus. */
@@ -104,7 +106,7 @@ const slides = [
     title: `Kell käib,<br>kui oled <span class="verified">kohal.</span>`,
     lead: "Tunnid koguvad ainult objektil viibitud aja pealt.",
     shot: shots.active,
-    crop: 0.78,
+    crop: 0.88,
   },
   {
     id: "03-kell-peatub",
@@ -112,7 +114,7 @@ const slides = [
     title: `Lahkud —<br><span class="stopped">kell peatub.</span>`,
     lead: "Ise. Keegi ei pea midagi vajutama ega meeles pidama.",
     shot: shots.away,
-    crop: 0.78,
+    crop: 0.72,
   },
   {
     id: "04-tunnid-kirjas",
@@ -123,7 +125,25 @@ const slides = [
     crop: 0.92,
   },
   {
-    id: "05-proovi",
+    id: "05-puudumised",
+    step: "Lisaks",
+    title: `Puudumine —<br><span class="accent">taotle ja saa vastus.</span>`,
+    lead: "Töötaja esitab taotluse, haldur kinnitab või lükkab tagasi.",
+    shot: shots.absences,
+    crop: 0.88,
+    standalone: true,
+  },
+  {
+    id: "06-margis",
+    step: "Lisaks",
+    title: `Kui keegi<br>kasutab su <span class="stopped">kontot.</span>`,
+    lead: "Tööpäev jääb kehtima — aga sina ja haldur saate teada.",
+    shot: shots.alert,
+    crop: 0.95,
+    standalone: true,
+  },
+  {
+    id: "07-proovi",
     step: "Kokkuvõte",
     title: `Proovi<br><span class="accent">14 päeva tasuta.</span>`,
     lead: "iOS, Android ja arvutiliides brauseris. Neli keelt.",
@@ -151,16 +171,23 @@ const sizes = [
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
 
-for (const [index, slide] of slides.entries()) {
+for (const slide of slides) {
   for (const size of sizes) {
     const page = await browser.newPage({
       viewport: { width: size.width, height: size.height },
       deviceScaleFactor: 1,
     });
 
-    const dots = slides
-      .map((_, i) => `<span class="dot${i === index ? " on" : ""}"></span>`)
-      .join("");
+    /*
+     * Punktid näitavad AINULT voo pikkust. Lisaslaidid (`standalone`) on
+     * eraldi kuulutused, mitte karusselli osa — nende peal punkte ei ole,
+     * muidu lubaks pilt karusselli, mida seal ei ole.
+     */
+    const flow = slides.filter((x) => !x.standalone);
+    const flowIndex = flow.indexOf(slide);
+    const dots = slide.standalone
+      ? ""
+      : flow.map((_, i) => `<span class="dot${i === flowIndex ? " on" : ""}"></span>`).join("");
 
     // Kärbe: näitame kaadri ülemist osa, sest allpool on tühi ekraan.
     const phone = slide.shot

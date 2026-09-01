@@ -9,11 +9,7 @@ import { computeWorkedHours, presenceState } from "../utils/timeStats.js";
 import { checkGeofence } from "../utils/geofence.js";
 import { decidePresenceEvent } from "../utils/presenceEvents.js";
 import { recordAudit } from "../utils/audit.js";
-import {
-  CLOCK_DRIFT_ALERT_SECONDS,
-  isDeviceMismatch,
-  raiseSecurityAlert,
-} from "../utils/securityAlerts.js";
+import { isDeviceMismatch, raiseSecurityAlert } from "../utils/securityAlerts.js";
 
 export const timeLogsRouter = Router();
 timeLogsRouter.use(requireAuth);
@@ -204,16 +200,23 @@ timeLogsRouter.post(
         dedupeKey: `mock_location:${log.id}`,
       });
     }
-    if (clockDriftSeconds != null && Math.abs(clockDriftSeconds) > CLOCK_DRIFT_ALERT_SECONDS) {
-      await raiseSecurityAlert({
-        organizationId: req.user!.organizationId,
-        userId,
-        timeLogId: log.id,
-        type: "clock_drift",
-        details: { driftSeconds: clockDriftSeconds },
-        dedupeKey: `clock_drift:${log.id}`,
-      });
-    }
+    /*
+     * Kellanihke MÄRGET EI TEHTA.
+     *
+     * Proovitud ja tagasi võetud: iga offline-kirje on määratluse järgi
+     * vana, seega nihe on suur ka siis, kui kõik on korras. Katsetuses
+     * tekitas kolme päeva demoandmestik kümme märget, millest ükski ei
+     * olnud päris probleem.
+     *
+     * Nihkest ei saa eristada "telefoni kell on vale" ja "töötaja oli
+     * kolm päeva levita" — mõlemad näevad välja ühtemoodi. Tulevikku
+     * suunatud kella, mis oleks päris signaal, lükkab server juba
+     * ülalpool tagasi.
+     *
+     * `clock_drift_seconds` ja `created_offline` on kirje küljes alles ja
+     * haldur näeb neid raportis. Märge, mis tekib alati, õpetab ainult
+     * märkeid ignoreerima.
+     */
 
     res.status(201).json(log);
   })
