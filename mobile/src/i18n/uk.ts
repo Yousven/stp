@@ -100,6 +100,7 @@ export const uk: Dictionary = {
     subscription: "Підписка",
     workdayRunning: "Робочий день триває",
     awayShort: "Поза об'єктом",
+    clockPaused: "Годинник зупинено до повернення на об'єкт",
     elapsedLabel: "Відпрацьовано сьогодні",
     duration: (hours: number, minutes: number) => `${hours} год ${minutes} хв`,
     adminSection: "Управління",
@@ -392,6 +393,12 @@ export const uk: Dictionary = {
     awayFromSite: (hours: number) => `Поза об'єктом: ${hours} год`,
     none: "Записів про роботу не знайдено.",
     loadFailed: "Не вдалося завантажити історію роботи.",
+    thisWeek: "Цей тиждень",
+    lastWeek: "Минулий тиждень",
+    weekHours: (hours: number) => `${hours} год`,
+    allObjects: "Усі об'єкти",
+    filterObject: "Об'єкт",
+    days: (count: number) => `${count} дн.`,
   },
 
   settings: {
@@ -411,7 +418,10 @@ export const uk: Dictionary = {
     orgSummary: "Стан компанії",
     activeNow: "Зараз працюють",
     activeNowNone: "Зараз ніхто не розпочав робочий день.",
-    peopleWorking: (count: number) => `${count} працівників на об'єкті`,
+    peopleWorking: (count: number) => `${count} робочих днів не закрито`,
+    onSiteCount: (count: number) => `${count} зараз на об'єкті`,
+    offSiteSince: (time: string) => `Поза об'єктом з ${time}`,
+    forgottenOpen: "Робочий день не закрито — підрахунок годин зупинено",
     phoneOnly: "Розпочати та завершити робочий день можна лише в телефоні",
     phoneOnlyBody:
       "Облік робочого часу спирається на місцезнаходження: сервер перевіряє, що ви справді на об'єкті. На " +
@@ -444,6 +454,7 @@ export const uk: Dictionary = {
       `Показано ${shown} записів із ${total}. Підсумки пораховані за всіма; повний список — у файлі.`,
     suspicious: "Місцезнаходження підозріле",
     offlineEntry: "Надіслано пізніше",
+    implausibleLength: "Незвично довгий день — перевірте",
     downloadTitle: "Завантажити файлом",
   },
 

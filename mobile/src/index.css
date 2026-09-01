@@ -85,6 +85,18 @@ body,
   margin: 0;
 }
 
+/**
+ * Ei kummita üle serva.
+ *
+ * Ilma selleta liiguks alla tõmmates korraga kaks asja: meie oma
+ * värskendusketas ja WebView enda rubber-band. Ühtlasi lülitab see välja
+ * Androidi brauseri sisseehitatud värskenduse, mille me siin ise asendame.
+ */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -240,6 +252,17 @@ p {
   letter-spacing: -0.02em;
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
+}
+
+/**
+ * Selgitus peatunud kella all. Punane, sest see kuulub kokku punase
+ * "objektilt eemal" päisega — seisev suur number vajab põhjendust, muidu
+ * näeb see välja nagu kinni jäänud äpp.
+ */
+.status-note {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--danger);
 }
 
 .status-meta {
@@ -648,6 +671,109 @@ button {
 }
 
 /**
+ * Servast paremale pühkides tagasi.
+ *
+ * Nool istub vasakus servas ja läheb siniseks siis, kui lahtilaskmine
+ * päriselt tagasi viib — sama keel mis alla tõmbamise ketas. Roheline ja
+ * punane on äpis kella seisu jaoks ja siia ei sobi.
+ */
+.swipe-back {
+  position: fixed;
+  left: calc(0.5rem + env(safe-area-inset-left));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-lifted);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.swipe-back--ready {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/*
+ * Žesti ajal järgib leht sõrme ilma üleminekuta; lahti lastes libiseb
+ * tagasi. Seetõttu on transition ainult liikumatul kujul.
+ */
+.swipe-back-page {
+  transition: transform 0.18s ease-out;
+}
+
+.swipe-back-page--moving {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe-back-page {
+    transition: none;
+  }
+}
+
+/**
+ * Alla tõmmates värskendamine.
+ *
+ * Ketas on fikseeritud ekraani ülaservas ja liigub sõrme järel. Ta on
+ * teadlikult suur (2.75rem) — objektil vaadatakse ekraani käeulatusest
+ * kaugemalt ja päikese käes.
+ */
+.pull-refresh {
+  position: fixed;
+  top: calc(0.5rem + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 50;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-lifted);
+  color: var(--muted);
+  /* Žesti ajal juhib asukohta sõrm, seega siin üleminekut ei ole; see
+     tuleks nähtavale ainult lahtilaskmise järel toimuva hüppena. */
+  pointer-events: none;
+}
+
+/* Piisavalt kaugele tõmmatud: lahti lastes värskendus käivitub. */
+.pull-refresh--ready {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.pull-refresh-icon {
+  display: flex;
+}
+
+.pull-refresh--spinning .pull-refresh-icon {
+  animation: pull-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes pull-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Kellel liikumine tekitab ebamugavust, sellele piisab värvimuutusest. */
+@media (prefers-reduced-motion: reduce) {
+  .pull-refresh--spinning .pull-refresh-icon {
+    animation: none;
+  }
+}
+
+/**
  * Kuu päis tööajaloos. Vajutatav terve laiuses, sest kokkuvolditud kuu
  * avamine peab õnnestuma ka siis, kui sõrm ei taba täpselt teksti.
  */
@@ -677,6 +803,24 @@ button {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+/**
+ * Objektifilter tööajaloos. Kindaga sõrmele mõeldud: silt on nupu kohal,
+ * mitte kõrval, ja valik ise on täies laiuses puuteala.
+ */
+.history-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.history-filter select {
+  width: 100%;
+  min-height: var(--tap);
 }
 
 /** Kirje ülemine rida: vasakul mis ja millal, paremal tundide arv. */

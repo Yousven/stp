@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { useElapsedMinutes } from "../hooks/useElapsed";
+import { useElapsedMinutes, usePresentMinutes } from "../hooks/useElapsed";
 import { useLayout } from "../hooks/useLayout";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "../components/PullToRefreshIndicator";
 import { DesktopOverview } from "./DesktopOverview";
 import { apiRequest } from "../api/client";
 import type { DashboardResponse, OnboardingState } from "../api/types";
@@ -69,14 +71,22 @@ export function DashboardPage() {
     load();
   }, [load]);
 
-  useGeofence(data?.activeLog ?? null, (status) => {
-    setPresence(status);
-    load();
-  });
+  // Dashboardi laadimine EI käivitu enam iga kohalolekukontrolliga, vaid
+  // ainult siis, kui sündmus päriselt serverisse läks — muidu tuleks minutis
+  // üks /me/dashboard päring, mis on just see aku kulu, mida vältida tahame.
+  useGeofence(data?.activeLog ?? null, setPresence, load);
 
   // Natiivne taustajälgimine: registreerib objekti OS-i valvesse ja tõstab
   // seadmes kogunenud sündmused serverisse äpi avamisel.
-  useBackgroundGeofence(data?.activeLog ?? null, load);
+  //
+  // `undefined` = veel laadimata; sellest sõltub, kas hook tohib valve maha
+  // võtta. Laadimata olek ei tohi seda teha, muidu kaob taustajälgimine iga
+  // kord, kui dashboardi päring ebaõnnestub.
+  useBackgroundGeofence(data === null ? undefined : (data.activeLog ?? null), load);
+
+  // Alla tõmmates värskendamine. Ainult telefoniliideses: arvutis on hiir
+  // ja F5, ning puutekuulajad oleksid seal asjatud.
+  const pullState = usePullToRefresh(load, layout === "phone");
 
   // Offline salvestatud tegevused saadetakse ära, kui võrk taastub.
   const { pending: offlinePending, lastResult: offlineResult, clearResult } = useOfflineSync(load);
@@ -100,12 +110,23 @@ export function DashboardPage() {
    * sõltu levist ega jää levi kadudes seisma. Tundide arvestus ei sõltu
    * sellest näidust üldse: palgale minevad tunnid arvutab server alguse ja
    * lõpu ajatempli ning kohaloleku sündmuste põhjal.
+   *
+   * Objektil olles näidatakse kohal viibitud aega, mis peatub lahkumisel —
+   * mitte tööpäeva algusest kulunud aega. Ilma selleta jooksis kell edasi ka
+   * punase "objektilt eemal" kaardi peal ja rääkis sellele vastu.
    */
   const activeStartTime = data?.activeLog?.startTime ?? offlineLog?.startTime ?? null;
-  const elapsedMinutes = useElapsedMinutes(activeStartTime);
+  const presentMinutes = usePresentMinutes(data?.activeLog?.presence, presence?.inside === false);
+
+  // Varuvariant kaheks juhuks, kus kohalolekut ei ole millegi põhjal
+  // arvutada: ühenduseta vaade (telefonis on ainult vahemälust algusaeg) ja
+  // vana server, mis `presence` välja veel ei saada. Äpp ja API uuenevad
+  // eraldi, seega see kombinatsioon on päris — ilma varuvariandita näitaks
+  // kell sellisel juhul nulli.
+  const fallbackElapsed = useElapsedMinutes(data?.activeLog?.presence ? null : activeStartTime);
 
   function elapsedLabel(): string {
-    const minutes = elapsedMinutes ?? 0;
+    const minutes = presentMinutes ?? fallbackElapsed ?? 0;
     return d.dashboard.duration(Math.floor(minutes / 60), minutes % 60);
   }
 
@@ -115,13 +136,20 @@ export function DashboardPage() {
     if (result === "granted") load();
   }
 
-  if (error) return <div className="page">{error}</div>;
+  if (error)
+    return (
+      <div className="page">
+        <PullToRefreshIndicator state={pullState} />
+        {error}
+      </div>
+    );
 
   // Ühenduseta vaade: ainult see, mis on telefonis teada, ja tee tööpäeva
   // lõpetamiseni. Kuu kokkuvõtet ei saa arvutada ilma serverita.
   if (!data && offline) {
     return (
       <div className="page">
+        <PullToRefreshIndicator state={pullState} />
         <header className="topbar">
           <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
         </header>
@@ -178,6 +206,7 @@ export function DashboardPage() {
 
   return (
     <div className="page">
+      <PullToRefreshIndicator state={pullState} />
       <header className="topbar">
         <h1>{d.dashboard.greeting(user?.username ?? "")}</h1>
         <button className="btn btn-link" onClick={() => logout()} aria-label={d.login.logout}>
@@ -254,6 +283,9 @@ export function DashboardPage() {
             {presence && !presence.inside ? d.dashboard.awayShort : d.dashboard.workdayRunning}
           </div>
           <div className="big-timer">{elapsedLabel()}</div>
+          {/* Seisev number ilma seletuseta näeb välja nagu katkine äpp.
+              See rida ütleb, et kell on meelega peatatud. */}
+          {presence && !presence.inside && <div className="status-note">{d.dashboard.clockPaused}</div>}
           <div className="status-meta">
             <span>
               <strong>{activeLog.object.name}</strong>

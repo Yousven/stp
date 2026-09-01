@@ -5,17 +5,13 @@ import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { presenceLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { HttpError } from "../middleware/errorHandler.js";
-import { computeWorkedHours } from "../utils/timeStats.js";
-import { distanceMeters } from "../utils/geofence.js";
+import { computeWorkedHours, presenceState } from "../utils/timeStats.js";
+import { checkGeofence } from "../utils/geofence.js";
+import { decidePresenceEvent } from "../utils/presenceEvents.js";
 import { recordAudit } from "../utils/audit.js";
 
 export const timeLogsRouter = Router();
 timeLogsRouter.use(requireAuth);
-
-// GPS-i ebatäpsuse varu: telefon võib teatada asukoha kuni ~paarikümne
-// meetrise veaga, seega lubame raadiusele lisaks seadme enda teatatud
-// täpsuse (kuni 100 m), et objekti servas seisev töötaja ei jääks kinni.
-const MAX_ACCURACY_ALLOWANCE_METERS = 100;
 
 const startSchema = z.object({
   objectId: z.number().int().positive(),
@@ -59,53 +55,12 @@ timeLogsRouter.post(
 
     // Asukoha kontroll serveri poolel: klient ei saa seda vahele jätta ega
     // võltsida lihtsalt kontrolli välja kommenteerides.
-    const distance = distanceMeters(latitude, longitude, Number(object.latitude), Number(object.longitude));
-    const allowance = Math.min(accuracy ?? 0, MAX_ACCURACY_ALLOWANCE_METERS);
-    if (distance > object.radius + allowance) {
-      throw new HttpError(403, req.m.timeLogs.tooFar(Math.round(distance), object.radius));
-    }
-
-    /**
-     * Objektilt objektile liikumine on ehituses igapäevane, seega avatud
-     * tööpäev EI blokeeri enam uue alustamist — kui uus objekt on teine,
-     * lõpetame eelmise automaatselt ja alustame uue. Nii ei pea töötaja
-     * kaks korda nuppu vajutama ega jää eelmine päev lahtiseks.
-     *
-     * Sama objektiga on tegu ilmselt eksitusega (topeltvajutus), seega
-     * seal jääb varasem käitumine alles.
-     */
-    const activeLog = await prisma.timeLog.findFirst({ where: { userId, endTime: null } });
-    if (activeLog) {
-      if (activeLog.objectId === objectId) {
-        throw new HttpError(409, req.m.timeLogs.alreadyStarted);
-      }
-
-      const switchedAt = new Date();
-      await prisma.timeLog.update({
-        where: { id: activeLog.id },
-        data: {
-          endTime: switchedAt,
-          comment: "Automaatselt lõpetatud: töötaja alustas tööd teisel objektil.",
-          presenceEvents: { create: { type: "EXIT", occurredAt: switchedAt, source: "manual" } },
-        },
-      });
-    }
-
-    // Vale tööliigi vaikiv ignoreerimine annaks arvele valed read, seega
-    // kontrollime enne salvestamist.
-    if (workTypeId) {
-      // Tööliik peab olema sellel objektil kasutusel, mitte ainult
-      // ettevõttes olemas — muidu saaks koristaja tunnid lammutuse hinnaga
-      // arvele minna.
-      const code = await prisma.objectWorkType.findFirst({
-        where: {
-          objectId,
-          workTypeId,
-          workType: { organizationId: req.user!.organizationId, deleted: false },
-        },
-        select: { objectId: true },
-      });
-      if (!code) throw new HttpError(404, req.m.workTypes.notOnObject);
+    const fence = checkGeofence(
+      { latitude: Number(object.latitude), longitude: Number(object.longitude), radius: object.radius },
+      { latitude, longitude, accuracy }
+    );
+    if (!fence.inside) {
+      throw new HttpError(403, req.m.timeLogs.tooFar(Math.round(fence.distance), object.radius));
     }
 
     /**
@@ -113,6 +68,9 @@ timeLogsRouter.post(
      * nüüd. Usaldame seadme aega, aga piiratult — tulevikku suunatud või
      * väga vana aeg lükatakse tagasi, ja kellanihe salvestatakse, et
      * admin näeks, kui keegi on kella nihutanud.
+     *
+     * NB: see arvutus peab olema ENNE objektivahetust, sest eelmine
+     * tööpäev tuleb lõpetada täpselt uue algushetkel.
      */
     const now = new Date();
     let startTime = now;
@@ -133,6 +91,62 @@ timeLogsRouter.post(
       startTime = reported;
       createdOffline = true;
       clockDriftSeconds = Math.round(driftMs / 1000);
+    }
+
+    /**
+     * Objektilt objektile liikumine on ehituses igapäevane, seega avatud
+     * tööpäev EI blokeeri enam uue alustamist — kui uus objekt on teine,
+     * lõpetame eelmise automaatselt ja alustame uue. Nii ei pea töötaja
+     * kaks korda nuppu vajutama ega jää eelmine päev lahtiseks.
+     *
+     * Sama objektiga on tegu ilmselt eksitusega (topeltvajutus), seega
+     * seal jääb varasem käitumine alles.
+     */
+    const activeLog = await prisma.timeLog.findFirst({ where: { userId, endTime: null } });
+    if (activeLog) {
+      if (activeLog.objectId === objectId) {
+        throw new HttpError(409, req.m.timeLogs.alreadyStarted);
+      }
+
+      /**
+       * Eelmine päev lõpeb TÄPSELT uue algushetkel, mitte "praegu".
+       *
+       * Serveri kellaaja kasutamine tegi offline-kirje puhul kattuva
+       * vahemiku: vana päev jooksis praeguse hetkeni, uus algas minevikus,
+       * ja kattuv aeg läks kaks korda arvesse. Nüüd on kaks kirjet alati
+       * järjestikused.
+       */
+      if (startTime.getTime() < activeLog.startTime.getTime()) {
+        // Offline-kirje on vanem kui juba avatud tööpäev — sellest ei saa
+        // järjestikuseid kirjeid teha ja vaikiv sobitamine rikuks andmed.
+        throw new HttpError(409, req.m.timeLogs.switchBeforeActiveStart);
+      }
+
+      await prisma.timeLog.update({
+        where: { id: activeLog.id },
+        data: {
+          endTime: startTime,
+          comment: "Automaatselt lõpetatud: töötaja alustas tööd teisel objektil.",
+          presenceEvents: { create: { type: "EXIT", occurredAt: startTime, source: "manual" } },
+        },
+      });
+    }
+
+    // Vale tööliigi vaikiv ignoreerimine annaks arvele valed read, seega
+    // kontrollime enne salvestamist.
+    if (workTypeId) {
+      // Tööliik peab olema sellel objektil kasutusel, mitte ainult
+      // ettevõttes olemas — muidu saaks koristaja tunnid lammutuse hinnaga
+      // arvele minna.
+      const code = await prisma.objectWorkType.findFirst({
+        where: {
+          objectId,
+          workTypeId,
+          workType: { organizationId: req.user!.organizationId, deleted: false },
+        },
+        select: { objectId: true },
+      });
+      if (!code) throw new HttpError(404, req.m.workTypes.notOnObject);
     }
 
     const log = await prisma.timeLog.create({
@@ -177,9 +191,29 @@ const presenceEventsSchema = z.object({
     .max(200),
 });
 
-// Kohaloleku sündmuste üleslaadimine. Natiivne taustajälgimine (Etapp B)
-// kogub sündmused seadmes järjekorda ja saadab need partiidena, kui äpp
-// järgmine kord avatakse — seetõttu peab see olema idempotentne.
+/**
+ * Kohaloleku sündmuste üleslaadimine.
+ *
+ * Natiivne taustajälgimine kogub sündmused seadmes järjekorda ja saadab
+ * need partiidena, kui äpp järgmine kord avatakse — seetõttu peab see
+ * olema idempotentne.
+ *
+ * ASÜMMEETRILINE KONTROLL. EXIT ja ENTER ei ole võrdsed:
+ *
+ *   EXIT  peatab kella ehk saab tunde ainult VÄHENDADA. Seda võtame
+ *         vastu ilma asukohakontrollita — vale EXIT teeb töötajale liiga,
+ *         mitte ettevõttele, ja kella peatumine peab töötama ka siis, kui
+ *         GPS on halb.
+ *
+ *   ENTER paneb peatatud kella uuesti käima ehk LISAB tunde. Seda tuleb
+ *         tõendada täpselt samamoodi nagu tööpäeva alustamist.
+ *
+ * Varem võeti mõlemad vastu kontrollimata. See tähendas, et serveripoolne
+ * asukohakontroll kehtis ainult tööpäeva ALUSTAMISEL: objektilt lahkunud
+ * töötaja sai kella uuesti käima panna ükskõik kust, saates ühe ENTER
+ * sündmuse. Sama auk lubas lisada ENTER-i juba lõpetatud tööpäeva sisse
+ * ja nii tagantjärele tunde juurde saada.
+ */
 timeLogsRouter.post(
   "/:id/presence-events",
   presenceLimiter,
@@ -188,31 +222,81 @@ timeLogsRouter.post(
     const { events } = presenceEventsSchema.parse(req.body);
     const userId = req.user!.sub;
 
-    const log = await prisma.timeLog.findFirst({ where: { id, userId } });
+    const log = await prisma.timeLog.findFirst({ where: { id, userId }, include: { object: true } });
     if (!log) throw new HttpError(404, req.m.timeLogs.notFound);
+
+    // Reegel ise on `utils/presenceEvents.ts`-s ja ühikutestidega kaetud —
+    // siin on ainult partii läbikäimine.
+    const context = {
+      logStart: log.startTime,
+      logEnd: log.endTime,
+      object: {
+        latitude: Number(log.object.latitude),
+        longitude: Number(log.object.longitude),
+        radius: log.object.radius,
+      },
+      now: new Date(),
+      futureToleranceMs: SUSPICIOUS_DRIFT_SECONDS * 1000,
+    };
+
+    const accepted: typeof events = [];
+    const rejected: { type: string; occurredAt: string; reason: string }[] = [];
+
+    for (const event of events) {
+      const decision = decidePresenceEvent(
+        {
+          type: event.type,
+          occurredAt: new Date(event.occurredAt),
+          latitude: event.latitude,
+          longitude: event.longitude,
+          accuracy: event.accuracy,
+        },
+        context
+      );
+
+      if (decision.accept) accepted.push(event);
+      else rejected.push({ type: event.type, occurredAt: event.occurredAt, reason: decision.reason });
+    }
 
     // skipDuplicates + @@unique([timeLogId, type, occurredAt]) teeb korduva
     // partii saatmise ohutuks: juba salvestatud sündmused jäetakse vahele.
-    const result = await prisma.presenceEvent.createMany({
-      data: events.map((e) => ({
-        timeLogId: id,
-        type: e.type,
-        occurredAt: new Date(e.occurredAt),
-        latitude: e.latitude,
-        longitude: e.longitude,
-        accuracy: e.accuracy,
-        source: e.source,
-        mocked: e.mocked,
-      })),
-      skipDuplicates: true,
-    });
+    const result = accepted.length
+      ? await prisma.presenceEvent.createMany({
+          data: accepted.map((e) => ({
+            timeLogId: id,
+            type: e.type,
+            occurredAt: new Date(e.occurredAt),
+            latitude: e.latitude,
+            longitude: e.longitude,
+            accuracy: e.accuracy,
+            source: e.source,
+            mocked: e.mocked,
+          })),
+          skipDuplicates: true,
+        })
+      : { count: 0 };
 
     const updated = await prisma.timeLog.findUniqueOrThrow({
       where: { id },
       include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
 
-    res.json({ accepted: result.count, skipped: events.length - result.count, log: withHours(updated) });
+    res.json({
+      accepted: result.count,
+      // Juba olemas olnud sündmused (idempotentsus).
+      skipped: accepted.length - result.count,
+      // Kontrollist läbi kukkunud sündmused koos põhjusega.
+      rejected,
+      /*
+       * Kohaloleku olek PÄRAST partii salvestamist.
+       *
+       * Klient ei tohi eeldada, et tema saadetud ENTER läks arvesse —
+       * server võib selle asukohakontrolli tõttu tagasi lükata. Ilma selle
+       * väljata usuks äpp end objektile ja lõpetaks uuesti proovimise.
+       */
+      presence: presenceState(updated),
+      log: withHours(updated),
+    });
   })
 );
 
@@ -437,12 +521,15 @@ type LogWithEvents = {
  * mõeldud just erandite parandamiseks (nt katkine GPS).
  */
 export function withHours<T extends LogWithEvents>(log: T) {
-  const { net, gross, awayHours } = computeWorkedHours(log);
+  const { net, gross, awayHours, implausibleLength } = computeWorkedHours(log);
   const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
   return {
     ...log,
     durationHours: log.endTime ? (manual ?? net) : null,
     grossHours: log.endTime ? gross : null,
     awayHours: log.endTime ? awayHours : null,
+    // Ebausutavalt pikk päev vajab kontrolli. Käsitsi parandatud päev on
+    // juba üle vaadatud, seega seal märget ei ole.
+    implausibleLength: log.endTime && manual == null ? (implausibleLength ?? false) : false,
   };
 }

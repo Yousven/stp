@@ -5,7 +5,7 @@ import type { ActiveWorker, DashboardResponse, OnboardingState, OrgStatus } from
 import { useAuth } from "../auth/AuthContext";
 import { useLocale, useT } from "../i18n";
 import { Icon } from "../components/Icon";
-import { useElapsedMinutes } from "../hooks/useElapsed";
+import { usePresentMinutes } from "../hooks/useElapsed";
 
 function since(startTime: string, locale: string): string {
   return new Date(startTime).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
@@ -83,7 +83,11 @@ export function DesktopOverview({ data }: { data: DashboardResponse }) {
             </div>
           ) : (
             <>
-              <p className="subtitle">{d.desktop.peopleWorking(status.active.length)}</p>
+              <p className="subtitle">
+                {d.desktop.peopleWorking(status.active.length)}
+                {" · "}
+                {d.desktop.onSiteCount(status.active.filter((w) => w.onSite).length)}
+              </p>
               <ul className="log-list">
                 {status.active.map((worker) => (
                   <ActiveWorkerRow key={worker.logId} worker={worker} locale={locale} />
@@ -145,7 +149,16 @@ export function DesktopOverview({ data }: { data: DashboardResponse }) {
  */
 function ActiveWorkerRow({ worker, locale }: { worker: ActiveWorker; locale: string }) {
   const d = useT();
-  const minutes = useElapsedMinutes(worker.startTime) ?? 0;
+  // Kohal oldud aeg, mitte aeg tööpäeva algusest: viimane sisaldaks ka
+  // vahepeal eemal käidud tunde ja näitaks suuremat numbrit kui see, mille
+  // eest palka makstakse.
+  const minutes =
+    usePresentMinutes({
+      onSite: worker.onSite,
+      since: worker.presenceSince,
+      lastEventAt: worker.lastPresenceAt,
+      presentMsBefore: worker.presentMsBefore,
+    }) ?? 0;
 
   return (
     <li className="log-item">
@@ -158,8 +171,26 @@ function ActiveWorkerRow({ worker, locale }: { worker: ActiveWorker; locale: str
             {since(worker.startTime, locale)}
           </div>
         </div>
-        <div className="log-hours">{d.dashboard.duration(Math.floor(minutes / 60), minutes % 60)}</div>
+        {/* Number on alati näha, ka eemal olija juures — juhataja tahab
+            teada, kui palju keegi täna teinud on. Eemal olles see number
+            seisab: varem kerkis see kohalolekust sõltumata edasi ja eelmisel
+            päeval lahkunu juures seisis hommikul "22 h", just see number,
+            mille pärast kogu arvestust ei saanud usaldada. */}
+        <div className={`log-hours${worker.onSite ? "" : " text-warning"}`}>
+          {!worker.onSite && <Icon name="pin" size={18} />}{" "}
+          {d.dashboard.duration(Math.floor(minutes / 60), minutes % 60)}
+        </div>
       </div>
+      {!worker.onSite && (
+        <div className="text-warning">{d.desktop.offSiteSince(since(worker.presenceSince, locale))}</div>
+      )}
+      {/* Lahti ununenud päev vajab admini sekkumist — töötaja ise ei pruugi
+          seda enam märgata, sest tema ekraanil kell ei jookse. */}
+      {worker.openLimitReached && (
+        <div className="alert alert-error" style={{ marginTop: "0.5rem" }}>
+          <Icon name="clock" size={18} /> {d.desktop.forgottenOpen}
+        </div>
+      )}
       {/* Võltsitud asukoht ei blokeeri tööpäeva, aga admin peab seda nägema —
           muidu ei tea keegi seda kontrollida. */}
       {worker.locationMocked && <div className="text-warning">{d.reports.suspicious}</div>}

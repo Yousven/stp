@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import type { AdminUser } from "../api/types";
 import { useT } from "../i18n";
+import { OrgCodeCard } from "../components/OrgCodeCard";
 
 export function AdminUsersPage() {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ export function AdminUsersPage() {
           {d.adminUsers.addUser}
         </Link>
       </header>
+      {/* Kood on siin, mitte ainult seadistusjuhises: uue töötaja lisamise
+          hetkel on see täpselt see asi, mida otsitakse. */}
+      <OrgCodeCard />
       {error && <div className="alert alert-error">{error}</div>}
       {!users && !error && <div className="page-loading">{d.common.loading}</div>}
       {users && (

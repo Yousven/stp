@@ -37,7 +37,14 @@ public final class GeofenceQueue {
         return format.format(new Date());
     }
 
-    public static synchronized void add(Context context, String type, Double latitude, Double longitude, boolean mocked) {
+    public static synchronized void add(
+        Context context,
+        String type,
+        Double latitude,
+        Double longitude,
+        Float accuracy,
+        boolean mocked
+    ) {
         try {
             JSONArray queue = read(context);
             JSONObject event = new JSONObject();
@@ -45,6 +52,8 @@ public final class GeofenceQueue {
             event.put("occurredAt", isoNow());
             if (latitude != null) event.put("latitude", latitude);
             if (longitude != null) event.put("longitude", longitude);
+            // Server kasutab täpsust raadiuse varuna — vt GeofenceBroadcastReceiver.
+            if (accuracy != null) event.put("accuracy", accuracy.doubleValue());
             event.put("mocked", mocked);
             queue.put(event);
 

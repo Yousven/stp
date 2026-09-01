@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeWorkedHours, monthlyTargetHours, splitOvertime, isoWeekKey } from "./timeStats.js";
+import {
+  computeWorkedHours,
+  monthlyTargetHours,
+  presenceState,
+  splitOvertime,
+  isoWeekKey,
+  MAX_OPEN_LOG_HOURS,
+} from "./timeStats.js";
 
 const H = (hour: number, minute = 0) => new Date(2026, 7, 24, hour, minute, 0);
 
@@ -200,4 +207,249 @@ test("ISO nädal: pühapäev kuulub eelmisse nädalasse", () => {
   // 30. august 2026 on pühapäev, 31. esmaspäev — eri nädalad.
   assert.equal(isoWeekKey("2026-08-24"), isoWeekKey("2026-08-30"), "E ja P on samas ISO nädalas");
   assert.notEqual(isoWeekKey("2026-08-30"), isoWeekKey("2026-08-31"), "P ja järgmine E on eri nädalates");
+});
+
+// --- presenceState ---
+
+test("sündmusteta lahtine tööpäev loeb kohalolekuks", () => {
+  const state = presenceState({ startTime: H(8), endTime: null, lunch: 0 });
+  assert.equal(state.onSite, true);
+  assert.deepEqual(state.since, H(8));
+  assert.equal(state.lastEventAt, null);
+});
+
+test("viimane EXIT tähendab, et töötaja ei ole objektil", () => {
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [
+      { type: "ENTER", occurredAt: H(8) },
+      { type: "EXIT", occurredAt: H(17, 20) },
+    ],
+  });
+  assert.equal(state.onSite, false);
+  assert.deepEqual(state.since, H(17, 20));
+  assert.deepEqual(state.lastEventAt, H(17, 20));
+});
+
+test("EXIT-le järgnev ENTER toob töötaja tagasi objektile", () => {
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [
+      { type: "EXIT", occurredAt: H(12) },
+      { type: "ENTER", occurredAt: H(13) },
+    ],
+  });
+  assert.equal(state.onSite, true);
+  assert.deepEqual(state.since, H(13));
+});
+
+test("sündmused sorteeritakse, järjekord saatmisel ei loe", () => {
+  // Natiivne järjekord võib jõuda serverisse vales järjekorras, kui
+  // taustasündmus ja esiplaani kontroll satuvad kokku.
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [
+      { type: "ENTER", occurredAt: H(13) },
+      { type: "EXIT", occurredAt: H(12) },
+    ],
+  });
+  assert.equal(state.onSite, true);
+  assert.deepEqual(state.since, H(13));
+});
+
+test("enne tööpäeva algust toimunud sündmust ei arvestata", () => {
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [{ type: "EXIT", occurredAt: H(6) }],
+  });
+  assert.equal(state.onSite, true);
+  assert.equal(state.lastEventAt, null);
+});
+
+// --- Lahtise tööpäeva piir ---
+
+test("lahtine tööpäev alla piiri loeb tunde praeguse hetkeni", () => {
+  const result = computeWorkedHours({ startTime: H(8), endTime: null, lunch: 0 }, H(16));
+  assert.equal(result.net, 8);
+  assert.equal(result.openLimitReached, false);
+});
+
+test("üle öö lahti jäänud tööpäev ei kogu tunde piiramatult", () => {
+  // Margus alustas 24.08 kell 10 ja lahkus poole päeva pealt; EXIT ei
+  // jõudnud kohale ja päev oli järgmisel hommikul kell 8 endiselt lahti.
+  const start = new Date(2026, 7, 24, 10, 0, 0);
+  const nextMorning = new Date(2026, 7, 25, 8, 0, 0);
+
+  const result = computeWorkedHours({ startTime: start, endTime: null, lunch: 0 }, nextMorning);
+
+  // 22 tundi oleks vale vastus — kohalolekut ei tõenda pärast piiri miski.
+  assert.equal(result.net, MAX_OPEN_LOG_HOURS);
+  assert.equal(result.gross, MAX_OPEN_LOG_HOURS);
+  assert.equal(result.openLimitReached, true);
+});
+
+test("piir kehtib ka siis, kui kohaloleku sündmused on olemas", () => {
+  const start = new Date(2026, 7, 24, 10, 0, 0);
+  const nextMorning = new Date(2026, 7, 25, 8, 0, 0);
+
+  const result = computeWorkedHours(
+    {
+      startTime: start,
+      endTime: null,
+      lunch: 0,
+      presenceEvents: [{ type: "ENTER", occurredAt: start }],
+    },
+    nextMorning
+  );
+
+  assert.equal(result.net, MAX_OPEN_LOG_HOURS);
+  assert.equal(result.openLimitReached, true);
+});
+
+test("enne piiri registreeritud lahkumine jääb kehtima", () => {
+  // Kui EXIT jõudis kohale, on tunnid juba õiged ja piir ei muuda midagi.
+  const start = new Date(2026, 7, 24, 10, 0, 0);
+  const left = new Date(2026, 7, 24, 14, 0, 0);
+  const nextMorning = new Date(2026, 7, 25, 8, 0, 0);
+
+  const result = computeWorkedHours(
+    {
+      startTime: start,
+      endTime: null,
+      lunch: 0,
+      presenceEvents: [
+        { type: "ENTER", occurredAt: start },
+        { type: "EXIT", occurredAt: left },
+      ],
+    },
+    nextMorning
+  );
+
+  assert.equal(result.net, 4);
+  assert.equal(result.openLimitReached, true);
+});
+
+test("lõpetatud tööpäeva piir ei puuduta", () => {
+  // Käsitsi lõpetatud pikk vahetus on tõendatud ja jääb nii nagu on.
+  const start = new Date(2026, 7, 24, 6, 0, 0);
+  const end = new Date(2026, 7, 24, 20, 0, 0);
+  const result = computeWorkedHours({ startTime: start, endTime: end, lunch: 0 });
+  assert.equal(result.net, 14);
+  assert.equal(result.openLimitReached, false);
+  // 14 h on ehituses tavaline vahetus — märget ei tule.
+  assert.equal(result.implausibleLength, false);
+});
+
+// --- Ebausutavalt pikk päev: MÄRGISTATAKSE, tunde ei muudeta ---
+
+test("üle öö lahti jäänud ja hommikul lõpetatud päev saab märke", () => {
+  // Täpselt see juhtum, mille pärast piir üldse olemas on: õhtul ununes
+  // lõpetamine ja nupp vajutati hommikul.
+  const start = new Date(2026, 7, 24, 8, 0, 0);
+  const end = new Date(2026, 7, 25, 8, 0, 0);
+  const result = computeWorkedHours({ startTime: start, endTime: end, lunch: 0 });
+
+  // Tunde EI lõigata — automaatne lõikamine kaotaks ausalt tehtud pikad
+  // vahetused. Otsustab haldur, kelle parandus läheb audit-logisse.
+  assert.equal(result.net, 24);
+  assert.equal(result.implausibleLength, true);
+});
+
+test("täpselt piiri peal olev päev ei ole veel ebausutav", () => {
+  const start = new Date(2026, 7, 24, 6, 0, 0);
+  const end = new Date(2026, 7, 24, 22, 0, 0); // 16 h
+  const result = computeWorkedHours({ startTime: start, endTime: end, lunch: 0 });
+  assert.equal(result.implausibleLength, false);
+});
+
+test("piirist üle mineku märgib ka siis, kui kohaloleku sündmused on olemas", () => {
+  const start = new Date(2026, 7, 24, 8, 0, 0);
+  const end = new Date(2026, 7, 25, 6, 0, 0); // 22 h
+  const result = computeWorkedHours({
+    startTime: start,
+    endTime: end,
+    lunch: 0,
+    presenceEvents: [
+      { type: "EXIT", occurredAt: new Date(2026, 7, 24, 17, 0, 0) },
+      { type: "ENTER", occurredAt: new Date(2026, 7, 25, 5, 0, 0) },
+    ],
+  });
+  // Kohalolek on 9 h + 1 h = 10 h, aga PÄEV ise kestis 22 h — see on
+  // ikkagi märkimist väärt, sest lõpetamine ununes.
+  assert.equal(result.net, 10);
+  assert.equal(result.implausibleLength, true);
+});
+
+test("lahtine päev ei saa ebausutava pikkuse märget — ta on juba peatatud", () => {
+  const start = new Date(2026, 7, 24, 8, 0, 0);
+  const now = new Date(2026, 7, 25, 8, 0, 0);
+  const result = computeWorkedHours({ startTime: start, endTime: null, lunch: 0 }, now);
+  // Lahtine päev peatub 12 h peal, seega tema "pikkus" ei ületa kunagi 16 h.
+  assert.equal(result.net, 12);
+  assert.equal(result.openLimitReached, true);
+  assert.equal(result.implausibleLength, false);
+});
+
+// --- presentMsBefore: ekraanil oleva kella alus ---
+
+const HOUR_MS = 3600 * 1000;
+
+test("sündmusteta päeval ei ole enne praegust olekut midagi kogunenud", () => {
+  const state = presenceState({ startTime: H(8), endTime: null, lunch: 0 });
+  assert.equal(state.presentMsBefore, 0);
+  assert.deepEqual(state.since, H(8));
+});
+
+test("eemal olles on kogunenud aeg lahkumise hetke seis", () => {
+  // 8:00 alustas, 17:20 lahkus -> 9 h 20 min kohal, kell peab sinna seisma.
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [{ type: "EXIT", occurredAt: H(17, 20) }],
+  });
+  assert.equal(state.onSite, false);
+  assert.equal(state.presentMsBefore, 9.333333333333334 * HOUR_MS);
+});
+
+test("tagasi tulles jätkub kell sealt, kus see peatus", () => {
+  // 8-12 objektil (4 h), 12-13 eemal, 13 tagasi. Kell peab näitama 4 h + see,
+  // mis 13-st edasi kulub — mitte 5 h, nagu tööpäeva algusest lugedes.
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [
+      { type: "EXIT", occurredAt: H(12) },
+      { type: "ENTER", occurredAt: H(13) },
+    ],
+  });
+  assert.equal(state.onSite, true);
+  assert.deepEqual(state.since, H(13));
+  assert.equal(state.presentMsBefore, 4 * HOUR_MS);
+});
+
+test("mitu käiku liidetakse kokku", () => {
+  const state = presenceState({
+    startTime: H(8),
+    endTime: null,
+    lunch: 0,
+    presenceEvents: [
+      { type: "EXIT", occurredAt: H(10) },
+      { type: "ENTER", occurredAt: H(11) },
+      { type: "EXIT", occurredAt: H(15) },
+    ],
+  });
+  // 8-10 (2 h) + 11-15 (4 h) = 6 h, eemal alates 15:00.
+  assert.equal(state.onSite, false);
+  assert.equal(state.presentMsBefore, 6 * HOUR_MS);
+  assert.deepEqual(state.since, H(15));
 });

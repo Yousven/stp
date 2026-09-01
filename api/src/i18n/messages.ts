@@ -32,6 +32,8 @@ export const et = {
     tooFar: (distance: number, radius: number) =>
       `Oled objektist ${distance} m kaugusel, lubatud on ${radius} m. Tööpäeva saab alustada ainult objektil.`,
     alreadyStarted: "Tööpäev sellel objektil on juba alustatud.",
+    switchBeforeActiveStart:
+      "Salvestatud tööpäev algab varem kui praegu avatud tööpäev. Lõpeta avatud tööpäev käsitsi ja võta ühendust administraatoriga.",
     noActiveLog: "Aktiivset töölogi ei leitud. Tööpäev pole alustatud või on juba lõpetatud.",
     notFound: "Töölogi ei leitud.",
     endBeforeStart: "Lõpetamise aeg on tööpäeva algusest varasem.",
@@ -128,6 +130,8 @@ export const en: Messages = {
     tooFar: (distance: number, radius: number) =>
       `You are ${distance} m from the site, the limit is ${radius} m. A workday can only be started on site.`,
     alreadyStarted: "A workday at this site has already been started.",
+    switchBeforeActiveStart:
+      "The saved workday starts earlier than the workday that is currently open. Finish the open workday by hand and contact your administrator.",
     noActiveLog: "No active workday found. It was not started, or it is already finished.",
     notFound: "Work record not found.",
     endBeforeStart: "The end time is earlier than the start of the workday.",
@@ -220,6 +224,8 @@ export const ru: Messages = {
     tooFar: (distance: number, radius: number) =>
       `Вы в ${distance} м от объекта, допустимо ${radius} м. Рабочий день можно начать только на объекте.`,
     alreadyStarted: "Рабочий день на этом объекте уже начат.",
+    switchBeforeActiveStart:
+      "Сохранённый рабочий день начинается раньше, чем уже открытый. Завершите открытый рабочий день вручную и обратитесь к администратору.",
     noActiveLog: "Активный рабочий день не найден. Он не был начат или уже завершён.",
     notFound: "Запись о работе не найдена.",
     endBeforeStart: "Время завершения раньше начала рабочего дня.",
@@ -312,6 +318,8 @@ export const uk: Messages = {
     tooFar: (distance: number, radius: number) =>
       `Ви за ${distance} м від об'єкта, дозволено ${radius} м. Робочий день можна розпочати лише на об'єкті.`,
     alreadyStarted: "Робочий день на цьому об'єкті вже розпочато.",
+    switchBeforeActiveStart:
+      "Збережений робочий день починається раніше, ніж уже відкритий. Завершіть відкритий робочий день вручну та зверніться до адміністратора.",
     noActiveLog: "Активний робочий день не знайдено. Його не розпочато або вже завершено.",
     notFound: "Запис про роботу не знайдено.",
     endBeforeStart: "Час завершення раніший за початок робочого дня.",

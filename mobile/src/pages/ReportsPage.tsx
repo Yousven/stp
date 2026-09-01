@@ -186,6 +186,12 @@ export function ReportsPage() {
                 {/* Võltsitud GPS ei blokeeri tööpäeva, aga peab raportis
                     silma paistma — muidu ei tea admin seda kunagi kontrollida. */}
                 {row.locationMocked && <div className="text-warning">{d.reports.suspicious}</div>}
+                {/* Pikk päev tähendab peaaegu alati, et õhtul ununes lõpetamine.
+                    Tunde EI ole automaatselt lõigatud — parandab haldur koos
+                    põhjendusega, mis läheb audit-logisse. */}
+                {row.implausibleLength && (
+                  <div className="text-warning">{d.reports.implausibleLength}</div>
+                )}
                 {row.createdOffline && <div className="subtitle" style={{ margin: 0 }}>{d.reports.offlineEntry}</div>}
                 {row.comment && <div className="log-comment">{row.comment}</div>}
               </li>

@@ -104,6 +104,7 @@ export const ru: Dictionary = {
     subscription: "Подписка",
     workdayRunning: "Рабочий день идёт",
     awayShort: "Вне объекта",
+    clockPaused: "Часы остановлены до возвращения на объект",
     elapsedLabel: "Отработано сегодня",
     duration: (hours: number, minutes: number) => `${hours} ч ${minutes} мин`,
     adminSection: "Управление",
@@ -396,6 +397,12 @@ export const ru: Dictionary = {
     awayFromSite: (hours: number) => `Вне объекта: ${hours} ч`,
     none: "Записей о работе не найдено.",
     loadFailed: "Не удалось загрузить историю работы.",
+    thisWeek: "Эта неделя",
+    lastWeek: "Прошлая неделя",
+    weekHours: (hours: number) => `${hours} ч`,
+    allObjects: "Все объекты",
+    filterObject: "Объект",
+    days: (count: number) => `${count} дн.`,
   },
 
   settings: {
@@ -415,7 +422,10 @@ export const ru: Dictionary = {
     orgSummary: "Состояние компании",
     activeNow: "Сейчас работают",
     activeNowNone: "Сейчас никто не начал рабочий день.",
-    peopleWorking: (count: number) => `${count} работников на объекте`,
+    peopleWorking: (count: number) => `${count} рабочих дней не закрыто`,
+    onSiteCount: (count: number) => `${count} сейчас на объекте`,
+    offSiteSince: (time: string) => `Вне объекта с ${time}`,
+    forgottenOpen: "Рабочий день не закрыт — подсчёт часов остановлен",
     phoneOnly: "Начать и завершить рабочий день можно только в телефоне",
     phoneOnlyBody:
       "Учёт рабочего времени опирается на местоположение: сервер проверяет, что вы действительно на объекте. " +
@@ -448,6 +458,7 @@ export const ru: Dictionary = {
       `Показано ${shown} записей из ${total}. Итоги посчитаны по всем; полный список — в файле.`,
     suspicious: "Местоположение подозрительное",
     offlineEntry: "Отправлено позже",
+    implausibleLength: "Необычно длинный день — проверьте",
     downloadTitle: "Скачать файлом",
   },
 

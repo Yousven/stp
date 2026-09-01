@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useLayout } from "../hooks/useLayout";
 import { DesktopShell } from "./DesktopShell";
+import { SwipeBackArea } from "./SwipeBackArea";
 
 /**
  * Sisselogimist nõudev leht. Ühtlasi otsustab siin, kumb raamistik lehe
@@ -18,5 +19,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
 
   if (layout === "desktop") return <DesktopShell>{children}</DesktopShell>;
-  return <>{children}</>;
+
+  // Telefonis lisandub servast pühkimise tagasi-žest. Arvutis seda ei ole:
+  // seal on külgmenüü püsivalt ees ja puuteekraani ei eeldata.
+  return <SwipeBackArea enabled={layout === "phone"}>{children}</SwipeBackArea>;
 }

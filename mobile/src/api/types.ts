@@ -25,6 +25,19 @@ export interface PresenceEvent {
   source: "manual" | "foreground" | "native";
 }
 
+export interface PresenceState {
+  onSite: boolean;
+  /** Millal praegune kohal/eemal olek algas. */
+  since: string;
+  /** Viimane seadmelt saadud signaal; null = ainult tööpäeva algus. */
+  lastEventAt: string | null;
+  /**
+   * Objektil viibitud aeg enne praeguse oleku algust (ms). Ekraanil olev
+   * kell arvutatakse siit, et see peatuks koos kohalolekuga.
+   */
+  presentMsBefore: number;
+}
+
 export interface TimeLog {
   id: number;
   userId: number;
@@ -36,12 +49,35 @@ export interface TimeLog {
   lunch: string | null;
   object: WorkObject;
   presenceEvents?: PresenceEvent[];
+  /**
+   * Serveri arvates kehtiv kohaloleku olek. Telefon seab siit oma
+   * lähteoleku — ilma selleta ei tea esiplaani kontroll esimesel korral,
+   * kas olek muutus, ja jätab EXIT-i saatmata.
+   */
+  presence?: PresenceState;
   /** Kohaloleku põhjal arvutatud netotunnid (lõuna maha arvatud). */
   durationHours?: number | null;
   /** Tööpäeva kogukestus algusest lõpuni, sõltumata kohalolekust. */
   grossHours?: number | null;
   /** Tööpäeva jooksul objektist eemal viibitud aeg. */
   awayHours?: number | null;
+  /** Ebausutavalt pikk päev — vajab halduri kontrolli, tunde ei ole muudetud. */
+  implausibleLength?: boolean;
+}
+
+/**
+ * `POST /time-logs/:id/presence-events` vastus.
+ *
+ * `presence` on serveri LÕPLIK otsus pärast partii salvestamist. Klient ei
+ * tohi eeldada, et tema saadetud ENTER läks arvesse: server kontrollib
+ * ENTER-i asukoha järgi ja võib selle tagasi lükata.
+ */
+export interface PresenceEventsResponse {
+  accepted: number;
+  skipped: number;
+  rejected: Array<{ type: string; occurredAt: string; reason: string }>;
+  presence: PresenceState;
+  log: TimeLog;
 }
 
 export interface MonthSummary {
@@ -280,6 +316,11 @@ export interface ReportRow {
   earnings: number | null;
   locationMocked: boolean;
   createdOffline: boolean;
+  /**
+   * Päeva pikkus ületab usutava vahetuse. Tunde EI ole muudetud — see on
+   * märk, et päev vajab kontrolli (tavaliselt ununes õhtul lõpetamine).
+   */
+  implausibleLength: boolean;
   comment: string | null;
 }
 
@@ -310,8 +351,17 @@ export interface ActiveWorker {
   objectName: string;
   workTypeName: string | null;
   startTime: string;
+  /** Kas töötaja on praegu objektil. Lahkumine peatab kella, aga ei
+   *  lõpeta tööpäeva, seega lahtine tööpäev ei tähenda kohalolekut. */
+  onSite: boolean;
+  presenceSince: string;
+  lastPresenceAt: string | null;
+  /** Objektil viibitud aeg enne praeguse oleku algust (ms). */
+  presentMsBefore: number;
   createdOffline: boolean;
   locationMocked: boolean;
+  /** Tööpäev on lahti ununenud: tundide kasv on peatatud, vajab lõpetamist. */
+  openLimitReached: boolean;
 }
 
 export interface OrgStatus {

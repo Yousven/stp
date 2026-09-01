@@ -16,7 +16,7 @@ import { BackgroundGeofence } from "../plugins/backgroundGeofence";
  * Veebis on plugin no-op (vt backgroundGeofence.ts web-implementatsioon),
  * seega see hook on brauseris ohutu.
  */
-export function useBackgroundGeofence(activeLog: TimeLog | null, onSynced: () => void) {
+export function useBackgroundGeofence(activeLog: TimeLog | null | undefined, onSynced: () => void) {
   const onSyncedRef = useRef(onSynced);
   onSyncedRef.current = onSynced;
 
@@ -71,11 +71,25 @@ export function useBackgroundGeofence(activeLog: TimeLog | null, onSynced: () =>
     };
   }, [activeLog?.id]);
 
+  // Kolm olekut, mitte kaks: "laadimata", "pole aktiivset päeva" ja "id".
+  // `activeLog?.id` annaks kahel esimesel juhul mõlemal `undefined`, mistõttu
+  // effect ei käivituks üleminekul laadimata -> päeva pole ja vana päeva ring
+  // jääks OS-i valvesse rippuma.
+  const monitorKey = activeLog === undefined ? "unknown" : activeLog === null ? "none" : String(activeLog.id);
+
   // Jälgimise käivitamine/lõpetamine vastavalt aktiivsele tööpäevale.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    if (!activeLog) {
+    // `undefined` = dashboard ei ole veel laetud (või laadimine ebaõnnestus
+    // võrgu tõttu). Sel juhul EI tohi valvet maha võtta: varem kutsuti siin
+    // igal mount'il stopMonitoring't, kuna `activeLog` on esimesel
+    // renderdusel alati null, ja kui järgnev päring ebaõnnestus, jäi
+    // taustajälgimine päriseks maha — objektilt lahkumine ei jõudnud enam
+    // kunagi serverisse.
+    if (activeLog === undefined) return;
+
+    if (activeLog === null) {
       BackgroundGeofence.stopMonitoring().catch(() => undefined);
       return;
     }
@@ -101,7 +115,8 @@ export function useBackgroundGeofence(activeLog: TimeLog | null, onSynced: () =>
         console.error("Taustajälgimise käivitamine ebaõnnestus:", err);
       }
     })();
-  }, [activeLog?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monitorKey]);
 }
 
 /** Kas natiivne taustajälgimine on lubatud (Dashboardi teavituse jaoks). */

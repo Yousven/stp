@@ -15,6 +15,7 @@ export function UserFormPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [hourlyRate, setHourlyRate] = useState("0");
   const [advance, setAdvance] = useState("0");
   const [role, setRole] = useState<"admin" | "employee">("employee");
@@ -44,6 +45,15 @@ export function UserFormPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    // Admin loob konto teise inimese eest ega saa trükivea korral ise
+    // proovida, kas parool töötab — töötaja lihtsalt ei saa sisse ja keegi
+    // ei tea, miks. Muutmisel kehtib sama, kui parool üldse sisestati.
+    if (password && password !== confirmPassword) {
+      setError(d.passwordsDoNotMatch);
+      return;
+    }
+
     setSubmitting(true);
     const body = {
       username,
@@ -87,6 +97,15 @@ export function UserFormPage() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!isEdit} />
         </label>
         <div className="form-hint">{d.passwordPolicy}</div>
+        <label>
+          {d.confirmPassword}
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required={!isEdit}
+          />
+        </label>
         <label>
           {d.userForm.hourlyRate} (€)
           <input type="number" step="0.01" min="0" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} required />

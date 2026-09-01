@@ -173,14 +173,46 @@ public class BackgroundGeofencePlugin: CAPPlugin, CAPBridgedPlugin, CLLocationMa
 
     // MARK: - Event queue
 
+    /**
+     * Kui vana tohib vahemällu jäänud asukoht olla, et ta veel tõendaks,
+     * kus töötaja piiri ületamise hetkel oli.
+     */
+    private let maxLocationAgeSeconds: TimeInterval = 300
+
     private func enqueue(type: String, region: CLRegion) {
         var event: [String: Any] = [
             "type": type,
             "occurredAt": ISO8601DateFormatter().string(from: Date())
         ]
-        if let circular = region as? CLCircularRegion {
-            event["latitude"] = circular.center.latitude
-            event["longitude"] = circular.center.longitude
+
+        /*
+         * Koordinaadid tulevad SEADMELT, mitte regioonilt.
+         *
+         * Varem pandi siia `region.center` ehk objekti enda koordinaadid.
+         * Need ei tõenda midagi: iga sündmus näitas täpselt objekti
+         * keskpunkti, olenemata sellest, kus telefon päriselt oli. Server,
+         * mis kontrollib ENTER-i asukoha järgi, oleks sellise kirje alati
+         * läbi lasknud — ja andmebaasi jäänuks "tõend", mis ei tõenda.
+         *
+         * `locationManager.location` on OS-i viimane vahemällu jäänud
+         * mõõtmine. Piiri ületamise järel on ta värske, sest OS just
+         * arvutas selle ise. Pidevat jälgimist see EI käivita — vt
+         * kommentaari `load()`-is.
+         *
+         * Kui värsket asukohta ei ole, jääb sündmus koordinaatideta ja
+         * server ei võta ENTER-it vastu. Kell jätkub siis alles siis, kui
+         * äpp avatakse ja esiplaani kontroll asukoha kinnitab. See on
+         * õigem suund kui tõendamata tundide juurde lugemine.
+         */
+        if let location = locationManager.location,
+           location.horizontalAccuracy >= 0,
+           abs(location.timestamp.timeIntervalSinceNow) < maxLocationAgeSeconds {
+            event["latitude"] = location.coordinate.latitude
+            event["longitude"] = location.coordinate.longitude
+            event["accuracy"] = location.horizontalAccuracy
+            if #available(iOS 15.0, *) {
+                event["mocked"] = location.sourceInformation?.isSimulatedBySoftware ?? false
+            }
         }
 
         var queue = UserDefaults.standard.array(forKey: queueKey) as? [[String: Any]] ?? []

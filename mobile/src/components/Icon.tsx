@@ -34,7 +34,9 @@ export type IconName =
   | "alert"
   | "info"
   | "inbox"
-  | "building2";
+  | "building2"
+  | "refresh"
+  | "chevronLeft";
 
 const PATHS: Record<IconName, string> = {
   play: "M8 5.5v13l11-6.5z",
@@ -61,6 +63,8 @@ const PATHS: Record<IconName, string> = {
   info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01",
   inbox: "M3 13h4l2 3h6l2-3h4M5 5h14l3 8v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6z",
   building2: "M6 21V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v16M3 21h18M10 8h1M13 8h1M10 12h1M13 12h1M10.5 21v-4h3v4",
+  refresh: "M23 4v6h-6M20.5 15a9 9 0 1 1-2.1-9.4L23 10",
+  chevronLeft: "M15 19l-7-7 7-7",
 };
 
 interface IconProps {

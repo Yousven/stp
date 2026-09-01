@@ -100,6 +100,7 @@ export const en: Dictionary = {
     subscription: "Subscription",
     workdayRunning: "Workday running",
     awayShort: "Away from site",
+    clockPaused: "Clock paused until you are back on site",
     elapsedLabel: "Today's working time",
     duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
     adminSection: "Administration",
@@ -392,6 +393,12 @@ export const en: Dictionary = {
     awayFromSite: (hours: number) => `Away from site: ${hours} h`,
     none: "No work records found.",
     loadFailed: "Could not load work history.",
+    thisWeek: "This week",
+    lastWeek: "Last week",
+    weekHours: (hours: number) => `${hours} h`,
+    allObjects: "All sites",
+    filterObject: "Site",
+    days: (count: number) => `${count} days`,
   },
 
   settings: {
@@ -411,7 +418,10 @@ export const en: Dictionary = {
     orgSummary: "Company status",
     activeNow: "Working now",
     activeNowNone: "Nobody has started a workday right now.",
-    peopleWorking: (count: number) => `${count} people on site`,
+    peopleWorking: (count: number) => `${count} workdays in progress`,
+    onSiteCount: (count: number) => `${count} on site now`,
+    offSiteSince: (time: string) => `Away from site since ${time}`,
+    forgottenOpen: "Workday left open — hour counting has stopped",
     phoneOnly: "A workday can only be started and ended on the phone",
     phoneOnlyBody:
       "Time tracking relies on location: the server checks that you are actually on the site. That cannot be " +
@@ -443,6 +453,7 @@ export const en: Dictionary = {
       `Showing ${shown} of ${total} entries. Totals are calculated over all of them; the full list is in the file.`,
     suspicious: "Location suspicious",
     offlineEntry: "Sent later",
+    implausibleLength: "Unusually long day — needs review",
     downloadTitle: "Download as a file",
   },
 

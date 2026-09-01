@@ -61,7 +61,7 @@ type ReportLog = Awaited<ReturnType<typeof fetchReportLogs>>[number];
 // käsitsi määratud väärtus (manualWorkDuration) võidab automaatika.
 function reportHours(log: ReportLog) {
   if (!log.endTime) return { gross: null, net: null, away: null, earnings: null };
-  const { net, gross, awayHours } = computeWorkedHours(log);
+  const { net, gross, awayHours, implausibleLength } = computeWorkedHours(log);
   const manual = log.manualWorkDuration != null ? Number(log.manualWorkDuration) : null;
   const effectiveNet = manual ?? net;
   return {
@@ -69,6 +69,8 @@ function reportHours(log: ReportLog) {
     net: round2(effectiveNet),
     away: round2(awayHours),
     earnings: round2(effectiveNet * Number(log.user.hourlyRate)),
+    // Käsitsi parandatud päev on juba üle vaadatud — siis märget ei näita.
+    implausibleLength: manual == null && (implausibleLength ?? false),
   };
 }
 
@@ -142,6 +144,7 @@ reportsRouter.get(
         grossHours: hours.gross,
         netHours: hours.net,
         awayHours: hours.away,
+        implausibleLength: hours.implausibleLength,
         lunch: log.endTime ? Number(log.lunch ?? 0) : null,
         earnings: hours.earnings,
         locationMocked: log.locationMocked,

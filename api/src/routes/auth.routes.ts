@@ -51,12 +51,30 @@ authRouter.post(
     const organization = await prisma.organization.findUnique({ where: { slug: orgSlug } });
     if (!organization) throw invalidCredentials();
 
+    // Sisse saab logida nii kasutajanime kui e-postiga: töötaja ei pea
+    // meeles pidama, kumma admin talle konto loomisel andis, ja e-post on
+    // enamasti see, mille ta ise mäletab.
+    //
     // MySQL-i vaikimisi tähemärjastik (utf8mb4_unicode_ci) on juba
     // suur-/väiketähetundetu, seega vastab see päring nt "Admin" ja "ADMIN"
     // sõltumata sellest, mis juhtumiga kasutajanimi algselt loodi.
-    const user = await prisma.user.findUnique({
-      where: { organizationId_username: { organizationId: organization.id, username } },
+    const identifier = username.trim();
+    const matches = await prisma.user.findMany({
+      where: {
+        organizationId: organization.id,
+        OR: [{ username: identifier }, { email: identifier }],
+      },
     });
+
+    // Kasutajanimi ja e-post on eraldi unikaalsed, seega ühe inimese
+    // kasutajanimi võib teoreetiliselt olla teise inimese e-post. Sel juhul
+    // võidab kasutajanimi — muidu saaks kellegi kasutajanime enda e-postiks
+    // registreerides tema sisselogimise endale tõmmata.
+    const user =
+      matches.find((candidate) => candidate.username.toLowerCase() === identifier.toLowerCase()) ??
+      matches[0] ??
+      null;
+
     if (!user || !(await verifyPassword(password, user.password))) {
       throw invalidCredentials();
     }

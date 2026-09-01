@@ -104,6 +104,7 @@ export const et = {
     subscription: "Tellimus",
     workdayRunning: "Tööpäev käib",
     awayShort: "Objektilt eemal",
+    clockPaused: "Kell on peatatud, kuni oled objektil tagasi",
     elapsedLabel: "Tänane tööaeg",
     duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
     adminSection: "Haldus",
@@ -396,6 +397,12 @@ export const et = {
     awayFromSite: (hours: number) => `Objektilt eemal: ${hours} h`,
     none: "Ühtegi tööaja kirjet ei leitud.",
     loadFailed: "Tööajaloo laadimine ebaõnnestus.",
+    thisWeek: "See nädal",
+    lastWeek: "Eelmine nädal",
+    weekHours: (hours: number) => `${hours} h`,
+    allObjects: "Kõik objektid",
+    filterObject: "Objekt",
+    days: (count: number) => `${count} päeva`,
   },
 
   settings: {
@@ -415,7 +422,10 @@ export const et = {
     orgSummary: "Ettevõtte seis",
     activeNow: "Praegu tööl",
     activeNowNone: "Hetkel ei ole keegi tööpäeva alustanud.",
-    peopleWorking: (count: number) => `${count} töötajat objektil`,
+    peopleWorking: (count: number) => `${count} töötajal tööpäev pooleli`,
+    onSiteCount: (count: number) => `${count} praegu objektil`,
+    offSiteSince: (time: string) => `Objektilt eemal alates ${time}`,
+    forgottenOpen: "Tööpäev on unustatud lõpetamata — tundide arvestus on peatatud",
     phoneOnly: "Tööpäeva saab alustada ja lõpetada ainult telefonis",
     phoneOnlyBody:
       "Tööaja arvestus tugineb asukohale: server kontrollib, et oled päriselt objektil. Arvutis seda kontrollida " +
@@ -447,6 +457,7 @@ export const et = {
       `Näidatakse ${shown} kirjet ${total}-st. Kogusummad on arvutatud kõigi kirjete pealt; terve nimekiri on failis.`,
     suspicious: "Asukoht kahtlane",
     offlineEntry: "Järelsaadetud",
+    implausibleLength: "Ebatavaliselt pikk päev — kontrolli",
     downloadTitle: "Laadi alla failina",
   },
 

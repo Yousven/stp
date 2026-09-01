@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { computeWorkedHours, monthRange, monthlyTargetHours } from "../utils/timeStats.js";
+import { computeWorkedHours, monthRange, monthlyTargetHours, presenceState } from "../utils/timeStats.js";
 import { absentWorkDaysInMonth, holidaysForMonth } from "../utils/workCalendar.js";
 
 export const dashboardRouter = Router();
@@ -14,11 +14,20 @@ dashboardRouter.get(
   asyncHandler(async (req, res) => {
     const userId = req.user!.sub;
 
-    const activeLog = await prisma.timeLog.findFirst({
+    const activeLogRow = await prisma.timeLog.findFirst({
       where: { userId, endTime: null },
       orderBy: { startTime: "desc" },
-      include: { object: true },
+      include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });
+
+    // Telefon peab teadma serveri arvates kehtivat kohaloleku olekut, muidu
+    // ei saa ta esimesel esiplaani kontrollil aru, kas olek muutus, ja jätab
+    // EXIT-i saatmata. Sündmuste nimekirja ennast telefonile ei saada.
+    let activeLog = null;
+    if (activeLogRow) {
+      const { presenceEvents, ...rest } = activeLogRow;
+      activeLog = { ...rest, presence: presenceState(activeLogRow) };
+    }
 
     const lastFinished = activeLog
       ? null
@@ -103,6 +112,7 @@ dashboardRouter.get(
           user: { select: { id: true, username: true } },
           object: { select: { id: true, name: true } },
           workType: { select: { id: true, name: true } },
+          presenceEvents: { orderBy: { occurredAt: "asc" } },
         },
         orderBy: { startTime: "asc" },
       }),
@@ -111,19 +121,39 @@ dashboardRouter.get(
 
     res.json({
       pendingRequests,
-      active: active.map((log) => ({
-        logId: log.id,
-        userId: log.user.id,
-        username: log.user.username,
-        objectId: log.object.id,
-        objectName: log.object.name,
-        workTypeName: log.workType?.name ?? null,
-        startTime: log.startTime,
-        // Offline järelsaadetud kirjed on adminile märgiline info: neid
-        // ei kinnitanud server tegevuse hetkel.
-        createdOffline: log.createdOffline,
-        locationMocked: log.locationMocked,
-      })),
+      active: active.map((log) => {
+        // "Kell käib" ja "on objektil" ei ole sama asi: lahkumine peatab
+        // kella, aga ei lõpeta tööpäeva. Varem näitas see vaade kõiki
+        // lõpetamata tööpäevi objektil olijatena, mistõttu juba ammu
+        // lahkunud töötaja jäi ekraanile objektile seisma.
+        const presence = presenceState(log);
+        // Lahti ununenud tööpäev: tunnid on peatatud ja see vajab admini
+        // sekkumist, muidu jääb päev igaveseks rippuma.
+        const { openLimitReached } = computeWorkedHours(log);
+        return {
+          logId: log.id,
+          userId: log.user.id,
+          username: log.user.username,
+          objectId: log.object.id,
+          objectName: log.object.name,
+          workTypeName: log.workType?.name ?? null,
+          startTime: log.startTime,
+          onSite: presence.onSite,
+          // Millal praegune kohal/eemal olek algas.
+          presenceSince: presence.since,
+          // Objektil viibitud aeg enne praeguse oleku algust — arvutivaade
+          // näitab selle põhjal kohal oldud aega, mitte aega tööpäeva
+          // algusest, mis sisaldaks ka eemal käidud tunde.
+          presentMsBefore: presence.presentMsBefore,
+          // Viimane seadmelt saadud kohalolekusignaal; null = ainult algus.
+          lastPresenceAt: presence.lastEventAt,
+          // Offline järelsaadetud kirjed on adminile märgiline info: neid
+          // ei kinnitanud server tegevuse hetkel.
+          createdOffline: log.createdOffline,
+          locationMocked: log.locationMocked,
+          openLimitReached: openLimitReached ?? false,
+        };
+      }),
     });
   })
 );

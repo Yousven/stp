@@ -35,10 +35,18 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
 
         Double latitude = null;
         Double longitude = null;
+        Float accuracy = null;
         boolean mocked = false;
         if (event.getTriggeringLocation() != null) {
             latitude = event.getTriggeringLocation().getLatitude();
             longitude = event.getTriggeringLocation().getLongitude();
+            // Täpsus peab kaasa tulema: server annab selle võrra raadiusele
+            // varu (kuni 100 m). Ilma selleta kontrollitaks piiri ületamise
+            // hetke — kus töötaja ongi täpselt raadiuse serval — nulliga
+            // varuga ja aus ENTER lükataks tagasi.
+            if (event.getTriggeringLocation().hasAccuracy()) {
+                accuracy = event.getTriggeringLocation().getAccuracy();
+            }
             // Arendajarežiimis saab asukohta võltsida; märgime selle ära,
             // et admin näeks raportis kahtlast kirjet.
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -53,6 +61,6 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
             return;
         }
 
-        GeofenceQueue.add(context, type, latitude, longitude, mocked);
+        GeofenceQueue.add(context, type, latitude, longitude, accuracy, mocked);
     }
 }
