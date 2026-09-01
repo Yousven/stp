@@ -9,6 +9,11 @@ import { computeWorkedHours, presenceState } from "../utils/timeStats.js";
 import { checkGeofence } from "../utils/geofence.js";
 import { decidePresenceEvent } from "../utils/presenceEvents.js";
 import { recordAudit } from "../utils/audit.js";
+import {
+  CLOCK_DRIFT_ALERT_SECONDS,
+  isDeviceMismatch,
+  raiseSecurityAlert,
+} from "../utils/securityAlerts.js";
 
 export const timeLogsRouter = Router();
 timeLogsRouter.use(requireAuth);
@@ -163,16 +168,85 @@ timeLogsRouter.post(
         // arendajarežiimi kõrvalmõju ja tööpäeva kaotamine oleks ausa
         // töötaja jaoks liiga karm. Märgime ja näitame adminile.
         locationMocked: mocked,
+        // Seade, millega päev algas. Edasised sündmused peaksid tulema
+        // samast seadmest; teine seade tekitab märke.
+        startDeviceId: req.deviceId,
         // Sisseregistreerimine ise on esimene kohaloleku tõend.
         presenceEvents: {
-          create: { type: "ENTER", occurredAt: startTime, latitude, longitude, accuracy, source: "manual", mocked },
+          create: {
+            type: "ENTER",
+            occurredAt: startTime,
+            latitude,
+            longitude,
+            accuracy,
+            source: "manual",
+            mocked,
+            deviceId: req.deviceId,
+          },
         },
       },
       include: { object: true, presenceEvents: true },
     });
+
+    /*
+     * Märked tekitatakse PÄRAST kirje loomist ja need ei blokeeri midagi.
+     * Võltsitud asukoht ja nihkes kell olid varem ainult andmebaasi
+     * veerud, mida keegi ei vaadanud — nüüd jõuavad nad nii töötaja kui
+     * halduri ette.
+     */
+    if (mocked) {
+      await raiseSecurityAlert({
+        organizationId: req.user!.organizationId,
+        userId,
+        timeLogId: log.id,
+        type: "mock_location",
+        details: { objectId, source: "start" },
+        dedupeKey: `mock_location:${log.id}`,
+      });
+    }
+    if (clockDriftSeconds != null && Math.abs(clockDriftSeconds) > CLOCK_DRIFT_ALERT_SECONDS) {
+      await raiseSecurityAlert({
+        organizationId: req.user!.organizationId,
+        userId,
+        timeLogId: log.id,
+        type: "clock_drift",
+        details: { driftSeconds: clockDriftSeconds },
+        dedupeKey: `clock_drift:${log.id}`,
+      });
+    }
+
     res.status(201).json(log);
   })
 );
+
+/**
+ * Kas see tegevus tuleb teisest seadmest kui see, kus tööpäev algas?
+ *
+ * Püüab kinni juhtumi, kus keegi teine logib sama kontoga oma telefonis
+ * sisse ja jätkab tööpäeva. EI takista midagi — jätab jälje ja teavitab.
+ *
+ * Kui kumbki id puudub (vana äpiversioon, veebiliides), ei väida me midagi:
+ * teadmatus ei ole kahtlus.
+ */
+async function flagDeviceMismatch(
+  req: { deviceId?: string; user?: { sub: number; organizationId: number } },
+  log: { id: number; startDeviceId: string | null },
+  where: "presence" | "end"
+): Promise<boolean> {
+  const current = req.deviceId;
+  if (!isDeviceMismatch(log.startDeviceId, current)) return false;
+
+  await raiseSecurityAlert({
+    organizationId: req.user!.organizationId,
+    userId: req.user!.sub,
+    timeLogId: log.id,
+    type: "device_mismatch",
+    details: { startedOn: log.startDeviceId, seenOn: current, where },
+    // Sama seade sama päeva kohta annab ühe märke, mitte ühe iga partii kohta.
+    dedupeKey: `device_mismatch:${log.id}:${current}`,
+  });
+  return true;
+}
 
 const presenceEventsSchema = z.object({
   events: z
@@ -225,6 +299,8 @@ timeLogsRouter.post(
     const log = await prisma.timeLog.findFirst({ where: { id, userId }, include: { object: true } });
     if (!log) throw new HttpError(404, req.m.timeLogs.notFound);
 
+    const deviceMismatch = await flagDeviceMismatch(req, log, "presence");
+
     // Reegel ise on `utils/presenceEvents.ts`-s ja ühikutestidega kaetud —
     // siin on ainult partii läbikäimine.
     const context = {
@@ -271,6 +347,7 @@ timeLogsRouter.post(
             accuracy: e.accuracy,
             source: e.source,
             mocked: e.mocked,
+            deviceId: req.deviceId,
           })),
           skipDuplicates: true,
         })
@@ -295,6 +372,8 @@ timeLogsRouter.post(
        * väljata usuks äpp end objektile ja lõpetaks uuesti proovimise.
        */
       presence: presenceState(updated),
+      /** Sündmused tulid teisest seadmest kui tööpäeva alustamine. */
+      deviceMismatch,
       log: withHours(updated),
     });
   })
@@ -338,6 +417,8 @@ timeLogsRouter.post(
       endTime = reported;
     }
 
+    await flagDeviceMismatch(req, log, "end");
+
     const updated = await prisma.timeLog.update({
       where: { id },
       data: {
@@ -347,7 +428,9 @@ timeLogsRouter.post(
         lunch,
         // Väljaregistreerimine lõpetab kohaloleku — ilma selleta jääks
         // viimane ENTER lahtiseks ja tunnid loeksid lõpuni kohalolekuks.
-        presenceEvents: { create: { type: "EXIT", occurredAt: endTime, source: "manual" } },
+        presenceEvents: {
+          create: { type: "EXIT", occurredAt: endTime, source: "manual", deviceId: req.deviceId },
+        },
       },
       include: { object: true, presenceEvents: { orderBy: { occurredAt: "asc" } } },
     });

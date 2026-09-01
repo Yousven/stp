@@ -39,6 +39,7 @@ model Organization {
   workTypes      WorkType[]
   invoices       Invoice[]
   subscription   Subscription?
+  securityAlerts SecurityAlert[]
 
   @@map("organizations")
 }
@@ -101,6 +102,7 @@ model User {
   deviceTokens    DeviceToken[]
   tokenRevocation TokenRevocation?
   absences        Absence[]
+  securityAlerts  SecurityAlert[]
 
   @@unique([organizationId, username])
   @@unique([organizationId, email])
@@ -473,6 +475,15 @@ model TimeLog {
    */
   locationMocked     Boolean   @default(false) @map("location_mocked")
   /**
+   * Seade, milles tööpäev alustati.
+   *
+   * Paigalduse püsiv id (mitte push-token, mis vahetub). Kui kohaloleku
+   * sündmused või lõpetamine hakkavad tulema TEISEST seadmest, tähendab
+   * see, et keegi teine kasutab seda kontot — süsteem tekitab siis
+   * `SecurityAlert`-i nii töötajale kui haldurile.
+   */
+  startDeviceId      String?   @map("start_device_id") @db.VarChar(64)
+  /**
    * Offline-režiimis loodud kirje: telefon salvestas selle ilma
    * ühenduseta ja saatis hiljem. `startTime` tuleb siis seadme kellast,
    * mitte serverilt.
@@ -490,6 +501,7 @@ model TimeLog {
   user           User            @relation(fields: [userId], references: [id])
   object         WorkObject      @relation(fields: [objectId], references: [id])
   presenceEvents PresenceEvent[]
+  securityAlerts SecurityAlert[]
 
   @@index([invoiceId])
   @@map("time_logs")
@@ -512,6 +524,8 @@ model PresenceEvent {
    * Kas seade teatas, et asukoht on võltsitud (mock location app).
    */
   mocked     Boolean  @default(false)
+  /** Seade, mis selle sündmuse saatis. Vt TimeLog.startDeviceId. */
+  deviceId   String?  @map("device_id") @db.VarChar(64)
 
   timeLog TimeLog @relation(fields: [timeLogId], references: [id], onDelete: Cascade)
 
@@ -565,4 +579,48 @@ model TokenRevocation {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("token_revocations")
+}
+
+/**
+ * Kahtlane tegevus tööaja registreerimisel.
+ *
+ * Ei blokeeri midagi — tööpäev jääb kehtima ja tunnid arvutatakse edasi.
+ * Eesmärk on, et kahtlane muster oleks NÄHTAV: töötaja saab teada, et
+ * tema kontoga tehti midagi ootamatut, ja haldur saab selle üle vaadata.
+ *
+ * Blokeerimine oleks siin vale: ehitusobjektil on katkine GPS ja vahetatud
+ * telefon igapäevased, ja ausa töötaja tööpäeva kaotamine oleks palju
+ * suurem kahju kui üks üle vaatamata märge.
+ */
+model SecurityAlert {
+  id             Int       @id @default(autoincrement())
+  organizationId Int       @map("organization_id")
+  /** Kelle kontot see puudutab. */
+  userId         Int       @map("user_id")
+  timeLogId      Int?      @map("time_log_id")
+  /** "device_mismatch" | "mock_location" | "clock_drift" */
+  type           String    @db.VarChar(40)
+  /** JSON: tüübipõhised üksikasjad (seadmete id-d, nihe sekundites jne). */
+  details        String    @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  /** Töötaja on teate näinud — äpi bänner kaob. */
+  seenAt         DateTime? @map("seen_at")
+  /** Haldur on juhtumi läbi vaadanud. */
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewedBy     Int?      @map("reviewed_by")
+
+  /**
+   * Sama juhtumi kordumine ei tekita uut märget: sündmusi saadetakse
+   * partiidena ja iga partii tekitaks muidu uue teate.
+   */
+  dedupeKey      String    @map("dedupe_key") @db.VarChar(120)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeLog      TimeLog?     @relation(fields: [timeLogId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, reviewedAt])
+  @@index([userId, seenAt])
+  @@map("security_alerts")
 }

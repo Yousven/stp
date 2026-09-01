@@ -41,6 +41,7 @@ export function DesktopShell({ children }: { children: ReactNode }) {
         { to: "/admin/objects", label: d.dashboard.manageObjects, icon: "building", adminOnly: true },
         { to: "/admin/users", label: d.dashboard.manageUsers, icon: "users", adminOnly: true },
         { to: "/admin/requests", label: d.dashboard.joinRequests, icon: "userPlus", adminOnly: true },
+        { to: "/admin/alerts", label: d.alerts.title, icon: "alert", adminOnly: true },
         { to: "/admin/team-performance", label: d.dashboard.teamOverview, icon: "chart", adminOnly: true },
         { to: "/admin/work-types", label: d.dashboard.workTypes, icon: "tag", adminOnly: true },
         { to: "/admin/clients", label: d.dashboard.clients, icon: "briefcase", adminOnly: true },

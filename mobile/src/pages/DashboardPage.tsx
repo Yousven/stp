@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AlertBanner } from "../components/AlertBanner";
 import { Icon } from "../components/Icon";
 import { useElapsedMinutes, usePresentMinutes } from "../hooks/useElapsed";
 import { useLayout } from "../hooks/useLayout";
@@ -202,7 +203,7 @@ export function DashboardPage() {
 
   if (layout === "desktop") return <DesktopOverview data={data} />;
 
-  const { activeLog, lastFinished, monthSummary } = data;
+  const { activeLog, lastFinished, monthSummary, today } = data;
 
   return (
     <div className="page">
@@ -337,6 +338,38 @@ export function DashboardPage() {
           </Link>
         )}
       </nav>
+
+      {/* Kahtlase tegevuse märge tuleb enne kõike muud: kui keegi kasutab
+          sinu kontot, on see tähtsam kui tänased tunnid. */}
+      <AlertBanner />
+
+      {/* Tänase päeva jaotus: kui kaua objektil, kui kaua eemal. Server
+          liidab kokku kõik tänased tööpäevad, seega objektivahetus ei lõhu
+          numbrit. Minutites, sest "0,3 h eemal" ei ütle midagi. */}
+      <section className="card">
+        <h2>{d.dashboard.todayTitle}</h2>
+        {today && today.logCount > 0 ? (
+          <dl className="stat-list">
+            <div>
+              <dt>{d.dashboard.todayPresent}</dt>
+              <dd>
+                {d.dashboard.duration(
+                  Math.floor(today.presentMinutes / 60),
+                  today.presentMinutes % 60
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{d.dashboard.todayAway}</dt>
+              <dd className={today.awayMinutes > 0 ? "text-warning" : undefined}>
+                {d.dashboard.duration(Math.floor(today.awayMinutes / 60), today.awayMinutes % 60)}
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="subtitle">{d.dashboard.todayNothing}</p>
+        )}
+      </section>
 
       <section className="card">
         <h2>{d.dashboard.monthSummary}</h2>

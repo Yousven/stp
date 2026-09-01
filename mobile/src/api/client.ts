@@ -1,4 +1,5 @@
 import { clearSession, getAccessToken, getRefreshToken, setAccessToken } from "../auth/tokenStore";
+import { getDeviceId } from "./deviceId";
 
 /**
  * Kasutaja valitud keel serveri veateadete jaoks.
@@ -59,6 +60,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "Accept-Language": apiLanguage,
+    // Seadme tuvastus: server seob tööpäeva selle seadmega ja märgib, kui
+    // sündmused hakkavad tulema mujalt. Vt api/deviceId.ts.
+    "X-Device-Id": await getDeviceId(),
   };
 
   if (auth) {

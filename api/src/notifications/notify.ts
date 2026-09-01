@@ -121,3 +121,63 @@ export async function sendCheckOutReminder(
     );
   }
 }
+
+/**
+ * Kahtlane tegevus → töötajale JA ettevõtte halduritele.
+ *
+ * Töötaja peab teadma, et tema kontoga tehti midagi ootamatut — kui see ei
+ * olnud tema, on see ainus viis seda avastada. Haldur peab teadma, sest
+ * tema otsustab, kas tunnid vajavad parandust.
+ *
+ * Push on praegu seadistamata ja `sendPushToUsers` logib sel juhul vaikselt.
+ * Märge ise on alati andmebaasis ja nähtav äpis, seega teavituse puudumine
+ * ei kaota infot.
+ */
+export function notifySecurityAlert(alert: {
+  organizationId: number;
+  userId: number;
+  type: string;
+}) {
+  const text: Record<string, { title: string; body: string }> = {
+    device_mismatch: {
+      title: "Tööpäeva muudeti teisest seadmest",
+      body: "Sinu tööpäeva kohta tuli kirje teisest seadmest kui see, kus päev algas. Kui see ei olnud sina, anna haldurile teada.",
+    },
+    mock_location: {
+      title: "Asukoht märgiti võltsituks",
+      body: "Seade teatas, et asukoht on võltsitud. Kontrolli, et telefonis ei oleks asukohta muutvat rakendust.",
+    },
+    clock_drift: {
+      title: "Seadme kell on nihkes",
+      body: "Telefoni kellaaeg erineb serveri omast oluliselt. Kontrolli telefoni kellaaega, muidu võivad tunnid valesti salvestuda.",
+    },
+  };
+
+  const message = text[alert.type];
+  if (!message) return;
+
+  fireAndForget(
+    (async () => {
+      // Töötajale isiklikult.
+      await sendPushToUsers([alert.userId], {
+        ...message,
+        data: { route: "/dashboard" },
+      });
+
+      // Halduritele koondteade — v.a kui haldur ise ongi see kasutaja.
+      const adminIds = (await orgAdminIds(alert.organizationId)).filter((id) => id !== alert.userId);
+      if (adminIds.length === 0) return;
+
+      const user = await prisma.user.findUnique({
+        where: { id: alert.userId },
+        select: { username: true },
+      });
+      await sendPushToUsers(adminIds, {
+        title: "Kontrollimist vajav tegevus",
+        body: `${user?.username ?? "Töötaja"}: ${message.title.toLowerCase()}.`,
+        data: { route: "/admin/alerts" },
+      });
+    })(),
+    "kahtlase tegevuse teavitus"
+  );
+}

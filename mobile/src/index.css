@@ -618,6 +618,15 @@ button {
   color: var(--warning);
 }
 
+/*
+ * Kontrollimist vajav märge. EI ole veateade: tööpäev jääb kehtima ja
+ * tunnid arvutatakse edasi. Seetõttu hoiatuse värv, mitte punane —
+ * punane tähendab selles äpis "objektilt väljas / peatatud".
+ */
+.card-warning {
+  border-left: 4px solid var(--warning);
+}
+
 .stat-list {
   display: grid;
   grid-template-columns: 1fr 1fr;

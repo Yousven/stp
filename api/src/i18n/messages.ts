@@ -28,6 +28,9 @@ export const et = {
     resetLinkExpired: "Link on aegunud või juba kasutatud. Palun küsi uus taastamise link.",
   },
 
+  alerts: {
+    notFound: "Märget ei leitud.",
+  },
   timeLogs: {
     tooFar: (distance: number, radius: number) =>
       `Oled objektist ${distance} m kaugusel, lubatud on ${radius} m. Tööpäeva saab alustada ainult objektil.`,
@@ -126,6 +129,9 @@ export const en: Messages = {
     resetLinkExpired: "The link has expired or was already used. Please request a new reset link.",
   },
 
+  alerts: {
+    notFound: "Alert not found.",
+  },
   timeLogs: {
     tooFar: (distance: number, radius: number) =>
       `You are ${distance} m from the site, the limit is ${radius} m. A workday can only be started on site.`,
@@ -220,6 +226,9 @@ export const ru: Messages = {
     resetLinkExpired: "Ссылка истекла или уже использована. Запросите новую ссылку для восстановления.",
   },
 
+  alerts: {
+    notFound: "Отметка не найдена.",
+  },
   timeLogs: {
     tooFar: (distance: number, radius: number) =>
       `Вы в ${distance} м от объекта, допустимо ${radius} м. Рабочий день можно начать только на объекте.`,
@@ -314,6 +323,9 @@ export const uk: Messages = {
     resetLinkExpired: "Посилання протерміноване або вже використане. Запитайте нове посилання для відновлення.",
   },
 
+  alerts: {
+    notFound: "Позначку не знайдено.",
+  },
   timeLogs: {
     tooFar: (distance: number, radius: number) =>
       `Ви за ${distance} м від об'єкта, дозволено ${radius} м. Робочий день можна розпочати лише на об'єкті.`,

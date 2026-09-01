@@ -37,6 +37,53 @@ dashboardRouter.get(
           include: { object: true },
         });
 
+    /*
+     * Tänase päeva kokkuvõte: kui kaua objektil ja kui kaua eemal.
+     *
+     * Miks server ja mitte telefon: päevas võib olla mitu tööpäeva (objekti
+     * vahetus) ja lahtise päeva puhul peab arvestus jooksma praeguse
+     * hetkeni. Telefon ei tea kohaloleku sündmusi — need jäävad tahtlikult
+     * serverisse — seega peab summa tulema siit.
+     *
+     * Minutid, mitte tunnid: "0,3 h eemal" ei ütle töötajale midagi,
+     * "18 min eemal" ütleb.
+     */
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const todayLogs = await prisma.timeLog.findMany({
+      where: { userId, startTime: { gte: dayStart, lt: dayEnd } },
+      include: { presenceEvents: { orderBy: { occurredAt: "asc" } } },
+    });
+
+    const todayTotals = todayLogs.reduce(
+      (acc, log) => {
+        const { net, awayHours } = computeWorkedHours(log);
+        // Lõuna on juba `net`-ist maha arvatud; siin näitame kohalolekut,
+        // seega liidame ta tagasi — muidu näeks töötaja kella ja selle
+        // numbri vahel seletamatut vahet.
+        const lunch = Number(log.lunch ?? 0);
+        return {
+          presentMinutes: acc.presentMinutes + Math.max(net + lunch, 0) * 60,
+          awayMinutes: acc.awayMinutes + awayHours * 60,
+          lunchMinutes: acc.lunchMinutes + lunch * 60,
+        };
+      },
+      { presentMinutes: 0, awayMinutes: 0, lunchMinutes: 0 }
+    );
+
+    const today = {
+      /** Objektil viibitud aeg, minutites (lõuna sees). */
+      presentMinutes: Math.round(todayTotals.presentMinutes),
+      /** Tööpäeva sees, aga objektist eemal viibitud aeg. */
+      awayMinutes: Math.round(todayTotals.awayMinutes),
+      lunchMinutes: Math.round(todayTotals.lunchMinutes),
+      /** Mitu tööpäeva täna olnud on (objektivahetusel rohkem kui üks). */
+      logCount: todayLogs.length,
+    };
+
     const { start, end } = monthRange();
     // Kuu tunnid arvutatakse nüüd kohaloleku põhjal (computeWorkedHours),
     // sama helperiga mis tööajalugu ja raportid — varem oli siin oma valem,
@@ -76,6 +123,7 @@ dashboardRouter.get(
       activeLog,
       lastFinished,
       pendingRequests,
+      today,
       monthSummary: {
         totalHours,
         hourlyRate,

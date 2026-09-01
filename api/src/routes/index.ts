@@ -6,6 +6,7 @@ import { timeLogsRouter } from "./timeLogs.routes.js";
 import { usersRouter } from "./users.routes.js";
 import { teamPerformanceRouter } from "./teamPerformance.routes.js";
 import { settingsRouter } from "./settings.routes.js";
+import { alertsRouter, meAlertsRouter } from "./alerts.routes.js";
 import { reportsRouter } from "./reports.routes.js";
 import { deviceTokensRouter } from "./deviceTokens.routes.js";
 import { passwordResetRouter } from "./passwordReset.routes.js";
@@ -35,6 +36,7 @@ apiRouter.use("/auth", authRouter);
 // Täpsem tee peab olema enne üldisemat "/me"-d, muidu püüaks dashboardRouter
 // selle enne kinni.
 apiRouter.use("/me/device-tokens", deviceTokensRouter);
+apiRouter.use("/me/alerts", meAlertsRouter);
 apiRouter.use("/me", dashboardRouter);
 apiRouter.use("/time-logs", timeLogsRouter);
 apiRouter.use("/objects", objectsRouter);
@@ -50,3 +52,4 @@ apiRouter.use("/billing", billingRouter);
 apiRouter.use("/subscription", subscriptionRouter);
 apiRouter.use("/settings", settingsRouter);
 apiRouter.use("/reports", reportsRouter);
+apiRouter.use("/alerts", alertsRouter);

@@ -8,6 +8,7 @@ import morgan from "morgan";
 import { env } from "./env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { languageMiddleware } from "./middleware/language.js";
+import { readDeviceId } from "./middleware/device.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { apiRouter } from "./routes/index.js";
 import { stripeWebhookRouter } from "./routes/stripeWebhook.routes.js";
@@ -42,6 +43,9 @@ export function createApp() {
   app.use(
     cors({
       origin: env.corsOrigins.length > 0 ? env.corsOrigins : true,
+      // `X-Device-Id` on omapäis, seega brauser küsib selle jaoks eraldi
+      // luba (preflight). Ilma selleta lakkaks arvutiliides töötamast.
+      allowedHeaders: ["Content-Type", "Authorization", "Accept-Language", "X-Device-Id"],
     })
   );
   // Stripe'i webhook vajab töötlemata keha allkirja kontrolliks, seega
@@ -50,6 +54,8 @@ export function createApp() {
 
   // Enne marsruute, et iga veateade oskaks kasutaja keelt.
   app.use(languageMiddleware);
+  // Seadme tuvastus (`X-Device-Id`) — vt middleware/device.ts.
+  app.use(readDeviceId);
 
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan("tiny"));

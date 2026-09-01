@@ -90,12 +90,59 @@ export interface MonthSummary {
   progress: number;
 }
 
+/**
+ * Tänase päeva kokkuvõte.
+ *
+ * Minutites, mitte tundides: "0,3 h eemal" ei ütle töötajale midagi,
+ * "18 min eemal" ütleb. Server liidab kokku kõik tänased tööpäevad, seega
+ * objektivahetus ei lõhu numbrit.
+ */
+export interface TodaySummary {
+  /** Objektil viibitud aeg (lõuna sees). */
+  presentMinutes: number;
+  /** Tööpäeva sees, aga objektist eemal viibitud aeg. */
+  awayMinutes: number;
+  lunchMinutes: number;
+  /** Mitu tööpäeva täna olnud on (objektivahetusel rohkem kui üks). */
+  logCount: number;
+}
+
 export interface DashboardResponse {
   activeLog: TimeLog | null;
   lastFinished: TimeLog | null;
   monthSummary: MonthSummary;
+  today: TodaySummary;
   /** Ootel liitumistaotluste arv (ainult adminile, muidu 0). */
   pendingRequests?: number;
+}
+
+/**
+ * Kahtlase tegevuse märge. EI blokeeri midagi — tööpäev jääb kehtima ja
+ * tunnid arvutatakse edasi. Eesmärk on, et muster oleks nähtav.
+ */
+export interface SecurityAlert {
+  id: number;
+  /** "device_mismatch" | "mock_location" | "clock_drift" */
+  type: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+  /** Töötaja on märke näinud. */
+  seenAt: string | null;
+  /** Haldur on juhtumi läbi vaadanud. */
+  reviewedAt: string | null;
+  timeLogId: number | null;
+  /** Ainult halduri vaates. */
+  user?: { id: number; username: string };
+}
+
+export interface MyAlertsResponse {
+  alerts: SecurityAlert[];
+  unseen: number;
+}
+
+export interface AdminAlertsResponse {
+  alerts: SecurityAlert[];
+  open: number;
 }
 
 export interface AuthUser {

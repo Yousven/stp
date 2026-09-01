@@ -7,6 +7,7 @@ import { RegisterOrganizationPage } from "./pages/RegisterOrganizationPage";
 import { RequestAccessPage } from "./pages/RequestAccessPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { AlertsPage } from "./pages/AlertsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { StartWorkPage } from "./pages/StartWorkPage";
@@ -143,6 +144,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/alerts"
+          element={
+            <ProtectedRoute>
+              <AlertsPage />
             </ProtectedRoute>
           }
         />

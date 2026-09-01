@@ -102,6 +102,10 @@ export const en: Dictionary = {
     awayShort: "Away from site",
     clockPaused: "Clock paused until you are back on site",
     elapsedLabel: "Today's working time",
+    todayTitle: "Today in total",
+    todayPresent: "On site",
+    todayAway: "Away from site",
+    todayNothing: "No workday started today yet.",
     duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
     adminSection: "Administration",
     everydaySection: "My things",
@@ -384,6 +388,25 @@ export const en: Dictionary = {
         "radius is the right size.",
       action: "Start workday",
     },
+  },
+
+  alerts: {
+    title: "Activity that needs a check",
+    none: "No suspicious activity.",
+    openCount: (n: number) => `${n} not reviewed`,
+    markSeen: "Got it",
+    markReviewed: "Mark as reviewed",
+    reviewed: "Reviewed",
+    notBlocking: "The workday stays valid — this is only a note for review.",
+    deviceMismatchTitle: "Workday changed from another device",
+    deviceMismatchBody:
+      "A record for this workday came from a different device than the one it started on. If this was not you, tell your manager.",
+    mockLocationTitle: "Location reported as mocked",
+    mockLocationBody:
+      "The device reported that the location is mocked. Check that no location-spoofing app is installed.",
+    clockDriftTitle: "Device clock is off",
+    clockDriftBody:
+      "The phone's clock differs noticeably from the server's. Check the time on your phone, otherwise hours may be recorded incorrectly.",
   },
 
   history: {

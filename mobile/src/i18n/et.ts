@@ -106,6 +106,10 @@ export const et = {
     awayShort: "Objektilt eemal",
     clockPaused: "Kell on peatatud, kuni oled objektil tagasi",
     elapsedLabel: "Tänane tööaeg",
+    todayTitle: "Täna kokku",
+    todayPresent: "Objektil",
+    todayAway: "Eemal tööajast",
+    todayNothing: "Täna ei ole veel tööpäeva alustatud.",
     duration: (hours: number, minutes: number) => `${hours} h ${minutes} min`,
     adminSection: "Haldus",
     everydaySection: "Minu asjad",
@@ -388,6 +392,25 @@ export const et = {
         "õige suurusega.",
       action: "Alusta tööpäeva",
     },
+  },
+
+  alerts: {
+    title: "Kontrollimist vajav tegevus",
+    none: "Kahtlast tegevust ei ole.",
+    openCount: (n: number) => `${n} üle vaatamata`,
+    markSeen: "Sain aru",
+    markReviewed: "Vaadatud üle",
+    reviewed: "Üle vaadatud",
+    notBlocking: "Tööpäev jääb kehtima — see on ainult märge kontrollimiseks.",
+    deviceMismatchTitle: "Tööpäeva muudeti teisest seadmest",
+    deviceMismatchBody:
+      "Selle tööpäeva kohta tuli kirje teisest seadmest kui see, kus päev algas. Kui see ei olnud sina, anna haldurile teada.",
+    mockLocationTitle: "Asukoht märgiti võltsituks",
+    mockLocationBody:
+      "Seade teatas, et asukoht on võltsitud. Kontrolli, ega telefonis ei ole asukohta muutvat rakendust.",
+    clockDriftTitle: "Seadme kell on nihkes",
+    clockDriftBody:
+      "Telefoni kellaaeg erineb serveri omast oluliselt. Kontrolli telefoni kellaaega, muidu võivad tunnid valesti salvestuda.",
   },
 
   history: {
