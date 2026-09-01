@@ -13,12 +13,18 @@ reegel mis lehel, joonistatud UI-d siin ei ole. Kui sõnum või hind muutub,
 tuleb kogu komplekt uuesti ühe käsuga ja vana versioon ei jää Facebooki
 ringlema.
 
-Väljund: `marketing/social/` — viis reklaami kahes mõõdus.
+**Kaks komplekti, kaks eri tööd:**
+
+| Kaust | Skript | Millest räägib |
+|---|---|---|
+| `marketing/social/` | `website/scripts/social-ads.mjs` | **Probleemist ja tulemusest.** Sõnumit kannab tüpograafia, tootekaader on tõend. Külmale sihtrühmale. |
+| `marketing/app/` | `website/scripts/app-ads.mjs` | **Äpist endast.** Peaosas on telefon ja slaidid järgivad päris kasutusvoogu. Karussellina või poe-kaadritena. |
 
 | Mõõt | Fail | Kuhu |
 |---|---|---|
-| 1080 × 1350 | `*-feed.png` | Facebook / Instagram sööde |
+| 1080 × 1350 | `*-feed.png` | Facebook / Instagram sööde, karussell |
 | 1080 × 1920 | `*-story.png` | Stories, Reels |
+| 1290 × 2796 | `*-store.png` | App Store / Play (ainult `app/`) |
 
 ---
 
@@ -184,3 +190,82 @@ Kõik on koodist kontrollitud (vt `website/CLAUDE.md`):
 - kohalolek on saabumiste ja lahkumiste ahel
 - töötab ka ilma võrguta, aeg salvestub telefoni
 - halduri käsitsi parandus nõuab põhjendust ja jätab jälje
+
+---
+
+# Äpi komplekt — `marketing/app/`
+
+Viis slaidi, mis järgivad **päris kasutusvoogu**: saabud objektile → kell
+käib → lahkud → kell peatub → tunnid on kirjas. Iga slaid näitab täpselt
+seda ekraani, kus see samm juhtub.
+
+Mõeldud eelkõige **karussellina** (Facebook / Instagram), kus inimene
+kerib slaidilt slaidile ja saab voost aru ilma ühtegi sõna lugemata.
+Poe-mõõt (1290 × 2796) on olemas selleks ajaks, kui äpp poodi läheb.
+
+| Slaid | Ekraan | Ütleb |
+|---|---|---|
+| `01-alusta` | Alusta tööpäeva | Asukoht kontrollitakse enne alustamist |
+| `02-kell-kaib` | Tööpäev käib | Tunnid koguvad ainult objektil |
+| `03-kell-peatub` | Objektilt eemal | Lahkumine peatab kella ise |
+| `04-tunnid-kirjas` | Tööajalugu | Iga päev koos objekti ja tundidega |
+| `05-proovi` | — | Hind ja CTA |
+
+## Karusselli põhitekst
+
+> **Nii see töötab.**
+>
+> Töötaja jõuab objektile ja alustab tööpäeva — asukoht kontrollitakse
+> enne, kui kell käima läheb. Kui ta objektilt lahkub, peatub arvestus
+> ise. Keegi ei pea midagi vajutama ega meeles pidama.
+>
+> Kuu lõpus on iga päev kirjas koos objekti, kellaaegade ja tundidega.
+>
+> 5 € kasutaja kohta kuus, esimesed 14 päeva tasuta.
+
+**Pealkiri:** Nii tööaeg päriselt salvestub
+**Kirjeldus:** Ehitusettevõtetele · iOS, Android ja arvuti
+
+## Üksikute slaidide tekstid
+
+Kui kasutad slaide eraldi kuulutustena, mitte karussellina:
+
+**01 — Alusta ainult objektil**
+
+> Tööpäeva saab alustada ainult objektil kohapeal. Asukohta kontrollib
+> server, mitte telefon — seega äpi muutmine ei aita.
+
+**02 — Kell käib, kui oled kohal**
+
+> Tunnid koguvad objektil viibitud aja pealt. Mitte nupuvajutuse, mitte
+> mälu, mitte tabeli järgi.
+
+**03 — Lahkud, kell peatub**
+
+> Töötaja sõidab objektilt ära ja arvestus peatub ise. Objektilt
+> lahkumine peatab kella, aga ei lõpeta tööpäeva — tagasi tulles jätkub.
+
+**04 — Iga päev on kirjas**
+
+> Objekt, kellaajad ja tunnid nädalate kaupa. Kuu lõpus ei ole vaja
+> kellegi mälu usaldada.
+
+**05 — Proovi tasuta**
+
+> 5 € kasutaja kohta kuus. iOS, Android ja arvutiliides brauseris.
+> Neli keelt: eesti, inglise, vene, ukraina. Esimesed 14 päeva tasuta.
+
+## Kumba komplekti millal
+
+- **Külm sihtrühm** → `social/` nr 1 (`10 h kirjas. 5 h objektil.`).
+  Konks peab tulema enne toodet.
+- **Huvi tekkinud, lehte vaadanud** → `app/` karussell. Nüüd tahab
+  inimene näha, mida ta päriselt saab.
+- **Retargeting** → `social/` nr 5 või `app/` nr 5 (hind).
+
+## Üks asi, mida lõppslaid EI ütle
+
+**"Laadi alla".** Äpp ei ole veel poes ja vale lubadus toob kliendi, kes
+esimese klikiga pettub. CTA on sama mis lehel: *Proovi tasuta*,
+aadressilt `stp.nutisemud.ee`. Kui äpp poodi jõuab, muuda seda skriptis
+ühes kohas ja tee komplekt uuesti.
